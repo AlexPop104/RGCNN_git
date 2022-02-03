@@ -9,6 +9,13 @@ from scipy.spatial import distance_matrix
 from sklearn.metrics import pairwise_distances_argmin
 
 
+import tensorflow as tf
+import numpy as np
+import time,json
+import os
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
+
+
 # Added by Alex pop
 import open3d as o3d
 
@@ -22,6 +29,44 @@ import open3d as o3d
 # para = Parameters()
 # NODES_NUM = para.reeb_nodes_num
 # SIM_MARGIN = para.reeb_sim_margin
+
+def genData(cls,limit=None):
+    assert type(cls) is str
+
+    seg_classes = {'Earphone': [16, 17, 18], 'Motorbike': [30, 31, 32, 33, 34, 35], 'Rocket': [41, 42, 43],
+                   'Car': [8, 9, 10, 11], 'Laptop': [28, 29], 'Cap': [6, 7], 'Skateboard': [44, 45, 46],
+                   'Mug': [36, 37], 'Guitar': [19, 20, 21], 'Bag': [4, 5], 'Lamp': [24, 25, 26, 27],
+                   'Table': [47, 48, 49], 'Airplane': [0, 1, 2, 3], 'Pistol': [38, 39, 40], 'Chair': [12, 13, 14, 15],
+                   'Knife': [22, 23]}
+
+
+
+    pos = np.load("/home/alex/Alex_documents/RGCNN_git/data/NPY_Data/seg_%s_pos.npy" % cls)
+    norm = np.load("/home/alex/Alex_documents/RGCNN_git/data/NPY_Data/seg_%s_norm.npy" % cls)
+    label = np.load("/home/alex/Alex_documents/RGCNN_git/data/NPY_Data/seg_%s_seg.npy" % cls)
+
+    data = np.append(pos, norm, axis=-1)
+
+
+    data = data[:limit]
+    label = label[:limit]
+
+    seg = {}
+    name = {}
+    i = 0
+    for k,v in sorted(seg_classes.items()):
+        for value in v:
+            seg[value] = i
+            name[value] = k
+        i += 1
+    cnt = data.shape[0]
+    cat = np.zeros((cnt))
+    for i in range(cnt):
+        cat[i] = seg[label[i][0]]
+    return data,label,cat,pos
+
+
+
 
 
 def filter_out(vertices, edges, sccs):
@@ -245,29 +290,29 @@ def extract_reeb_graph(point_cloud, knn, ns, reeb_nodes_num, reeb_sim_margin,poi
         sccs = [sccs[0][:len(sccs[0]) // 2], sccs[0][len(sccs[0]) // 2:]]
         vertices = np.stack([np.mean(point_cloud[sccs[0]], 0), np.mean(point_cloud[sccs[1]], 0)])
         edges.append([0, 1])
-    vertices, edges, sccs = filter_out(np.asarray(vertices), edges, sccs)
-    vertices, edges, sccs = normalize_reeb(np.asarray(vertices), edges, sccs, point_cloud, reeb_nodes_num)
-    vertices, edges, laplacian, sccs = adjacency_reeb(vertices, edges, sccs, point_cloud, reeb_sim_margin)
-    # laplacian = np.delete(laplacian, idx2remove, 0)
-    # laplacian = np.delete(laplacian, idx2remove, 1)
-    # sccs = np.delete(sccs, idx2remove, 0)
-    while vertices.shape[0] != reeb_nodes_num:
-        # print(vertices.shape[0])
-        vertices, edges, sccs = normalize_reeb(np.asarray(vertices), edges, sccs, point_cloud, reeb_nodes_num)
-        vertices, edges, laplacian, sccs = adjacency_reeb(vertices, edges, sccs, point_cloud, reeb_sim_margin)
-        # laplacian = np.delete(laplacian, idx2remove, 0)
-        # laplacian = np.delete(laplacian, idx2remove, 1)
-        # sccs = np.delete(sccs, idx2remove, 0)
-    # print(laplacian)
-    #pad
+    # vertices, edges, sccs = filter_out(np.asarray(vertices), edges, sccs)
+    # vertices, edges, sccs = normalize_reeb(np.asarray(vertices), edges, sccs, point_cloud, reeb_nodes_num)
+    # vertices, edges, laplacian, sccs = adjacency_reeb(vertices, edges, sccs, point_cloud, reeb_sim_margin)
+    # # laplacian = np.delete(laplacian, idx2remove, 0)
+    # # laplacian = np.delete(laplacian, idx2remove, 1)
+    # # sccs = np.delete(sccs, idx2remove, 0)
+    # while vertices.shape[0] != reeb_nodes_num:
+    #     # print(vertices.shape[0])
+    #     vertices, edges, sccs = normalize_reeb(np.asarray(vertices), edges, sccs, point_cloud, reeb_nodes_num)
+    #     vertices, edges, laplacian, sccs = adjacency_reeb(vertices, edges, sccs, point_cloud, reeb_sim_margin)
+    #     # laplacian = np.delete(laplacian, idx2remove, 0)
+    #     # laplacian = np.delete(laplacian, idx2remove, 1)
+    #     # sccs = np.delete(sccs, idx2remove, 0)
+    # # print(laplacian)
+    # pad
     largest_dim = max([len(x) for x in sccs])
     # largest_dim = pointNumber
     sccs = np.asarray([np.pad(x, (0, largest_dim - len(x)), 'edge') for x in sccs])
     # assert np.all(np.isfinite(laplacian)) and np.all(np.isfinite(sccs))
     # print(vertices.shape, laplacian.shape)
     print(np.shape(vertices))
-    return vertices, laplacian, list(sccs), edges
-    #return vertices, list(sccs), edges
+    #return vertices, laplacian, list(sccs), edges
+    return vertices, list(sccs), edges
 
 
 if __name__ == '__main__':
@@ -279,10 +324,14 @@ if __name__ == '__main__':
     # ax.scatter(x[:, 0], x[:, 1], x[:, 2], s=1, color='r')
     # matplotlib.pyplot.show()
 
-    pcd_load= o3d.io.read_point_cloud("/home/alex/Alex_documents/RGCNN_git/Reeb_graph/chair_0983.pcd")
-    point_cloud=np.asarray(pcd_load.points)
+    train_data, train_label, train_cat, train_pcd = genData('train')
 
-    print(point_cloud.shape)
+
+    point_cloud=np.asarray(train_pcd[1000])
+
+  
+
+
 
     
     knn = 20
@@ -291,13 +340,11 @@ if __name__ == '__main__':
     reeb_nodes_num=20
     reeb_sim_margin=20
     pointNumber=200
-    vertices,laplacian, sccs, edges = extract_reeb_graph(point_cloud, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
+    vertices, sccs, edges = extract_reeb_graph(point_cloud, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
 
 
-    new_sccs=np.asarray(sccs)
-
-    for line in vertices:
-        print ('  '.join(map(str, line)))
+    # for line in vertices:
+    #     print ('  '.join(map(str, line)))
 
     
     

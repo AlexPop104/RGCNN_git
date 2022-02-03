@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 
 BASE_DIR = os.path.abspath('')
 sys.path.append(BASE_DIR)
-# ROOT_DIR = BASE_DIR
-ROOT_DIR = os.path.join(BASE_DIR, os.pardir)
+ROOT_DIR = BASE_DIR
+#ROOT_DIR = os.path.join(BASE_DIR, os.pardir)
 print(ROOT_DIR)
 
 DATA_DIR = os.path.join(ROOT_DIR, 'data/modelnet40_normal_resampled')
@@ -42,23 +42,26 @@ print(d_size)
 fn1 = datapath[0]
 
 point_set = np.loadtxt(fn1[1], delimiter=',').astype(np.float32)
+print("Number of points and shape of point cloud")
 print(point_set.shape)
+
+
 for i in tqdm(range(1, 100)):
     fn = datapath[i]
     cls = classes[datapath[0][0]]
     cls = np.array([cls]).astype(np.int32)
     point_set = np.append(point_set, np.loadtxt(fn[1], delimiter=',').astype(np.float32), axis=0)
-
+    
 print(point_set.shape)
 
 plt.plot(point_set[0:100][0:2])
 plt.ylabel('some numbers')
 plt.show()
 
-np.save('train_data_test.npy', point_set)
+# np.save('train_data_test.npy', point_set)
 
 
-loaded_point_set = np.load('train_data_test.npy')
-plt.plot(loaded_point_set[0:100][0:2])
-plt.ylabel('some numbers')
-plt.show()
+#loaded_point_set = np.load('train_data_test.npy')
+#plt.plot(loaded_point_set[0:100][0:2])
+#plt.ylabel('some numbers')
+#plt.show()
