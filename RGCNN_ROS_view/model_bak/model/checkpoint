@@ -1,0 +1,6 @@
+model_checkpoint_path: "/home/victor/workspace/thesis_ws/RGCNN/../checkpoints/model/model-23340"
+all_model_checkpoint_paths: "/home/victor/workspace/thesis_ws/RGCNN/../checkpoints/model/model-23220"
+all_model_checkpoint_paths: "/home/victor/workspace/thesis_ws/RGCNN/../checkpoints/model/model-23250"
+all_model_checkpoint_paths: "/home/victor/workspace/thesis_ws/RGCNN/../checkpoints/model/model-23280"
+all_model_checkpoint_paths: "/home/victor/workspace/thesis_ws/RGCNN/../checkpoints/model/model-23310"
+all_model_checkpoint_paths: "/home/victor/workspace/thesis_ws/RGCNN/../checkpoints/model/model-23340"
