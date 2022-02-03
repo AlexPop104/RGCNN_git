@@ -17,9 +17,9 @@ def genData(cls,limit=None):
 
 
 
-    pos = np.load("/home/alex/Alex_documents/RGCNN/data/NPY_Data/seg_%s_pos.npy" % cls)
-    norm = np.load("/home/alex/Alex_documents/RGCNN/data/NPY_Data/seg_%s_norm.npy" % cls)
-    label = np.load("/home/alex/Alex_documents/RGCNN/data/NPY_Data/seg_%s_seg.npy" % cls)
+    pos = np.load("/home/alex/Alex_documents/RGCNN_git/data/NPY_Data/seg_%s_pos.npy" % cls)
+    norm = np.load("/home/alex/Alex_documents/RGCNN_git/data/NPY_Data/seg_%s_norm.npy" % cls)
+    label = np.load("/home/alex/Alex_documents/RGCNN_git/data/NPY_Data/seg_%s_seg.npy" % cls)
 
     data = np.append(pos, norm, axis=-1)
 
