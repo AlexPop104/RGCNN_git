@@ -19,8 +19,8 @@ def genData(cls, limit=None):
                    'Table': [47, 48, 49], 'Airplane': [0, 1, 2, 3], 'Pistol': [38, 39, 40], 'Chair': [12, 13, 14, 15],
                    'Knife': [22, 23]}
 
-    data = np.load( "/home/victor/workspace/thesis_ws/RGCNN/cls_data_%s" % cls)
-    label = np.load("/home/victor/workspace/thesis_ws/RGCNN/cls_label_%s" % cls)
+    data = np.load( "/home/alex/Alex_documents/RGCNN_git/data/NPY_Data/cls_data_%s.npy" % cls)
+    label = np.load("/home/alex/Alex_documents/RGCNN_git/data/NPY_Data/cls_label_%s.npy" % cls)
 
     data = data[:limit]
     label = label[:limit]
@@ -120,7 +120,7 @@ def test():
     params['momentum'] = 0
     params['decay_steps'] = test_data.shape[0] / params['batch_size']
 
-    model = cls_model.rgcnn(2048, **params)
+    model = cls_model.rgcnn(1024, **params)
     model.evaluate(test_data, test_cat, test_label)
 
 

@@ -1,6 +1,10 @@
 
 import seg_model
+import seg_model_REEB
+import cls_model
 import tensorflow as tf
+
+
 import numpy as np
 import time,json
 import os
@@ -47,7 +51,7 @@ def train():
     params = dict()
     params['dir_name'] = 'model'
     params['num_epochs'] = 50
-    params['batch_size'] = 26
+    params['batch_size'] = 1
     params['eval_frequency'] = 30
 
     # Building blocks.
@@ -72,7 +76,9 @@ def train():
     params['momentum'] = 0
     params['decay_steps'] = train_data.shape[0] / params['batch_size']
 
-    model = seg_model.rgcnn(2048, **params)
+    #model = seg_model.rgcnn(2048, **params)
+    model = seg_model_REEB.rgcnn(2048, **params)
+    #model = cls_model.rgcnn(2048, **params)
     accuracy, loss, t_step = model.fit(train_data, train_cat, train_label, val_data, val_cat, val_label,
                                        is_continue=False)
 
@@ -106,7 +112,9 @@ def test():
     params['momentum'] = 0
     params['decay_steps'] = test_data.shape[0] / params['batch_size']
 
-    model = seg_model.rgcnn(2048, **params)
+    #model = seg_model.rgcnn(2048, **params)
+    model = seg_model_REEB.rgcnn(2048, **params)
+    model = cls_model.rgcnn(2048, **params)
     model.evaluate(test_data,test_cat,test_label)
 
 if __name__=="__main__":

@@ -5,6 +5,8 @@ import numpy as np
 import os, time, collections, shutil
 from collections import defaultdict
 
+from Reeb_graph import reeb
+
 
 # NFEATURES = 28**2
 # NCLASSES = 10
@@ -546,6 +548,9 @@ class rgcnn(base_model):
         return to_substract
 
     def _inference(self, x, cat, dropout):
+
+        
+
         L = self.pairwise_distance(x)
         # L_ =self.get_laplacian(L,normalize=False)
         # L = tf.stack([self.get_one_matrix_knn(matrix = L[o],k = 30) for o in range(L.get_shape()[0])])

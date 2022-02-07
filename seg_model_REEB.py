@@ -1,9 +1,16 @@
 import tensorflow as tf
+
+
+
 import sklearn
 import scipy.sparse
 import numpy as np
 import os, time, collections, shutil
 from collections import defaultdict
+
+from Reeb_graph import Reeb_RGCNN
+import matplotlib.pyplot
+from mpl_toolkits.mplot3d import Axes3D
 
 
 # NFEATURES = 28**2
@@ -148,8 +155,35 @@ class base_model(object):
             batch_data, batch_cat, batch_labels = train_data[idx, :], train_cat[idx], train_labels[idx]
             if type(batch_data) is not np.ndarray:
                 batch_data = batch_data.toarray()  # convert sparse matrices
+
+
+            point_cloud=batch_data[0,:,0:3]
+
+
+            knn = 20
+            ns = 20
+            tau = 0.6
+            reeb_nodes_num=20
+            reeb_sim_margin=20
+            pointNumber=200
+            vertices, sccs, edges = Reeb_RGCNN.extract_reeb_graph(point_cloud, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
+
+            # fig = matplotlib.pyplot.figure()
+            # ax = fig.add_subplot(111, projection='3d')
+            # ax.set_axis_off()
+            # for e in edges:
+            #     ax.plot([vertices[e[0]][0], vertices[e[1]][0]], [vertices[e[0]][1], vertices[e[1]][1]], [vertices[e[0]][2], vertices[e[1]][2]], color='b')
+            # ax.scatter(point_cloud[:, 0], point_cloud[:, 1], point_cloud[:, 2], s=1, color='r')
+            # matplotlib.pyplot.show()
+
+
+
+
             feed_dict = {self.ph_data: batch_data, self.ph_cat: batch_cat, self.ph_labels: batch_labels,
                          self.ph_dropout: self.dropout}
+
+            
+
             learning_rate, loss_average, loss = sess.run([self.op_train, self.op_loss_average, self.op_loss], feed_dict)
             # print(sess.run([self.op_logits],feed_dict))
             print(loss, loss_average)
@@ -191,6 +225,7 @@ class base_model(object):
 
     def build_graph(self, M_0):
         """Build the computational graph of the model."""
+        
         self.graph = tf.Graph()
         with self.graph.as_default():
             # Inputs.
@@ -201,6 +236,8 @@ class base_model(object):
                 self.ph_cat = tf.placeholder(tf.int32, (self.batch_size), 'labels')
                 self.ph_dropout = tf.placeholder(tf.float32, (), 'dropout')
 
+
+    
             # Model.
             op_logits = self.inference(self.ph_data, self.ph_cat, self.ph_dropout)
 
@@ -210,8 +247,6 @@ class base_model(object):
             print('Total flops' + str(flops.total_float_ops))
 
             self.op_logits = op_logits
-            print(op_logits.shape)
-            print(self.ph_labels.shape)
             self.op_loss, self.op_loss_average = self.loss(op_logits, self.ph_labels, self.regularization)
             self.op_train = self.training(self.op_loss, self.learning_rate,
                                           self.decay_steps, self.decay_rate, self.momentum)
@@ -420,6 +455,9 @@ class rgcnn(base_model):
         self.brelu = getattr(self, brelu)
 
         # Build the computational graph.
+
+
+
         self.build_graph(M_0)
 
     def chebyshev5(self, x, L, Fout, K):
@@ -548,32 +586,42 @@ class rgcnn(base_model):
         return to_substract
 
     def _inference(self, x, cat, dropout):
+
+        
+        
+
+       
+        knn = 20
+        ns = 20
+        tau = 2
+        reeb_nodes_num=20
+        reeb_sim_margin=20
+        pointNumber=200
+       # vertices, sccs, edges = Reeb_RGCNN.extract_reeb_graph(pcd, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
+
+
+
+
+
         L = self.pairwise_distance(x)
         # L_ =self.get_laplacian(L,normalize=False)
         # L = tf.stack([self.get_one_matrix_knn(matrix = L[o],k = 30) for o in range(L.get_shape()[0])])
         L = self.get_laplacian(L)
         cat = tf.expand_dims(cat, axis=1)
         cat = tf.one_hot(cat, 16, axis=-1)
-        cat = tf.tile(cat, [1, 1024, 1])
+        cat = tf.tile(cat, [1, 2048, 1])
         x = tf.concat([x, cat], axis=2)
 
+        x1 = 0 #cache for layer1
         for i in range(len(self.F)):
             with tf.variable_scope('conv{}'.format(i)):
                 with tf.name_scope('filter'):
+                    if i == 4:
+                        x = tf.concat([x, x1], axis=2)
                     x = self.filter(x, L, self.F[i], self.K[i])
+                    if i == 1:
+                        x1 = x
                     self.regularizers.append(tf.nn.l2_loss(tf.matmul(tf.matmul(tf.transpose(x, perm=[0, 2, 1]), L), x)))
                 with tf.name_scope('bias_relu'):
                     x = self.brelu(x)
-
-        x = tf.reduce_max(x, 1)
-        ## FC-Layer
-        # N,M,F = x.get_shape()
-        # x = tf.reshape(x, [int(N), int(M) * int(F)])
-        for i, M in enumerate(self.M[:-1]):
-            with tf.variable_scope('fc{}'.format(i + 1)):
-                x = self.fc(x, M)
-                x = tf.nn.dropout(x, dropout)
-
-        with tf.variable_scope('logits'):
-            x = self.fc(x, self.M[-1], relu=False)
         return x
