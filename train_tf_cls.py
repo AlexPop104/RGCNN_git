@@ -1,5 +1,7 @@
 # import mymodel, mymodel_knn, seg_model
+from pickle import NONE
 import seg_model
+import cls_model
 import tensorflow as tf
 import numpy as np
 import time, json
@@ -36,7 +38,8 @@ def genData(cls, limit=None):
     cnt = data.shape[0]
     cat = np.zeros((cnt))
     for i in range(cnt):
-        cat[i] = seg[label[i][0]]
+       # cat[i] = seg[label[i]]
+         cat[i] = label[i]
     return data,label,cat
 
 def train():
@@ -55,9 +58,9 @@ def train():
 
     params = dict()
     params['dir_name'] = 'model'
-    params['num_epochs'] = 20         # 50
-    params['batch_size'] = 3       # 26
-    params['eval_frequency'] = 15   # 30
+    params['num_epochs'] = 50         # 50
+    params['batch_size'] = 26       # 26
+    params['eval_frequency'] = 30   # 30
 
     # Building blocks.
     params['filter'] = 'chebyshev5'
@@ -69,9 +72,9 @@ def train():
     # assert C == np.unique(y) .size
 
     # Architecture.
-    params['F'] = [128, 512, 1024]  # Number of graph convolutional filters.
-    params['K'] = [6, 5, 3]  # Polynomial orders.
-    params['M'] = [512, 128, 10]  # Output dimensionality of fully connected layers. For classification only
+    params['F'] = [128, 512, 1024, 512, 128, 50]  # Number of graph convolutional filters.
+    params['K'] = [6, 5, 3, 1, 1, 1]  # Polynomial orders.
+    params['M'] = [384, 16, 1]  # Output dimensionality of fully connected layers. For classification only
 
     # Optimization.
     params['regularization'] = 1e-9
@@ -89,6 +92,7 @@ def train():
                                         test_cat, 
                                         test_label,
                                         is_continue=False)
+   
 
 def test():
     test_data, test_label, test_cat = genData('test')
@@ -108,9 +112,9 @@ def test():
     # assert C == np.unique(y) .size
 
     # Architecture.
-    params['F'] = [128, 512, 1024]  # Number of graph convolutional filters.
-    params['K'] = [6, 5, 3]  # Polynomial orders.
-    params['M'] = [512, 128, 10]  # Output dimensionality of fully connected layers. For classification only
+    params['F'] = [128, 512, 1024, 512, 128, 50]  # Number of graph convolutional filters.
+    params['K'] = [6, 5, 3, 1, 1, 1]  # Polynomial orders.
+    params['M'] = [384, 16, 1]  # Output dimensionality of fully connected layers. For classification only
 
     # Optimization.
     params['regularization'] = 1e-9

@@ -54,7 +54,7 @@ def train():
     params = dict()
     params['dir_name'] = 'model'
     params['num_epochs'] = 20         # 50
-    params['batch_size'] = 3       # 26
+    params['batch_size'] = 26       # 26
     params['eval_frequency'] = 15   # 30
 
     # Building blocks.
@@ -67,9 +67,9 @@ def train():
     # assert C == np.unique(y) .size
 
     # Architecture.
-    params['F'] = [128, 512, 1024]  # Number of graph convolutional filters.
-    params['K'] = [6, 5, 3]  # Polynomial orders.
-    params['M'] = [512, 128, 10]  # Output dimensionality of fully connected layers. For classification only
+    params['F'] = [128, 512, 1024, 512, 128, 50]  # Number of graph convolutional filters.
+    params['K'] = [6, 5, 3, 1, 1, 1]  # Polynomial orders.
+    params['M'] = [384, 16, 1]  # Output dimensionality of fully connected layers.
 
     # Optimization.
     params['regularization'] = 1e-9
@@ -106,9 +106,9 @@ def test():
     # assert C == np.unique(y) .size
 
     # Architecture.
-    params['F'] = [128, 512, 1024]  # Number of graph convolutional filters.
-    params['K'] = [6, 5, 3]  # Polynomial orders.
-    params['M'] = [512, 128, 10]  # Output dimensionality of fully connected layers. For classification only
+    params['F'] = [128, 512, 1024, 512, 128, 50]  # Number of graph convolutional filters.
+    params['K'] = [6, 5, 3, 1, 1, 1]  # Polynomial orders.
+    params['M'] = [384, 16, 1]  # Output dimensionality of fully connected layers.
 
     # Optimization.
     params['regularization'] = 1e-9
@@ -118,7 +118,7 @@ def test():
     params['momentum'] = 0
     params['decay_steps'] = test_data.shape[0] / params['batch_size']
 
-    model = cls_model.rgcnn(2048, **params)
+    model = seg_model.rgcnn(2048, **params)
     model.evaluate(test_data, test_cat, test_label)
 
 

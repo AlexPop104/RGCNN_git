@@ -212,6 +212,8 @@ class base_model(object):
             print('Total flops' + str(flops.total_float_ops))
 
             self.op_logits = op_logits
+            print(op_logits.shape)
+            print(self.ph_labels.shape)
             self.op_loss, self.op_loss_average = self.loss(op_logits, self.ph_labels, self.regularization)
             self.op_train = self.training(self.op_loss, self.learning_rate,
                                           self.decay_steps, self.decay_rate, self.momentum)

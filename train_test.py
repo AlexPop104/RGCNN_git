@@ -114,7 +114,7 @@ def test():
 
     #model = seg_model.rgcnn(2048, **params)
     model = seg_model_REEB.rgcnn(2048, **params)
-    model = cls_model.rgcnn(2048, **params)
+    #model = cls_model.rgcnn(2048, **params)
     model.evaluate(test_data,test_cat,test_label)
 
 if __name__=="__main__":
