@@ -5,8 +5,6 @@ import numpy as np
 import os, time, collections, shutil
 from collections import defaultdict
 
-from Reeb_graph import reeb
-
 
 # NFEATURES = 28**2
 # NCLASSES = 10
@@ -153,7 +151,7 @@ class base_model(object):
             feed_dict = {self.ph_data: batch_data, self.ph_cat: batch_cat, self.ph_labels: batch_labels,
                          self.ph_dropout: self.dropout}
             learning_rate, loss_average, loss = sess.run([self.op_train, self.op_loss_average, self.op_loss], feed_dict)
-            print(sess.run([self.op_logits],feed_dict))
+            # print(sess.run([self.op_logits],feed_dict))
             print(loss, loss_average)
             f.write(str(loss) + str(loss_average))
             # Periodical evaluation of the model.
@@ -212,8 +210,6 @@ class base_model(object):
             print('Total flops' + str(flops.total_float_ops))
 
             self.op_logits = op_logits
-            print(op_logits.shape)
-            print(self.ph_labels.shape)
             self.op_loss, self.op_loss_average = self.loss(op_logits, self.ph_labels, self.regularization)
             self.op_train = self.training(self.op_loss, self.learning_rate,
                                           self.decay_steps, self.decay_rate, self.momentum)
@@ -550,28 +546,32 @@ class rgcnn(base_model):
         return to_substract
 
     def _inference(self, x, cat, dropout):
-
-        
-
         L = self.pairwise_distance(x)
         # L_ =self.get_laplacian(L,normalize=False)
         # L = tf.stack([self.get_one_matrix_knn(matrix = L[o],k = 30) for o in range(L.get_shape()[0])])
         L = self.get_laplacian(L)
         cat = tf.expand_dims(cat, axis=1)
-        cat = tf.one_hot(cat, 16, axis=-1)
-        cat = tf.tile(cat, [1, 2048, 1])
+        cat = tf.one_hot(cat, 40, axis=-1)
+        cat = tf.tile(cat, [1, 1024, 1])
         x = tf.concat([x, cat], axis=2)
 
-        x1 = 0 #cache for layer1
         for i in range(len(self.F)):
             with tf.variable_scope('conv{}'.format(i)):
                 with tf.name_scope('filter'):
-                    if i == 4:
-                        x = tf.concat([x, x1], axis=2)
                     x = self.filter(x, L, self.F[i], self.K[i])
-                    if i == 1:
-                        x1 = x
                     self.regularizers.append(tf.nn.l2_loss(tf.matmul(tf.matmul(tf.transpose(x, perm=[0, 2, 1]), L), x)))
                 with tf.name_scope('bias_relu'):
                     x = self.brelu(x)
+
+        x = tf.reduce_max(x, 1)
+        ## FC-Layer
+        # N,M,F = x.get_shape()
+        # x = tf.reshape(x, [int(N), int(M) * int(F)])
+        for i, M in enumerate(self.M[:-1]):
+            with tf.variable_scope('fc{}'.format(i + 1)):
+                x = self.fc(x, M)
+                x = tf.nn.dropout(x, dropout)
+
+        with tf.variable_scope('logits'):
+            x = self.fc(x, self.M[-1], relu=False)
         return x

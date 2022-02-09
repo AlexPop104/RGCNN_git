@@ -5,8 +5,6 @@ import numpy as np
 import os, time, collections, shutil
 from collections import defaultdict
 
-from Reeb_graph import reeb
-
 
 # NFEATURES = 28**2
 # NCLASSES = 10
@@ -54,7 +52,7 @@ class base_model(object):
 
             # Compute loss if labels are given.
             if labels is not None:
-                batch_labels = np.zeros((self.batch_size, data.shape[1]))
+                batch_labels = np.zeros((self.batch_size))
                 batch_labels[:end - begin] = labels[begin:end]
                 feed_dict[self.ph_labels] = batch_labels
                 batch_pred, batch_loss = sess.run([self.op_prediction, self.op_loss], feed_dict)
@@ -63,9 +61,11 @@ class base_model(object):
                 batch_pred = sess.run(self.op_prediction, feed_dict)
 
             predictions[begin:end] = batch_pred[:end - begin]
+            
 
         if labels is not None:
             return predictions, loss * self.batch_size / size
+            
         else:
             return predictions
 
@@ -87,7 +87,7 @@ class base_model(object):
         t_process, t_wall = time.process_time(), time.time()
         predictions, loss = self.predict(data, cat, labels, sess)
         # print(predictions)
-        ncorrects = np.mean(predictions == labels, axis=1)
+        ncorrects = np.mean(predictions == labels, axis=0)
         print(ncorrects)
         accuracy = np.mean(ncorrects)
         f1 = 0
@@ -199,7 +199,7 @@ class base_model(object):
             with tf.name_scope('inputs'):
                 # self.pj_graph = tf.placeholder(tf.float32, (self.batch_size, M_0, M_0), 'lapacian')
                 self.ph_data = tf.placeholder(tf.float32, (self.batch_size, M_0, 6), 'data')
-                self.ph_labels = tf.placeholder(tf.int32, (self.batch_size, M_0), 'labels')
+                self.ph_labels = tf.placeholder(tf.int32, (self.batch_size), 'labels')
                 self.ph_cat = tf.placeholder(tf.int32, (self.batch_size), 'labels')
                 self.ph_dropout = tf.placeholder(tf.float32, (), 'dropout')
 
@@ -257,7 +257,7 @@ class base_model(object):
     def prediction(self, logits):
         """Return the predicted classes."""
         with tf.name_scope('prediction'):
-            prediction = tf.argmax(logits, axis=2)
+            prediction = tf.argmax(logits)
             return prediction
 
     def loss(self, logits, labels, regularization):
@@ -550,28 +550,32 @@ class rgcnn(base_model):
         return to_substract
 
     def _inference(self, x, cat, dropout):
-
-        
-
         L = self.pairwise_distance(x)
         # L_ =self.get_laplacian(L,normalize=False)
         # L = tf.stack([self.get_one_matrix_knn(matrix = L[o],k = 30) for o in range(L.get_shape()[0])])
         L = self.get_laplacian(L)
-        cat = tf.expand_dims(cat, axis=1)
-        cat = tf.one_hot(cat, 16, axis=-1)
-        cat = tf.tile(cat, [1, 2048, 1])
-        x = tf.concat([x, cat], axis=2)
+        # cat = tf.expand_dims(cat, axis=1)
+        # cat = tf.one_hot(cat, 40, axis=-1)
+        # cat = tf.tile(cat, [1, 1024, 1])
+        # x = tf.concat([x, cat], axis=2)
 
-        x1 = 0 #cache for layer1
         for i in range(len(self.F)):
             with tf.variable_scope('conv{}'.format(i)):
                 with tf.name_scope('filter'):
-                    if i == 4:
-                        x = tf.concat([x, x1], axis=2)
                     x = self.filter(x, L, self.F[i], self.K[i])
-                    if i == 1:
-                        x1 = x
                     self.regularizers.append(tf.nn.l2_loss(tf.matmul(tf.matmul(tf.transpose(x, perm=[0, 2, 1]), L), x)))
                 with tf.name_scope('bias_relu'):
                     x = self.brelu(x)
+
+        x = tf.reduce_max(x, 1)
+        ## FC-Layer
+        # N,M,F = x.get_shape()
+        # x = tf.reshape(x, [int(N), int(M) * int(F)])
+        for i, M in enumerate(self.M[:-1]):
+            with tf.variable_scope('fc{}'.format(i + 1)):
+                x = self.fc(x, M)
+                x = tf.nn.dropout(x, dropout)
+
+        with tf.variable_scope('logits'):
+            x = self.fc(x, self.M[-1], relu=False)
         return x

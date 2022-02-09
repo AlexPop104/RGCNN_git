@@ -2,6 +2,8 @@
 from pickle import NONE
 import seg_model
 import cls_model
+import cls_model_AP
+import cls_model_them
 import tensorflow as tf
 import numpy as np
 import time, json
@@ -72,8 +74,8 @@ def train():
     # assert C == np.unique(y) .size
 
     # Architecture.
-    params['F'] = [128, 512, 1024, 512, 128, 50]  # Number of graph convolutional filters.
-    params['K'] = [6, 5, 3, 1, 1, 1]  # Polynomial orders.
+    params['F'] = [128, 512, 1024]  # Number of graph convolutional filters.
+    params['K'] = [6, 5, 3]  # Polynomial orders.
     params['M'] = [384, 16, 1]  # Output dimensionality of fully connected layers. For classification only
 
     # Optimization.
@@ -84,7 +86,7 @@ def train():
     params['momentum'] = 0
     params['decay_steps'] = train_data.shape[0] / params['batch_size']
 
-    model = cls_model.rgcnn(1024, **params)
+    model = cls_model_AP.rgcnn(1024, **params)
     accuracy, loss, t_step = model.fit(train_data, 
                                         train_cat, 
                                         train_label, 
@@ -124,7 +126,7 @@ def test():
     params['momentum'] = 0
     params['decay_steps'] = test_data.shape[0] / params['batch_size']
 
-    model = cls_model.rgcnn(1024, **params)
+    model = cls_model_AP.rgcnn(1024, **params)
     model.evaluate(test_data, test_cat, test_label)
 
 
