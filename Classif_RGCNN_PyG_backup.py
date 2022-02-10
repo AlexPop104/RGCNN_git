@@ -158,64 +158,39 @@ class RGCNN_model(nn.Module):
         ###################################################################
 
 
-    def forward(self, x,batch,batch_size,nr_points):
-
-        x2=torch.reshape(x.detach(),(batch_size*nr_points,6))
-
+    def forward(self, x):
         self.regularizers = []
         # forward pass
         W   = self.get_graph(x.detach())  # we don't want to compute gradients when building the graph
         edge_index, edge_weight = utils.dense_to_sparse(W)
-
-        #out = self.conv1(x, edge_index, edge_weight,batch)
-        out = self.conv1(x2, edge_index, edge_weight,batch)
-
-
+        out = self.conv1(x, edge_index, edge_weight)
         out = self.relu(out)
-        
-        
-        # edge_index, edge_weight = utils.remove_self_loops(edge_index, edge_weight)
-        # L_edge_index, L_edge_weight = torch_geometric.utils.get_laplacian(edge_index.detach(), edge_weight.detach(), normalization="sym")
-        # L = torch_geometric.utils.to_dense_adj(edge_index=L_edge_index, edge_attr=L_edge_weight)
-        # self.regularizers.append(torch.linalg.norm(torch.matmul(torch.matmul(torch.Tensor.permute(out.detach(), [0, 2, 1]), L), out.detach())))
+        edge_index, edge_weight = utils.remove_self_loops(edge_index, edge_weight)
+        L_edge_index, L_edge_weight = torch_geometric.utils.get_laplacian(edge_index.detach(), edge_weight.detach(), normalization="sym")
+        L = torch_geometric.utils.to_dense_adj(edge_index=L_edge_index, edge_attr=L_edge_weight)
+        self.regularizers.append(torch.linalg.norm(torch.matmul(torch.matmul(torch.Tensor.permute(out.detach(), [0, 2, 1]), L), out.detach())))
 
-        out_reshaped_graph=torch.reshape(out,(batch_size,nr_points,128))
-
-        W   = self.get_graph(out_reshaped_graph.detach())
+        W   = self.get_graph(out.detach())
         edge_index, edge_weight = utils.dense_to_sparse(W)
-
-        #out = self.conv2(out, edge_index, edge_weight)
-
-        out = self.conv2(out, edge_index, edge_weight,batch)
+        out = self.conv2(out, edge_index, edge_weight)
         out = self.relu(out)
+        edge_index, edge_weight = utils.remove_self_loops(edge_index, edge_weight)
+        L_edge_index, L_edge_weight = torch_geometric.utils.get_laplacian(edge_index.detach(), edge_weight.detach(), normalization="sym")
+        L = torch_geometric.utils.to_dense_adj(edge_index=L_edge_index, edge_attr=L_edge_weight)
+        self.regularizers.append(torch.linalg.norm(torch.matmul(torch.matmul(torch.Tensor.permute(out.detach(), [0, 2, 1]), L), out.detach())))
 
-        # edge_index, edge_weight = utils.remove_self_loops(edge_index, edge_weight)
-        # L_edge_index, L_edge_weight = torch_geometric.utils.get_laplacian(edge_index.detach(), edge_weight.detach(), normalization="sym")
-        # L = torch_geometric.utils.to_dense_adj(edge_index=L_edge_index, edge_attr=L_edge_weight)
-        # self.regularizers.append(torch.linalg.norm(torch.matmul(torch.matmul(torch.Tensor.permute(out.detach(), [0, 2, 1]), L), out.detach())))
-
-        out_reshaped_graph=torch.reshape(out.detach(),(batch_size,nr_points,512))
-
-
-        W   = self.get_graph(out_reshaped_graph.detach())
+        W   = self.get_graph(out.detach())
         edge_index, edge_weight = utils.dense_to_sparse(W)
-
-        #out = self.conv3(out, edge_index, edge_weight)
-        
-        out = self.conv3(out, edge_index, edge_weight,batch)
+        out = self.conv3(out, edge_index, edge_weight)
         out = self.relu(out)
+        edge_index, edge_weight = utils.remove_self_loops(edge_index, edge_weight)
+        L_edge_index, L_edge_weight = torch_geometric.utils.get_laplacian(edge_index.detach(), edge_weight.detach(), normalization="sym")
+        L = torch_geometric.utils.to_dense_adj(edge_index=L_edge_index, edge_attr=L_edge_weight)
+        self.regularizers.append(torch.linalg.norm(torch.matmul(torch.matmul(torch.Tensor.permute(out.detach(), [0, 2, 1]), L), out.detach())))
 
-        # edge_index, edge_weight = utils.remove_self_loops(edge_index, edge_weight)
-        # L_edge_index, L_edge_weight = torch_geometric.utils.get_laplacian(edge_index.detach(), edge_weight.detach(), normalization="sym")
-        # L = torch_geometric.utils.to_dense_adj(edge_index=L_edge_index, edge_attr=L_edge_weight)
-        # self.regularizers.append(torch.linalg.norm(torch.matmul(torch.matmul(torch.Tensor.permute(out.detach(), [0, 2, 1]), L), out.detach())))
+       
 
-        out_reshaped_graph=torch.reshape(out.detach(),(batch_size,nr_points,1024))
-
-        #out = out.permute(0, 2, 1) # Transpose
-
-        out=out_reshaped_graph.permute(0, 2, 1)
-
+        out = out.permute(0, 2, 1) # Transpose
         out = self.pool(out)
         out.squeeze_(2)
 
@@ -278,7 +253,7 @@ def train(model, optimizer, loader, batch_size):
         pos = data.pos        # (num_points * 3)   
         normals = data.normal # (num_points * 3)
 
-        batch=data.batch
+        batches=data.batch
 
         nr_points=int(pos.shape[0]/batch_size)
         
@@ -287,25 +262,15 @@ def train(model, optimizer, loader, batch_size):
         
         
         x = torch.cat([pos, normals], dim=1)   # (num_points * 6)
-        x = x.unsqueeze(0)    # (1 * num_points * 6)     the first dimension may be used for batching?
-        
-        x=torch.reshape(x, (batch_size, nr_points,6))
+        #x = x.unsqueeze(0)    # (1 * num_points * 6)     the first dimension may be used for batching?
+        #x=torch.reshape(x, (batch_size, nr_points,6))
 
         x = x.type(torch.float32)  # other types of data may be unstable
 
-        y = data.y              # (1)
-        y = y.type(torch.long)  # required by the loss function
+      
 
-        x = x.to(device)      # to CUDA if available
-        y = y.to(device)
-
-        batch=batch.to(device)
-        
-
-        logits,regularizers = model(x,batch,batch_size,nr_points)  # Forward pass.
-        
-
-        loss = loss_criterion(logits, y)  # Loss computation.
+        logits = model(x)  # Forward pass.
+        loss = loss_criterion(logits, data.y)  # Loss computation.
         loss.backward()  # Backward pass.
         optimizer.step()  # Update model parameters.
         total_loss += loss.item() * data.num_graphs
