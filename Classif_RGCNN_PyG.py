@@ -30,7 +30,7 @@ os.mkdir(path)
 # ----------------------------------------------------------------
 # Hyper parameters:
 num_points = 1024    
-batch_size_nr = 2      # not yet used
+batch_size_nr = 1     # not yet used
 num_epochs = 100
 learning_rate = 0.001
 modelnet_num = 40    # 10 or 40
@@ -160,7 +160,7 @@ class RGCNN_model(nn.Module):
 
     def forward(self, x,batch,batch_size,nr_points):
 
-        x2=torch.reshape(x.detach(),(batch_size*nr_points,6))
+        out_reshaped_graph=torch.reshape(x.detach(),(batch_size*nr_points,6))
 
         self.regularizers = []
         # forward pass
@@ -168,7 +168,7 @@ class RGCNN_model(nn.Module):
         edge_index, edge_weight = utils.dense_to_sparse(W)
 
         #out = self.conv1(x, edge_index, edge_weight,batch)
-        out = self.conv1(x2, edge_index, edge_weight,batch)
+        out = self.conv1(out_reshaped_graph, edge_index, edge_weight,batch)
 
 
         out = self.relu(out)
@@ -179,7 +179,7 @@ class RGCNN_model(nn.Module):
         # L = torch_geometric.utils.to_dense_adj(edge_index=L_edge_index, edge_attr=L_edge_weight)
         # self.regularizers.append(torch.linalg.norm(torch.matmul(torch.matmul(torch.Tensor.permute(out.detach(), [0, 2, 1]), L), out.detach())))
 
-        out_reshaped_graph=torch.reshape(out,(batch_size,nr_points,128))
+        out_reshaped_graph=torch.reshape(out.detach(),(batch_size,nr_points,128))
 
         W   = self.get_graph(out_reshaped_graph.detach())
         edge_index, edge_weight = utils.dense_to_sparse(W)
@@ -261,8 +261,10 @@ test_loader = DataLoader(dataset_test, batch_size=batch_size_nr)
 
 
 
+
+
 model = RGCNN_model(num_points, F, K, M, dropout=1)
-#model = model.to(device)
+model = model.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 loss_criterion = torch.nn.CrossEntropyLoss()
 
@@ -275,8 +277,8 @@ def train(model, optimizer, loader, batch_size):
     for data in loader:
         optimizer.zero_grad()  # Clear gradients.
 
-        pos = data.pos        # (num_points * 3)   
-        normals = data.normal # (num_points * 3)
+        pos = data.pos.cuda()        # (num_points * 3)   
+        normals = data.normal.cuda() # (num_points * 3)
 
         batch=data.batch
 
