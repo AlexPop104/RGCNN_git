@@ -28,7 +28,7 @@ os.mkdir(path)
 # ----------------------------------------------------------------
 # Hyper parameters:
 num_points = 512
-batch_size_nr = 1     # not yet used
+batch_size_nr = 1    # not yet used
 num_epochs = 100
 learning_rate = 0.001
 modelnet_num = 10    # 10 or 40
@@ -157,78 +157,72 @@ class RGCNN_model(nn.Module):
         ###################################################################
 
 
-    def forward(self, x,batch, batch_size, nr_points):
+    def forward(self, x, batch, batch_size, nr_points):
 
-        out_reshaped_graph=torch.reshape(x.detach(),(batch_size*nr_points,6))
-
-        self.regularizers = []
-        # forward pass
-        W   = self.get_graph(x.detach())  # we don't want to compute gradients when building the graph
-        edge_index, edge_weight = utils.dense_to_sparse(W)
+        with torch.no_grad():
+            out_reshaped_graph=torch.reshape(x,(batch_size * nr_points, 6))
+            self.regularizers = []
+            W   = self.get_graph(x)  # we don't want to compute gradients when building the graph
+            edge_index, edge_weight = utils.dense_to_sparse(W)
 
         #out = self.conv1(x, edge_index, edge_weight,batch)
         out = self.conv1(out_reshaped_graph, edge_index, edge_weight,batch)
-
-
         out = self.relu(out)
         
-        
-        edge_index, edge_weight = utils.remove_self_loops(edge_index.detach(), edge_weight.detach())
-        L_edge_index, L_edge_weight = torch_geometric.utils.get_laplacian(edge_index.detach(), edge_weight.detach(), normalization="sym")
-        L = torch_geometric.utils.to_dense_adj(edge_index=L_edge_index, edge_attr=L_edge_weight)     
+        with torch.no_grad():
+            edge_index, edge_weight = utils.remove_self_loops(edge_index, edge_weight)
+            L_edge_index, L_edge_weight = torch_geometric.utils.get_laplacian(edge_index, edge_weight, normalization="sym")
+            L = torch_geometric.utils.to_dense_adj(edge_index = L_edge_index, edge_attr = L_edge_weight)     
 
-        out=out.unsqueeze(0)
-
-        self.regularizers.append(torch.linalg.norm(torch.matmul(torch.matmul(torch.Tensor.permute(out.detach(), [0, 2, 1]), L), out.detach())))
-
-        out=out.squeeze(0)
-
-        out_reshaped_graph=torch.reshape(out.detach(),(batch_size ,nr_points, 128))
-
-        
-        W   = self.get_graph(out_reshaped_graph.detach())
-        edge_index, edge_weight = utils.dense_to_sparse(W)
+            out=out.unsqueeze(0)
+            self.regularizers.append(torch.linalg.norm(torch.matmul(torch.matmul(torch.Tensor.permute(out, [0, 2, 1]), L), out)))
+            out=out.squeeze(0)
+            out_reshaped_graph=torch.reshape(out, (batch_size, nr_points, 128))
+            W   = self.get_graph(out_reshaped_graph)
+            edge_index, edge_weight = utils.dense_to_sparse(W)
 
         #out = self.conv2(out, edge_index, edge_weight)
 
         out = self.conv2(out, edge_index, edge_weight,batch)
         out = self.relu(out)
 
-        edge_index, edge_weight = utils.remove_self_loops(edge_index.detach(), edge_weight.detach())
-        L_edge_index, L_edge_weight = torch_geometric.utils.get_laplacian(edge_index.detach(), edge_weight.detach(), normalization="sym")
-        L = torch_geometric.utils.to_dense_adj(edge_index=L_edge_index, edge_attr=L_edge_weight)
+        with torch.no_grad():
+            edge_index, edge_weight = utils.remove_self_loops(edge_index, edge_weight)
+            L_edge_index, L_edge_weight = torch_geometric.utils.get_laplacian(edge_index, edge_weight, normalization="sym")
+            L = torch_geometric.utils.to_dense_adj(edge_index=L_edge_index, edge_attr=L_edge_weight)
 
-        out = out.unsqueeze(0)
+            out = out.unsqueeze(0)
 
-        self.regularizers.append(torch.linalg.norm(torch.matmul(torch.matmul(torch.Tensor.permute(out.detach(), [0, 2, 1]), L), out.detach())))
+            self.regularizers.append(torch.linalg.norm(torch.matmul(torch.matmul(torch.Tensor.permute(out, [0, 2, 1]), L), out)))
 
-        out = out.squeeze(0)
+            out = out.squeeze(0)
 
-        out_reshaped_graph=torch.reshape(out.detach(),(batch_size,nr_points,512))
+            out_reshaped_graph=torch.reshape(out,(batch_size,nr_points, 512))
 
-        W   = self.get_graph(out_reshaped_graph.detach())
-        edge_index, edge_weight = utils.dense_to_sparse(W)
+            W   = self.get_graph(out_reshaped_graph)
+            edge_index, edge_weight = utils.dense_to_sparse(W)
 
-        #out = self.conv3(out, edge_index, edge_weight)
-        
+            #out = self.conv3(out, edge_index, edge_weight)
+            
         out = self.conv3(out, edge_index, edge_weight,batch)
         out = self.relu(out)
 
-        edge_index, edge_weight = utils.remove_self_loops(edge_index, edge_weight)
-        L_edge_index, L_edge_weight = torch_geometric.utils.get_laplacian(edge_index.detach(), edge_weight.detach(), normalization="sym")
-        L = torch_geometric.utils.to_dense_adj(edge_index=L_edge_index, edge_attr=L_edge_weight)
+        with torch.no_grad():
+            edge_index, edge_weight = utils.remove_self_loops(edge_index, edge_weight)
+            L_edge_index, L_edge_weight = torch_geometric.utils.get_laplacian(edge_index, edge_weight, normalization="sym")
+            L = torch_geometric.utils.to_dense_adj(edge_index=L_edge_index, edge_attr=L_edge_weight)
 
-        out=out.unsqueeze(0)
+            out=out.unsqueeze(0)
 
-        self.regularizers.append(torch.linalg.norm(torch.matmul(torch.matmul(torch.Tensor.permute(out.detach(), [0, 2, 1]), L), out.detach())))
+            self.regularizers.append(torch.linalg.norm(torch.matmul(torch.matmul(torch.Tensor.permute(out, [0, 2, 1]), L), out)))
 
-        out=out.squeeze(0)
+            out=out.squeeze(0)
 
-        out_reshaped_graph=torch.reshape(out.detach(),(batch_size,nr_points,1024))
+            out_reshaped_graph=torch.reshape(out,(batch_size,nr_points, 1024))
 
-        #out = out.permute(0, 2, 1) # Transpose
+            #out = out.permute(0, 2, 1) # Transpose
 
-        out=out_reshaped_graph.permute(0, 2, 1)
+            out=out_reshaped_graph.permute(0, 2, 1)
 
         out = self.pool(out)
         out.squeeze_(2)
@@ -236,18 +230,23 @@ class RGCNN_model(nn.Module):
         out = self.fc1(out)
         out = self.relu(out)
         out = self.dropout(out)
-        for param in self.fc1.parameters():
-            self.regularizers.append(torch.linalg.norm(param))
 
         out = self.fc2(out)
         out = self.relu(out)
         out = self.dropout(out)
-        for param in self.fc1.parameters():
-            self.regularizers.append(torch.linalg.norm(param))
+
         out = self.fc3(out)
+        
+        '''
         for param in self.fc1.parameters():
             self.regularizers.append(torch.linalg.norm(param))
         
+        for param in self.fc2.parameters():
+            self.regularizers.append(torch.linalg.norm(param))
+
+        for param in self.fc3.parameters():
+            self.regularizers.append(torch.linalg.norm(param))
+        '''
 
         return out, self.regularizers
 
