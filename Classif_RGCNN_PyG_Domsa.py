@@ -28,7 +28,7 @@ os.mkdir(path)
 # ----------------------------------------------------------------
 # Hyper parameters:
 num_points = 512
-batch_size_nr = 1     # not yet used
+batch_size_nr = 8     # not yet used
 num_epochs = 100
 learning_rate = 0.001
 modelnet_num = 10    # 10 or 40
