@@ -15,6 +15,8 @@ import torch.nn as nn
 import torch_geometric.utils as utils
 import torch_geometric.nn.conv as conv
 
+import time
+
 import os
 from datetime import datetime
 now = datetime.now()
@@ -33,7 +35,7 @@ num_points = 1024
 batch_size_nr = 1     # not yet used
 num_epochs = 100
 learning_rate = 0.001
-modelnet_num = 40    # 10 or 40
+modelnet_num = 10    # 10 or 40
 
 F = [128, 512, 1024]  # Outputs size of convolutional filter.
 K = [6, 5, 3]         # Polynomial orders.
@@ -160,6 +162,8 @@ class RGCNN_model(nn.Module):
 
     def forward(self, x,batch,batch_size,nr_points):
 
+        torch.cuda.empty_cache()
+
         out_reshaped_graph=torch.reshape(x.detach(),(batch_size*nr_points,6))
 
         self.regularizers = []
@@ -174,15 +178,15 @@ class RGCNN_model(nn.Module):
         out = self.relu(out)
         
         
-        # edge_index, edge_weight = utils.remove_self_loops(edge_index, edge_weight)
-        # L_edge_index, L_edge_weight = torch_geometric.utils.get_laplacian(edge_index.detach(), edge_weight.detach(), normalization="sym")
-        # L = torch_geometric.utils.to_dense_adj(edge_index=L_edge_index, edge_attr=L_edge_weight)
+        edge_index, edge_weight = utils.remove_self_loops(edge_index, edge_weight)
+        L_edge_index, L_edge_weight = torch_geometric.utils.get_laplacian(edge_index.detach(), edge_weight.detach(), normalization="sym")
+        L = torch_geometric.utils.to_dense_adj(edge_index=L_edge_index, edge_attr=L_edge_weight)
 
        
 
         out=out.unsqueeze(0)
 
-        #self.regularizers.append(torch.linalg.norm(torch.matmul(torch.matmul(torch.Tensor.permute(out.detach(), [0, 2, 1]), L), out.detach())))
+        self.regularizers.append(torch.linalg.norm(torch.matmul(torch.matmul(torch.Tensor.permute(out.detach(), [0, 2, 1]), L), out.detach())))
 
         out=out.squeeze(0)
 
@@ -197,13 +201,13 @@ class RGCNN_model(nn.Module):
         out = self.conv2(out, edge_index, edge_weight,batch)
         out = self.relu(out)
 
-        # edge_index, edge_weight = utils.remove_self_loops(edge_index, edge_weight)
-        # L_edge_index, L_edge_weight = torch_geometric.utils.get_laplacian(edge_index.detach(), edge_weight.detach(), normalization="sym")
-        # L = torch_geometric.utils.to_dense_adj(edge_index=L_edge_index, edge_attr=L_edge_weight)
+        edge_index, edge_weight = utils.remove_self_loops(edge_index, edge_weight)
+        L_edge_index, L_edge_weight = torch_geometric.utils.get_laplacian(edge_index.detach(), edge_weight.detach(), normalization="sym")
+        L = torch_geometric.utils.to_dense_adj(edge_index=L_edge_index, edge_attr=L_edge_weight)
 
         out=out.unsqueeze(0)
 
-        #self.regularizers.append(torch.linalg.norm(torch.matmul(torch.matmul(torch.Tensor.permute(out.detach(), [0, 2, 1]), L), out.detach())))
+        self.regularizers.append(torch.linalg.norm(torch.matmul(torch.matmul(torch.Tensor.permute(out.detach(), [0, 2, 1]), L), out.detach())))
 
         out=out.squeeze(0)
 
@@ -218,13 +222,13 @@ class RGCNN_model(nn.Module):
         out = self.conv3(out, edge_index, edge_weight,batch)
         out = self.relu(out)
 
-        # edge_index, edge_weight = utils.remove_self_loops(edge_index, edge_weight)
-        # L_edge_index, L_edge_weight = torch_geometric.utils.get_laplacian(edge_index.detach(), edge_weight.detach(), normalization="sym")
-        # L = torch_geometric.utils.to_dense_adj(edge_index=L_edge_index, edge_attr=L_edge_weight)
+        edge_index, edge_weight = utils.remove_self_loops(edge_index, edge_weight)
+        L_edge_index, L_edge_weight = torch_geometric.utils.get_laplacian(edge_index.detach(), edge_weight.detach(), normalization="sym")
+        L = torch_geometric.utils.to_dense_adj(edge_index=L_edge_index, edge_attr=L_edge_weight)
 
         out=out.unsqueeze(0)
 
-        #self.regularizers.append(torch.linalg.norm(torch.matmul(torch.matmul(torch.Tensor.permute(out.detach(), [0, 2, 1]), L), out.detach())))
+        self.regularizers.append(torch.linalg.norm(torch.matmul(torch.matmul(torch.Tensor.permute(out.detach(), [0, 2, 1]), L), out.detach())))
 
         out=out.squeeze(0)
 
@@ -288,17 +292,74 @@ loss = torch.nn.CrossEntropyLoss()
 
 
 
-def train(model, optimizer, loader, batch_size):
-    model.train()
-    
+# def train(model, optimizer, loader, batch_size):
+#     i=0
+#     total_loss = 0
+#     for data in loader:
+
+#         torch.cuda.empty_cache()
+        
+#         if(i%100==0):
+#             print(i)
+#         i=i+1
+#         optimizer.zero_grad()  # Clear gradients.
+
+#         pos = data.pos.cuda()        # (num_points * 3)   
+#         normals = data.normal.cuda() # (num_points * 3)
+
+#         batch=data.batch
+
+#         iteration_batch_size=int(pos.shape[0]/1024)
+
+#         nr_points=int(pos.shape[0]/iteration_batch_size)
+
+#         #################
+#         #Taking the batch size and using that
+        
+#         x = torch.cat([pos, normals], dim=1)   # (num_points * 6)
+#         x = x.unsqueeze(0)    # (1 * num_points * 6)     the first dimension may be used for batching?
+        
+#         x=torch.reshape(x, (iteration_batch_size, nr_points,6))
+
+#         x = x.type(torch.float32)  # other types of data may be unstable
+
+#         y = data.y              # (1)
+#         y = y.type(torch.long)  # required by the loss function
+
+#         x = x.to(device)      # to CUDA if available
+#         y = y.to(device)
+
+#         batch=batch.to(device)
+        
+
+#         logits,regularizers = model(x,batch,iteration_batch_size,nr_points)  # Forward pass.
+        
+
+#         l = loss(logits, y)  # Loss computation.
+
+#         #l=get_loss(logits, y, regularization=1e-9, regularizers=regularizers) 
+#         l.backward()  # Backward pass.
+#         optimizer.step()  # Update model parameters.
+#         total_loss += l.item() * data.num_graphs
+
+#     return total_loss / len(train_loader.dataset)
+
+
+# model.train()
+# for epoch in range(1, 100):
+#     loss = train(model, optimizer, train_loader,batch_size_nr)
+#     print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}')
+
+
+model.train()
+for epoch in range(1, 51):
     i=0
     total_loss = 0
-    for data in loader:
 
-
-        
-        print(i)
-        i=i+1
+    now_time = time.time()
+    for data in train_loader:
+        i= i + 1
+        # print(i)
         optimizer.zero_grad()  # Clear gradients.
 
         pos = data.pos.cuda()        # (num_points * 3)   
@@ -306,16 +367,17 @@ def train(model, optimizer, loader, batch_size):
 
         batch=data.batch
 
-        nr_points=int(pos.shape[0]/batch_size)
-        
-        
+        iteration_batch_size=int(pos.shape[0]/1024)
 
+        nr_points=int(pos.shape[0]/iteration_batch_size)
+
+        #nr_points=int(pos.shape[0]/batch_size_nr)
         
         
         x = torch.cat([pos, normals], dim=1)   # (num_points * 6)
         x = x.unsqueeze(0)    # (1 * num_points * 6)     the first dimension may be used for batching?
         
-        x=torch.reshape(x, (batch_size, nr_points,6))
+        x=torch.reshape(x, (iteration_batch_size, nr_points,6))
 
         x = x.type(torch.float32)  # other types of data may be unstable
 
@@ -328,24 +390,20 @@ def train(model, optimizer, loader, batch_size):
         batch=batch.to(device)
         
 
-        logits,regularizers = model(x,batch,batch_size,nr_points)  # Forward pass.
+        logits,regularizers = model(x,batch, iteration_batch_size, nr_points)  # Forward pass.
         
 
-        l = loss(logits, y)  # Loss computation.
+        #loss = loss_criterion(logits, y)  # Loss computation.
 
-        #l=get_loss(logits, y, regularization=1e-9, regularizers=regularizers) 
+        l=get_loss(logits, y, regularization=1e-9, regularizers=regularizers) 
         l.backward()  # Backward pass.
         optimizer.step()  # Update model parameters.
         total_loss += l.item() * data.num_graphs
-
-    return total_loss / len(train_loader.dataset)
-
-
-for epoch in range(1, 100):
-    loss = train(model, optimizer, train_loader,batch_size_nr)
-    print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}')
-
-
+        if (i % 100) == 0:
+            print(f"Iter: {i} - Loss: {total_loss/i} ")
+    epoch_loss = total_loss / i
+    
+    print(f"--- Epoch: {epoch} --- Loss: {epoch_loss}  --- Time: {time.time() - now_time}")
 
 ##########################################################
 

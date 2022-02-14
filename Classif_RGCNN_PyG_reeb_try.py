@@ -331,7 +331,7 @@ class GetReebGraph(nn.Module):
         reeb_sim_margin=20
         pointNumber=200
 
-        point_cloud2=point_cloud[0,:,:].detach().cpu().numpy()
+        point_cloud2=point_cloud[0,:,0:3].detach().cpu().numpy()
 
 
         vertices,laplacian, sccs,edges =self.extract_reeb_graph(point_cloud2, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
@@ -473,6 +473,17 @@ class RGCNN_model(nn.Module):
         out=out.squeeze(0)
 
         out_reshaped_graph=torch.reshape(out.detach(),(batch_size,nr_points,128))
+
+
+
+        ##################################################################
+        #Reeb graph guided convolution
+
+        a=torch.empty((1,128), dtype=torch.int32, device = 'cuda')
+
+
+
+        ###########3
 
         
         W   = self.get_graph(out_reshaped_graph.detach())
@@ -619,6 +630,8 @@ def train(model, optimizer, loader, batch_size):
         l.backward()  # Backward pass.
         optimizer.step()  # Update model parameters.
         total_loss += l.item() * data.num_graphs
+
+        
 
     return total_loss / len(train_loader.dataset)
 
