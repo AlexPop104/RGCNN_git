@@ -1,4 +1,3 @@
-from Reeb_graph.Reeb_RGCNN import extract_reeb_graph
 import torch
 import torch_geometric
 from torch_geometric.datasets import ModelNet
@@ -89,9 +88,9 @@ class GetReebGraph(nn.Module):
         Creates the weighted adjacency matrix 'W'
         Taked directly from RGCNN
         """
-        super(GetGraph, self).__init__()
+        super(GetReebGraph, self).__init__()
 
-    def filter_out(vertices, edges, sccs):
+    def filter_out(self,vertices, edges, sccs):
         dist = np.zeros([vertices.shape[0], vertices.shape[0]])
         for e in edges:
             dist[e[0]][e[1]] = dist[e[1]][e[0]] = np.linalg.norm(vertices[e[0]] - vertices[e[1]])
@@ -105,17 +104,17 @@ class GetReebGraph(nn.Module):
         return np.delete(vertices, idx2remove, 0), edges, sccs
 
 
-    def similarity(scc1, scc2, SIM_MARGIN):
+    def similarity(self,scc1, scc2, SIM_MARGIN):
         dist = distance_matrix(scc1, scc2)
         return (np.sum(np.max(np.min(dist, 0) - SIM_MARGIN, 0)) + np.sum(np.max(np.min(dist, 1) - SIM_MARGIN, 0))) / (scc1.shape[0] + scc2.shape[1])
 
 
-    def adjacency_reeb(vertices, edges, sccs, point_cloud, SIM_MARGIN):
+    def adjacency_reeb(self,vertices, edges, sccs, point_cloud, SIM_MARGIN):
         dist1 = np.zeros([vertices.shape[0], vertices.shape[0]])
         dist2 = np.zeros_like(dist1)
         for e in edges:
             dist1[e[0]][e[1]] = dist1[e[1]][e[0]] = np.linalg.norm(vertices[e[0]] - vertices[e[1]])
-            dist2[e[0]][e[1]] = dist2[e[1]][e[0]] = similarity(point_cloud[sccs[e[0]]], point_cloud[sccs[e[1]]], SIM_MARGIN)
+            dist2[e[0]][e[1]] = dist2[e[1]][e[0]] = self.similarity(point_cloud[sccs[e[0]]], point_cloud[sccs[e[1]]], SIM_MARGIN)
 
         with np.errstate(divide='ignore', invalid='ignore'):
             sigma1 = np.sum(dist1, axis=1, keepdims=True) / (np.count_nonzero(dist1, axis=1)[:, None])
@@ -144,7 +143,7 @@ class GetReebGraph(nn.Module):
         return vertices, edges, dist, sccs
 
 
-    def normalize_reeb(vertices, edges, sccs, point_cloud, NODES_NUM):
+    def normalize_reeb(self,vertices, edges, sccs, point_cloud, NODES_NUM):
         if vertices.shape[0] == NODES_NUM:
             return vertices, edges, sccs
         elif vertices.shape[0] > NODES_NUM:  # merge nodes
@@ -195,7 +194,7 @@ class GetReebGraph(nn.Module):
         return vertices, edges, sccs
         
 
-    def expand(x, k, visited, nbrs, valid_idxs, scc, tau, knn, cnt=0):
+    def expand(self,x, k, visited, nbrs, valid_idxs, scc, tau, knn, cnt=0):
         if visited[k]:
             return
 
@@ -216,7 +215,9 @@ class GetReebGraph(nn.Module):
 
 
 
-    def extract_reeb_graph(point_cloud, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber):  
+    def extract_reeb_graph(self,point_cloud, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber):  
+
+        
 
         nbrs = NearestNeighbors(n_neighbors=knn + 1, algorithm='kd_tree').fit(point_cloud)
         distances, indices = nbrs.kneighbors(point_cloud)
@@ -297,16 +298,16 @@ class GetReebGraph(nn.Module):
             sccs = [sccs[0][:len(sccs[0]) // 2], sccs[0][len(sccs[0]) // 2:]]
             vertices = np.stack([np.mean(point_cloud[sccs[0]], 0), np.mean(point_cloud[sccs[1]], 0)])
             edges.append([0, 1])
-        vertices, edges, sccs = filter_out(np.asarray(vertices), edges, sccs)
-        vertices, edges, sccs = normalize_reeb(np.asarray(vertices), edges, sccs, point_cloud, reeb_nodes_num)
-        vertices, edges, laplacian, sccs = adjacency_reeb(vertices, edges, sccs, point_cloud, reeb_sim_margin)
+        vertices, edges, sccs = self.filter_out(np.asarray(vertices), edges, sccs)
+        vertices, edges, sccs = self.normalize_reeb(np.asarray(vertices), edges, sccs, point_cloud, reeb_nodes_num)
+        vertices, edges, laplacian, sccs = self.adjacency_reeb(vertices, edges, sccs, point_cloud, reeb_sim_margin)
         # laplacian = np.delete(laplacian, idx2remove, 0)
         # laplacian = np.delete(laplacian, idx2remove, 1)
         # sccs = np.delete(sccs, idx2remove, 0)
         while vertices.shape[0] != reeb_nodes_num:
             # print(vertices.shape[0])
-            vertices, edges, sccs = normalize_reeb(np.asarray(vertices), edges, sccs, point_cloud, reeb_nodes_num)
-            vertices, edges, laplacian, sccs = adjacency_reeb(vertices, edges, sccs, point_cloud, reeb_sim_margin)
+            vertices, edges, sccs = self.normalize_reeb(np.asarray(vertices), edges, sccs, point_cloud, reeb_nodes_num)
+            vertices, edges, laplacian, sccs = self.adjacency_reeb(vertices, edges, sccs, point_cloud, reeb_sim_margin)
             # laplacian = np.delete(laplacian, idx2remove, 0)
             # laplacian = np.delete(laplacian, idx2remove, 1)
             # sccs = np.delete(sccs, idx2remove, 0)
@@ -318,7 +319,7 @@ class GetReebGraph(nn.Module):
         # assert np.all(np.isfinite(laplacian)) and np.all(np.isfinite(sccs))
         # print(vertices.shape, laplacian.shape)
         print(np.shape(vertices))
-        return vertices, laplacian, list(sccs), 
+        return vertices, laplacian, list(sccs), edges
         #return vertices, list(sccs), edges
 
     def forward(self, point_cloud):
@@ -330,10 +331,18 @@ class GetReebGraph(nn.Module):
         reeb_sim_margin=20
         pointNumber=200
 
+        point_cloud2=point_cloud[0,:,:].detach().cpu().numpy()
 
-        vertices,laplacian, sccs =extract_reeb_graph(point_cloud, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
 
+        vertices,laplacian, sccs,edges =self.extract_reeb_graph(point_cloud2, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
 
+        fig = matplotlib.pyplot.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.set_axis_off()
+        for e in edges:
+            ax.plot([vertices[e[0]][0], vertices[e[1]][0]], [vertices[e[0]][1], vertices[e[1]][1]], [vertices[e[0]][2], vertices[e[1]][2]], color='b')
+        ax.scatter(point_cloud2[:, 0], point_cloud2[:, 1], point_cloud2[:, 2], s=1, color='r')
+        matplotlib.pyplot.show()
 
       
         return vertices,laplacian,sccs
@@ -438,6 +447,9 @@ class RGCNN_model(nn.Module):
 
         self.regularizers = []
         # forward pass
+
+        vertices,laplacian,sccs=self.get_reeb_graph(x.detach())
+
         W   = self.get_graph(x.detach())  # we don't want to compute gradients when building the graph
         edge_index, edge_weight = utils.dense_to_sparse(W)
 
