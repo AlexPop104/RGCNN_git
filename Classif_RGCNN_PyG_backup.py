@@ -17,6 +17,7 @@ import torch_geometric.nn.conv as conv
 
 import os
 from datetime import datetime
+
 now = datetime.now()
 directory = now.strftime("%d_%m_%y_%H:%M:%S")
 parent_directory = "/home/alex/Alex_pyt_geom/Models"
@@ -30,7 +31,7 @@ os.mkdir(path)
 # ----------------------------------------------------------------
 # Hyper parameters:
 num_points = 1024    
-batch_size_nr = 2      # not yet used
+batch_size_nr = 1      # not yet used
 num_epochs = 100
 learning_rate = 0.001
 modelnet_num = 40    # 10 or 40
@@ -236,51 +237,13 @@ test_loader = DataLoader(dataset_test, batch_size=batch_size_nr)
 
 
 
-model = RGCNN_model(num_points, F, K, M, dropout=1)
-#model = model.to(device)
+model = RGCNN_model(num_points, F, K, M, dropout=0)
+model = model.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 loss_criterion = torch.nn.CrossEntropyLoss()
 
 
 
-def train(model, optimizer, loader, batch_size):
-    model.train()
-    
-    total_loss = 0
-    for data in loader:
-        optimizer.zero_grad()  # Clear gradients.
-
-        pos = data.pos        # (num_points * 3)   
-        normals = data.normal # (num_points * 3)
-
-        batches=data.batch
-
-        nr_points=int(pos.shape[0]/batch_size)
-        
-        
-
-        
-        
-        x = torch.cat([pos, normals], dim=1)   # (num_points * 6)
-        #x = x.unsqueeze(0)    # (1 * num_points * 6)     the first dimension may be used for batching?
-        #x=torch.reshape(x, (batch_size, nr_points,6))
-
-        x = x.type(torch.float32)  # other types of data may be unstable
-
-      
-
-        logits = model(x)  # Forward pass.
-        loss = loss_criterion(logits, data.y)  # Loss computation.
-        loss.backward()  # Backward pass.
-        optimizer.step()  # Update model parameters.
-        total_loss += loss.item() * data.num_graphs
-
-    return total_loss / len(train_loader.dataset)
-
-
-for epoch in range(1, 51):
-    loss = train(model, optimizer, train_loader,batch_size_nr)
-    print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}')
 
 
 
@@ -289,82 +252,65 @@ for epoch in range(1, 51):
 #Previous iteration, working without batch data
 
 
-# correct_percentage_list = []
-# loss = torch.nn.CrossEntropyLoss()
-# model.train()
-# for epoch in range(num_epochs):
+correct_percentage_list = []
+loss = torch.nn.CrossEntropyLoss()
+model.train()
+for epoch in range(num_epochs):
+    total_loss = 0
+    correct = 0
 
-#     correct = 0
-#     for i, data in enumerate(dataset_train):
-#         # make sure the gradients are empty
-#         optimizer.zero_grad()
-        
-#         # Data preparation 
-#         pos = data.pos        # (num_points * 3)   
-#         normals = data.normal # (num_points * 3)
-#         x = torch.cat([pos, normals], dim=1)   # (num_points * 6)
-#         x = x.unsqueeze(0)    # (1 * num_points * 6)     the first dimension may be used for batching?
-#         x = x.type(torch.float32)  # other types of data may be unstable
+    t=0
 
-#         y = data.y              # (1)
-#         y = y.type(torch.long)  # required by the loss function
+    for i, data in enumerate(dataset_train):
+        # make sure the gradients are empty
+        optimizer.zero_grad()
+
+        t=t+1
         
-#         x = x.to(device)      # to CUDA if available
-#         y = y.to(device)
+        # Data preparation 
+        pos = data.pos        # (num_points * 3)   
+        normals = data.normal # (num_points * 3)
+        x = torch.cat([pos, normals], dim=1)   # (num_points * 6)
+        x = x.unsqueeze(0)    # (1 * num_points * 6)     the first dimension may be used for batching?
+        x = x.type(torch.float32)  # other types of data may be unstable
+
+        y = data.y              # (1)
+        y = y.type(torch.long)  # required by the loss function
+        
+        x = x.to(device)      # to CUDA if available
+        y = y.to(device)
      
-#         # Forward pass
-#         y_pred, regularizers = model(x)     # (1 * 40)
+        # Forward pass
+        y_pred, regularizers = model(x)     # (1 * 40)
         
-#         class_pred = torch.argmax(y_pred.squeeze(0))  # (1)  
-#         correct += int((class_pred == y).sum())       # to compute the accuracy for each epoch
+        class_pred = torch.argmax(y_pred.squeeze(0))  # (1)  
+        correct += int((class_pred == y).sum())       # to compute the accuracy for each epoch
         
 
-#         # loss and backward
-#         ###################################################################################
-#         #                           CrossEntropyLoss
-#         # This WORKS but I am testing the other way...
-#         l = loss(y_pred, y)   # one value
-#         # l.backward()          # update gradients
-#         ###################################################################################
+        # loss and backward
+        ###################################################################################
        
-#         #l = get_loss(y_pred, y, regularization=1e-9, regularizers=regularizers)
-#         l.backward()
+        l = loss(y_pred, y)   # one value
+        l.backward()          # update gradients
+       
+        #l = get_loss(y_pred, y, regularization=1e-9, regularizers=regularizers)
+        #l.backward()
 
-#         # optimisation
-#         optimizer.step()
+        # optimisation
+        optimizer.step()
+
+        total_loss += l.item() 
         
+        ##################################################
             
-#         if i%100==0:
-#             print(f"Epoch: {epoch}, Sample: {i}, Loss:{l} - Predicted class vs Real Cass: {class_pred} <-> {y.item()}")
-#             # print(torch.sum(torch.as_tensor(regularizers)))
-#         if epoch%5==0:
-#             torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
-#     print(f"~~~~~~~~~ CORRECT: {correct / len(dataset_train)} ~~~~~~~~~~~")
-#     correct_percentage_list.append(correct / len(dataset_train))
-# print(correct_percentage_list)
+        if i%100==0:
+            print(f"Epoch: {epoch}, Sample: {i}, Loss:{l} - Predicted class vs Real Cass: {class_pred} <-> {y.item()}")
+            
+            print(f"Iter: {i} - Loss: {total_loss/t} ")
+            # print(torch.sum(torch.as_tensor(regularizers)))
+        if epoch%5==0:
+            torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+    print(f"~~~~~~~~~ CORRECT: {correct / len(dataset_train)} ~~~~~~~~~~~")
+    correct_percentage_list.append(correct / len(dataset_train))
+print(correct_percentage_list)
 
-# torch.save(model.state_dict(), "/home/alex/Alex_pyt_geom/Models/final_model.pt")
-
-# with torch.no_grad():
-#     model.eval()
-#     correct = 0
-#     for data in dataset_test:
-#         pos = data.pos        # (num_points * 3)   
-#         normals = data.normal # (num_points * 3)
-#         x = torch.cat([pos, normals], dim=1)   # (num_points * 6)
-#         x = x.unsqueeze(0)    # (1 * num_points * 6)     the first dimension may be used for batching?
-#         x = x.type(torch.float32)  # other types of data may be unstable
-
-#         y = data.y              # (1)
-#         y = y.type(torch.long)  # required by the loss function
-        
-#         x = x.to(device)      # to CUDA if available
-#         y = y.to(device)
-     
-#         # Forward pass
-#         y_pred, _ = model(x)     # (1 * 40)
-
-#         class_pred = torch.argmax(y_pred)
-#         correct += int((class_pred == y).sum())
-
-#     print(f"Correct percentage : {correct / len(dataset_test)}")
