@@ -28,7 +28,7 @@ os.mkdir(path)
 # ----------------------------------------------------------------
 # Hyper parameters:
 num_points = 512
-batch_size_nr = 1    # not yet used
+batch_size_nr = 2   # not yet used
 num_epochs = 100
 learning_rate = 0.001
 modelnet_num = 10    # 10 or 40
@@ -44,9 +44,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 print(device)
 
-
 ####################################################################################
-
 
 transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
@@ -65,7 +63,7 @@ print(f"Test dataset shape:  {dataset_test}")
 
 print(dataset_train[0])
 
-######################################################3
+#################################################################################
 
 class GetGraph(nn.Module):
     def __init__(self):
@@ -73,6 +71,7 @@ class GetGraph(nn.Module):
         Creates the weighted adjacency matrix 'W'
         Taked directly from RGCNN
         """
+
         super(GetGraph, self).__init__()
 
     def forward(self, point_cloud):
@@ -129,6 +128,7 @@ class RGCNN_model(nn.Module):
         
         Currently the dimensions are 'hardcoded'
         '''
+
         self.F = F
         self.K = K
         self.M = M
@@ -160,13 +160,13 @@ class RGCNN_model(nn.Module):
     def forward(self, x, batch, batch_size, nr_points):
 
         with torch.no_grad():
-            out_reshaped_graph=torch.reshape(x,(batch_size * nr_points, 6))
+            out_reshaped_graph = torch.reshape(x, (batch_size * nr_points, 6))
             self.regularizers = []
             W   = self.get_graph(x)  # we don't want to compute gradients when building the graph
             edge_index, edge_weight = utils.dense_to_sparse(W)
 
         #out = self.conv1(x, edge_index, edge_weight,batch)
-        out = self.conv1(out_reshaped_graph, edge_index, edge_weight,batch)
+        out = self.conv1(out_reshaped_graph, edge_index, edge_weight, batch)
         out = self.relu(out)
         
         with torch.no_grad():
@@ -203,8 +203,8 @@ class RGCNN_model(nn.Module):
             edge_index, edge_weight = utils.dense_to_sparse(W)
 
             #out = self.conv3(out, edge_index, edge_weight)
-            
-        out = self.conv3(out, edge_index, edge_weight,batch)
+
+        out = self.conv3(out, edge_index, edge_weight, batch)
         out = self.relu(out)
 
         with torch.no_grad():
@@ -237,6 +237,7 @@ class RGCNN_model(nn.Module):
 
         out = self.fc3(out)
         
+
         '''
         for param in self.fc1.parameters():
             self.regularizers.append(torch.linalg.norm(param))
@@ -251,6 +252,20 @@ class RGCNN_model(nn.Module):
         return out, self.regularizers
 
 
+# Training
+
+# PATH = "/home/alex/Alex_pyt_geom/Models/model"
+
+#model_number = 5                # Change this acording to the model you want to load
+# model.load_state_dict(torch.load(path + '/model' + str(model_number) + '.pt'))
+
+train_loader = DataLoader(dataset_train, batch_size=batch_size_nr, shuffle=True, pin_memory=True)
+test_loader = DataLoader(dataset_test, batch_size=batch_size_nr)
+
+model = RGCNN_model(num_points, F, K, M, dropout=1)
+model = model.to(device)
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+loss = torch.nn.CrossEntropyLoss()
 
 def get_loss(y, labels, regularization, regularizers):
     cross_entropy_loss = loss(y, labels)
@@ -259,31 +274,14 @@ def get_loss(y, labels, regularization, regularizers):
     l = cross_entropy_loss + regularization
     return l
 
-# Training
-
-# PATH = "/home/alex/Alex_pyt_geom/Models/model"
-
-
-
-#model_number = 5                # Change this acording to the model you want to load
-# model.load_state_dict(torch.load(path + '/model' + str(model_number) + '.pt'))
-
-train_loader = DataLoader(dataset_train, batch_size=batch_size_nr, shuffle=True)
-test_loader = DataLoader(dataset_test, batch_size=batch_size_nr)
-
-
-model = RGCNN_model(num_points, F, K, M, dropout=1)
-model = model.to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-loss = torch.nn.CrossEntropyLoss()
-
 import time
+import torch.nn.functional as F
 
 model.train()
 for epoch in range(1, 51):
     i=0
     total_loss = 0
-
+    accuracy = 0
     now_time = time.time()
     for data in train_loader:
         i= i + 1
@@ -296,7 +294,6 @@ for epoch in range(1, 51):
         batch=data.batch
 
         nr_points=int(pos.shape[0]/batch_size_nr)
-        
         
         x = torch.cat([pos, normals], dim=1)   # (num_points * 6)
         x = x.unsqueeze(0)    # (1 * num_points * 6)     the first dimension may be used for batching?
@@ -313,21 +310,29 @@ for epoch in range(1, 51):
 
         batch=batch.to(device)
         
-
-        logits,regularizers = model(x,batch, batch_size_nr, nr_points)  # Forward pass.
+        logits, regularizers = model(x,batch, batch_size_nr, nr_points)  # Forward pass.
         
 
         #loss = loss_criterion(logits, y)  # Loss computation.
 
-        l=get_loss(logits, y, regularization=1e-9, regularizers=regularizers) 
+        l = get_loss(logits, y, regularization=1e-9, regularizers=regularizers) 
+        
         l.backward()  # Backward pass.
+        
         optimizer.step()  # Update model parameters.
+        
         total_loss += l.item() * data.num_graphs
+
+        acc = sum(logits.max(axis=1).indices == y) / logits.shape[0]
+        accuracy += acc
+
         if (i % 100) == 0:
-            print(f"Iter: {i} - Loss: {total_loss/i} ")
+            print(f"Iter: {i} - Loss: {total_loss/i} - Acc - {acc}")
+
     epoch_loss = total_loss / i
     
-    print(f"--- Epoch: {epoch} --- Loss: {epoch_loss}  --- Time: {time.time() - now_time}")
+    print(f"--- Epoch: {epoch} --- Loss: {epoch_loss} --- Time: {time.time() - now_time}")
+    print(f"--- Accuracy: {accuracy/i}")
 
 '''
 def train(model, optimizer, loader, batch_size):
