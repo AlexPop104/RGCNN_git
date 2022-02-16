@@ -10,11 +10,21 @@ from torch_geometric.transforms import Compose
 import numpy as np
 import matplotlib.pyplot as plt
 
+import time
+
+import os
+from datetime import datetime
+now = datetime.now()
+directory = now.strftime("%d_%m_%y_%H:%M:%S")
+parent_directory = "/home/alex/Alex_pyt_geom/Models"
+path = os.path.join(parent_directory, directory)
+os.mkdir(path)
+
 
 num_points = 1024
-batch_size = 64
-modelnet_num = 10
-nr_epochs=40
+batch_size = 16
+modelnet_num = 40
+nr_epochs=100
 
 transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
@@ -109,6 +119,7 @@ criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 def train(model, optimizer, loader):
     model.train()
     total_loss = 0
+    
     for data in loader:
         optimizer.zero_grad()
         x = torch.cat([data.pos, data.normal], dim=1)
@@ -128,6 +139,7 @@ def train(model, optimizer, loader):
 @torch.no_grad()
 def test(model, loader,modelnet_num,num_points):
     confusion_matrix=np.zeros((modelnet_num,modelnet_num))
+    category_counters=np.zeros(modelnet_num)
 
     model.eval()
 
@@ -140,13 +152,17 @@ def test(model, loader,modelnet_num,num_points):
         iteration_batch_size=int(data.pos.shape[0]/num_points)
 
         for j in range(iteration_batch_size):
-            confusion_matrix[data.y[j]][ pred[j]]+=1
+            confusion_matrix[pred[j]][data.y[j]]+=1
+            category_counters[pred[j]]+=1
 
 
 
         total_correct += int((pred == data.y.to(device)).sum())
+
+    for j in range(modelnet_num):
+            confusion_matrix[j,:] =confusion_matrix[j,:]/ category_counters[j]
     
-    confusion_matrix=confusion_matrix/len(loader.dataset)
+    #confusion_matrix=confusion_matrix/len(loader.dataset)
 
     return total_correct / len(loader.dataset) , confusion_matrix
 
@@ -154,37 +170,41 @@ all_losses=np.array([])
 test_accuracy=np.array([])
 confusion_matrix_collection = np.zeros((1,modelnet_num))
 
-for epoch in range(1, nr_epochs):
+for epoch in range(nr_epochs):
     
-
+    train_time_start = time.time()
     loss = train(model, optimizer, dataloader_train)
+    train_time_end=time.time()
+    
     all_losses=np.append(all_losses, loss)
+
+    eval_time_start = time.time()
     test_acc, confusion_matrix = test(model, dataloader_test,modelnet_num,num_points)
+    eval_time_end=time.time()
     test_accuracy=np.append(test_accuracy, test_acc)
     confusion_matrix_collection=np.append(confusion_matrix_collection,confusion_matrix,axis=0)
-    print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
+    print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f} --- Train Time: {train_time_end - train_time_start} --- Eval Time: {eval_time_end - eval_time_start }')
 
-    trace_confusion_matrix = np.trace(confusion_matrix)
-    print(trace_confusion_matrix==test_acc)
+    
 
     if(epoch%5==0):
-        np.save('/home/alex/Alex_documents/RGCNN_git/data/conf_matrix.npy', confusion_matrix_collection)
-        np.save('/home/alex/Alex_documents/RGCNN_git/data/losses.npy', all_losses)
-        np.save('/home/alex/Alex_documents/RGCNN_git/data/test_accuracy.npy', test_accuracy)
+        np.save('/home/alex/Alex_documents/RGCNN_git/data/conf_matrix_2.npy', confusion_matrix_collection)
+        np.save('/home/alex/Alex_documents/RGCNN_git/data/losses_2.npy', all_losses)
+        np.save('/home/alex/Alex_documents/RGCNN_git/data/test_accuracy_2.npy', test_accuracy)
 
         print(confusion_matrix)
 
 
 
-iterations=range(1,nr_epochs)
-np.save('/home/alex/Alex_documents/RGCNN_git/data/losses.npy', all_losses)
-plt.plot(iterations, all_losses, '-b', label='Training loss')
-plt.pyplot.title('Training loss', fontdict=None, loc='center', pad=None, **kwargs)
+
+np.save('/home/alex/Alex_documents/RGCNN_git/data/losses_2.npy', all_losses)
+plt.plot(all_losses, '-b', label='Training loss')
+plt.title('Training loss', fontdict=None, loc='center', pad=None)
 plt.show()
 
-np.save('/home/alex/Alex_documents/RGCNN_git/data/test_accuracy.npy', test_accuracy)
-plt.plot(iterations, test_accuracy, '-r', label='Test accuracy')
-plt.pyplot.title('Test accuracy', fontdict=None, loc='center', pad=None, **kwargs)
+np.save('/home/alex/Alex_documents/RGCNN_git/data/test_accuracy_2.npy', test_accuracy)
+plt.plot(test_accuracy, '-r', label='Test accuracy')
+plt.title('Test accuracy', fontdict=None, loc='center', pad=None)
 plt.show()
 
-print(confusion_matrix_collection[1+(nr_epochs-1)*modelnet_num:1+(nr_epochs-1)*modelnet_num])
+np.save('/home/alex/Alex_documents/RGCNN_git/data/conf_matrix_2.npy', confusion_matrix_collection)
