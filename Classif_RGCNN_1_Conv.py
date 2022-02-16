@@ -12,9 +12,9 @@ import matplotlib.pyplot as plt
 
 
 num_points = 1024
-batch_size = 32
+batch_size = 64
 modelnet_num = 10
-nr_epochs=3
+nr_epochs=40
 
 transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
@@ -106,22 +106,29 @@ device = "cuda"
 model = model.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
-def train(model, optimizer, loader,modelnet_num):
+def train(model, optimizer, loader):
     model.train()
     total_loss = 0
     for data in loader:
         optimizer.zero_grad()
         x = torch.cat([data.pos, data.normal], dim=1)
         logits  = model(x.to(device),  data.batch.to(device))
+
+        pred = logits.argmax(dim=-1)
+
+        
         loss    = criterion(logits, data.y.to(device))
         loss.backward()
         optimizer.step()
         total_loss += loss.item() * data.num_graphs
 
-    return total_loss / len(loader.dataset)
+    
+    return total_loss / len(loader.dataset) 
 
 @torch.no_grad()
-def test(model, loader):
+def test(model, loader,modelnet_num,num_points):
+    confusion_matrix=np.zeros((modelnet_num,modelnet_num))
+
     model.eval()
 
     total_correct = 0
@@ -129,27 +136,55 @@ def test(model, loader):
         x = torch.cat([data.pos, data.normal], dim=1)
         logits = model(x.to(device), data.batch.to(device))
         pred = logits.argmax(dim=-1)
-        total_correct += int((pred == data.y.to(device)).sum())
 
-    return total_correct / len(loader.dataset)
+        iteration_batch_size=int(data.pos.shape[0]/num_points)
+
+        for j in range(iteration_batch_size):
+            confusion_matrix[data.y[j]][ pred[j]]+=1
+
+
+
+        total_correct += int((pred == data.y.to(device)).sum())
+    
+    confusion_matrix=confusion_matrix/len(loader.dataset)
+
+    return total_correct / len(loader.dataset) , confusion_matrix
 
 all_losses=np.array([])
 test_accuracy=np.array([])
+confusion_matrix_collection = np.zeros((1,modelnet_num))
 
 for epoch in range(1, nr_epochs):
     
 
-    loss = train(model, optimizer, dataloader_train,modelnet_num)
+    loss = train(model, optimizer, dataloader_train)
     all_losses=np.append(all_losses, loss)
-    test_acc = test(model, dataloader_test)
+    test_acc, confusion_matrix = test(model, dataloader_test,modelnet_num,num_points)
     test_accuracy=np.append(test_accuracy, test_acc)
+    confusion_matrix_collection=np.append(confusion_matrix_collection,confusion_matrix,axis=0)
     print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
+
+    trace_confusion_matrix = np.trace(confusion_matrix)
+    print(trace_confusion_matrix==test_acc)
+
+    if(epoch%5==0):
+        np.save('/home/alex/Alex_documents/RGCNN_git/data/conf_matrix.npy', confusion_matrix_collection)
+        np.save('/home/alex/Alex_documents/RGCNN_git/data/losses.npy', all_losses)
+        np.save('/home/alex/Alex_documents/RGCNN_git/data/test_accuracy.npy', test_accuracy)
+
+        print(confusion_matrix)
+
+
 
 iterations=range(1,nr_epochs)
 np.save('/home/alex/Alex_documents/RGCNN_git/data/losses.npy', all_losses)
 plt.plot(iterations, all_losses, '-b', label='Training loss')
+plt.pyplot.title('Training loss', fontdict=None, loc='center', pad=None, **kwargs)
 plt.show()
 
 np.save('/home/alex/Alex_documents/RGCNN_git/data/test_accuracy.npy', test_accuracy)
 plt.plot(iterations, test_accuracy, '-r', label='Test accuracy')
+plt.pyplot.title('Test accuracy', fontdict=None, loc='center', pad=None, **kwargs)
 plt.show()
+
+print(confusion_matrix_collection[1+(nr_epochs-1)*modelnet_num:1+(nr_epochs-1)*modelnet_num])
