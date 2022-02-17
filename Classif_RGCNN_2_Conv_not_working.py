@@ -22,7 +22,7 @@ os.mkdir(path)
 
 
 num_points = 1024
-batch_size = 16
+batch_size = 1
 modelnet_num = 40
 nr_epochs=100
 
@@ -65,7 +65,7 @@ class GetGraph(nn.Module):
         return edge_index, edge_weight
 
 def get_graph(point_cloud, batch):
-    point_cloud = point_cloud.reshape(batch.unique().shape[0], -1, 6)
+    point_cloud = point_cloud.reshape(batch.unique().shape[0], num_points, -1)
     point_cloud_transpose = point_cloud.permute(0, 2, 1)
     point_cloud_inner = torch.matmul(point_cloud, point_cloud_transpose)
     point_cloud_inner = -2 * point_cloud_inner
@@ -74,9 +74,14 @@ def get_graph(point_cloud, batch):
     adj_matrix = point_cloud_square + point_cloud_inner + point_cloud_square_tranpose
     adj_matrix = torch.exp(-adj_matrix)
     edge_index, edge_weight = utils.dense_to_sparse(adj_matrix)
+    
+    return edge_index, edge_weight ,adj_matrix
 
-    return edge_index, edge_weight
+def get_graph_v2(point_cloud, batch):
+    point_cloud = point_cloud.reshape(batch.unique().shape[0], -1, 6)
+    adj_matrix = torch.exp(-(torch.sum(torch.mul(point_cloud, point_cloud), dim=2, keepdim=True) - 2 * torch.matmul(point_cloud, point_cloud.permute(0, 2, 1)) + torch.sum(torch.mul(point_cloud, point_cloud), dim=2, keepdim=True).permute(0, 2, 1)))
 
+    return utils.dense_to_sparse(adj_matrix)
 
 import torch
 
@@ -91,23 +96,60 @@ class RGCNN_model(nn.Module):
     def __init__(self):
         super(RGCNN_model, self).__init__()
         self.conv1  = ChebConv(6, 128, 6)
-        self.fc1    = Linear(128, modelnet_num)
+        self.conv2  = ChebConv(128, 512, 5)
         self.relu   = nn.ReLU()
+
+        
+        self.fc1    = Linear(512, 128)
+        self.fc2    = Linear(128, modelnet_num)
+
+        self.fc_experimental=Linear(512, modelnet_num)
+
         #self.get_graph = GetGraph()
 
     def forward(self, x, batch):
-        #edge_index, edge_weight = get_graph(x, batch=batch)
-        #out = self.conv1(x=x, edge_index=edge_index, edge_weight=edge_weight, batch=batch)
-        
-        
-        edge_index= torch_geometric.nn.knn_graph(x, 30, batch,
+        # time_start = time.time()
+        edge_index_knn= torch_geometric.nn.knn_graph(x, 30, batch,
                                                   loop=False,
                                                   )
 
-        out = self.conv1(x=x, edge_index=edge_index, batch=batch)
+        with torch.no_grad():
+            edge_index, edge_weight,adj_matrix = get_graph(x, batch=batch)
+
+        
+
+        out = self.conv1(x=x, edge_index=edge_index, edge_weight=edge_weight, batch=batch)
+        out = self.relu(out)
+        # time_end = time.time()
+
+        # print("Time first convolution")
+        # print(time_end-time_start)
+
+        # time_start = time.time()
+        with torch.no_grad():
+            edge_index, edge_weight = get_graph(out, batch=batch)
+        out = self.conv2(x=out, edge_index=edge_index, edge_weight=edge_weight, batch=batch)
         out = self.relu(out)
         out = global_max_pool(out, batch)
+
+        # time_end = time.time()
+
+        # print("Time second convolution")
+        # print(time_end-time_start)
+
+        
+        
+        #time_start = time.time()
         out = self.fc1(out)
+        out=self.relu(out)
+        out = self.fc2(out)
+
+        #time_end=time.time()
+
+        # print("Time forward layer")
+        # print(time_end-time_start)
+
+        
         return out
 
 model = RGCNN_model()
@@ -121,11 +163,20 @@ criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 def train(model, optimizer, loader):
     model.train()
     total_loss = 0
-    
+    i=0
+    time_start = time.time()
     for data in loader:
+        if(i%100==0):
+            print(i)
+        i+=1
         optimizer.zero_grad()
         x = torch.cat([data.pos, data.normal], dim=1)
+        
         logits  = model(x.to(device),  data.batch.to(device))
+
+       
+
+        
 
         pred = logits.argmax(dim=-1)
 
@@ -135,7 +186,9 @@ def train(model, optimizer, loader):
         optimizer.step()
         total_loss += loss.item() * data.num_graphs
 
-    
+    time_end=time.time()
+    print("Time train layer")
+    print(time_end-time_start)
     return total_loss / len(loader.dataset) 
 
 @torch.no_grad()
