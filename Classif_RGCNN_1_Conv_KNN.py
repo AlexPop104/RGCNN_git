@@ -22,7 +22,7 @@ os.mkdir(path)
 
 
 num_points = 1024
-batch_size = 5
+batch_size = 32
 modelnet_num = 40
 nr_epochs=100
 
