@@ -24,7 +24,28 @@ import os
 from datetime import datetime
 
 
-select_net_archi=1
+select_net_archi=6
+
+if(select_net_archi==1):
+    archi_type="RGCNN_1_layer_FC"
+elif(select_net_archi==2):
+    archi_type="RGCNN_1_layer_KN"
+elif(select_net_archi==3):
+    archi_type="RGCNN_2_layer_KN_KN"
+elif(select_net_archi==4):
+    archi_type="RGCNN_2_layer_KN_FC"
+elif(select_net_archi==5):
+    archi_type="RGCNN_2_layer_FC_KN"
+elif(select_net_archi==6):
+    archi_type="RGCNN_3_layer_KNN_KNN_KNN"       
+else:
+    archi_type="RGCNN_1_layer_FC"
+
+
+num_points = 1024
+batch_size = 32
+modelnet_num = 40
+nr_epochs=100
 
 
 now = datetime.now()
@@ -33,19 +54,12 @@ time_now_string = now.strftime("%d_%m_%y_%H:%M:%S")
 log_folder_path="/home/alex/Alex_documents/RGCNN_git/data/logs/Network_performances/"
 model_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models"
 
-conf_matrix_path=log_folder_path+"Type_"+str(select_net_archi)+"_"+time_now_string+"_conf_matrix.npy"
-loss_log_path=log_folder_path+"Type_"+str(select_net_archi)+"_"+time_now_string+"_losses.npy"
-accuracy_log_path=log_folder_path+"Type_"+str(select_net_archi)+"_"+time_now_string+"test_accuracy.npy"
+conf_matrix_path=log_folder_path+"Type_"+archi_type+"_"+time_now_string+"_conf_matrix.npy"
+loss_log_path=log_folder_path+"Type_"+archi_type+"_"+time_now_string+"_losses.npy"
+accuracy_log_path=log_folder_path+"Type_"+archi_type+"_"+time_now_string+"test_accuracy.npy"
 
 ########################################################################################
 
-
-
-
-num_points = 1024
-batch_size = 32
-modelnet_num = 40
-nr_epochs=100
 
 
 path = os.path.join(model_directory, time_now_string)
@@ -108,8 +122,8 @@ def get_one_matrix_knn(matrix, k,batch_size,batch):
 
     edge_weights=torch.reshape(values,[-1])
 
-   
     
+
     return full_indices ,edge_weights
 
 
@@ -117,36 +131,131 @@ class RGCNN_model(nn.Module):
     def __init__(self):
         super(RGCNN_model, self).__init__()
         self.conv1  = ChebConv(6, 128, 6)
-
+        self.conv2  = ChebConv(128, 512, 5)
+        self.conv3  = ChebConv(512, 1024, 3)
 
         self.relu   = nn.ReLU()
 
-     
-        self.fc1_output    = Linear(128, modelnet_num)
+        self.fc1    = Linear(1024, 512)
+        self.fc2    = Linear(512, 128)
 
+        ######################################################
+        #Final connection
+        self.fc_output    = Linear(128, modelnet_num)
+       
 
 
 
     def forward(self, x, batch,num_points,select_archi):
         # time_start = time.time()
         batch_size=int(batch.size(0)/num_points)
-
+        out=[]
         if(select_net_archi==1):
             with torch.no_grad():
                 edge_index, edge_weight,adj_matrix = get_graph(x, batch=batch)
             out = self.conv1(x=x, edge_index=edge_index, edge_weight=edge_weight, batch=batch)
             out = self.relu(out)
             out = global_max_pool(out, batch)
-            out = self.fc1_output(out)
+            out = self.fc_output(out)
         
-        else:
+        elif(select_net_archi==2):
             with torch.no_grad():
                 edge_index, edge_weight,adj_matrix = get_graph(x, batch=batch)
                 edge_index_knn, edge_weight_knn =get_one_matrix_knn(matrix=adj_matrix,k=30,batch_size=batch_size,batch=batch)
             out = self.conv1(x=x, edge_index=edge_index_knn, edge_weight=edge_weight_knn, batch=batch)
             out = self.relu(out)
             out = global_max_pool(out, batch)
-            out = self.fc1_output(out)
+            out = self.fc_output(out)
+
+        elif(select_net_archi==3):
+            with torch.no_grad():
+                edge_index, edge_weight,adj_matrix = get_graph(x, batch=batch)
+                edge_index_knn, edge_weight_knn =get_one_matrix_knn(matrix=adj_matrix,k=30,batch_size=batch_size,batch=batch)
+            out = self.conv1(x=x, edge_index=edge_index_knn, edge_weight=edge_weight_knn, batch=batch)
+            out = self.relu(out)
+
+            with torch.no_grad():
+                edge_index, edge_weight,adj_matrix = get_graph(out, batch=batch)
+                edge_index_knn, edge_weight_knn =get_one_matrix_knn(matrix=adj_matrix,k=30,batch_size=batch_size,batch=batch)
+
+            out = self.conv2(x=out, edge_index=edge_index_knn, edge_weight=edge_weight_knn, batch=batch)
+            out = self.relu(out)
+            out = global_max_pool(out, batch)
+
+            out = self.fc2(out)
+            out = self.relu(out)
+            out = self.fc_output(out)
+
+        elif(select_net_archi==4):
+            with torch.no_grad():
+                edge_index, edge_weight,adj_matrix = get_graph(x, batch=batch)
+                edge_index_knn, edge_weight_knn =get_one_matrix_knn(matrix=adj_matrix,k=30,batch_size=batch_size,batch=batch)
+            out = self.conv1(x=x, edge_index=edge_index_knn, edge_weight=edge_weight_knn, batch=batch)
+            out = self.relu(out)
+
+            with torch.no_grad():
+                edge_index, edge_weight,adj_matrix = get_graph(out, batch=batch)
+
+            out = self.conv2(x=out, edge_index=edge_index, edge_weight=edge_weight, batch=batch)
+            out = self.relu(out)
+            out = global_max_pool(out, batch)
+
+            out = self.fc2(out)
+            out = self.relu(out)
+            out = self.fc_output(out)
+
+        elif(select_net_archi==5):
+            with torch.no_grad():
+                edge_index, edge_weight,adj_matrix = get_graph(x, batch=batch)
+            out = self.conv1(x=x, edge_index=edge_index, edge_weight=edge_weight, batch=batch)
+            out = self.relu(out)
+
+            with torch.no_grad():
+                edge_index, edge_weight,adj_matrix = get_graph(out, batch=batch)
+                edge_index_knn, edge_weight_knn =get_one_matrix_knn(matrix=adj_matrix,k=30,batch_size=batch_size,batch=batch)
+
+            out = self.conv2(x=out, edge_index=edge_index_knn, edge_weight=edge_weight_knn, batch=batch)
+            out = self.relu(out)
+            out = global_max_pool(out, batch)
+
+            out = self.fc2(out)
+            out = self.relu(out)
+            out = self.fc_output(out)
+
+        elif(select_net_archi==6):
+            with torch.no_grad():
+                edge_index, edge_weight,adj_matrix = get_graph(x, batch=batch)
+                edge_index, edge_weight =get_one_matrix_knn(matrix=adj_matrix,k=30,batch_size=batch_size,batch=batch)
+            out = self.conv1(x=x, edge_index=edge_index, edge_weight=edge_weight, batch=batch)
+            out = self.relu(out)
+
+            with torch.no_grad():
+                edge_index, edge_weight,adj_matrix = get_graph(out, batch=batch)
+                edge_index, edge_weight =get_one_matrix_knn(matrix=adj_matrix,k=30,batch_size=batch_size,batch=batch)
+            out = self.conv2(x=out, edge_index=edge_index, edge_weight=edge_weight, batch=batch)
+            out = self.relu(out)
+
+            with torch.no_grad():
+                edge_index, edge_weight,adj_matrix = get_graph(out, batch=batch)
+                edge_index, edge_weight =get_one_matrix_knn(matrix=adj_matrix,k=30,batch_size=batch_size,batch=batch)
+            out = self.conv3(x=out, edge_index=edge_index, edge_weight=edge_weight, batch=batch)
+            out = self.relu(out)
+
+            out = global_max_pool(out, batch)
+
+            out = self.fc1(out)
+            out = self.relu(out)
+            out = self.fc2(out)
+            out = self.relu(out)
+            out = self.fc_output(out)
+
+        else:
+            with torch.no_grad():
+                edge_index, edge_weight,adj_matrix = get_graph(x, batch=batch)
+            out = self.conv1(x=x, edge_index=edge_index, edge_weight=edge_weight, batch=batch)
+            out = self.relu(out)
+            out = global_max_pool(out, batch)
+            out = self.fc_output(out)
         
 
         return out
