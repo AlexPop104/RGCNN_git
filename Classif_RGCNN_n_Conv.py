@@ -1,4 +1,5 @@
 import torch_geometric
+import torch.nn as nn
 from torch_geometric.datasets import ModelNet
 from torch_geometric.transforms import SamplePoints
 from torch_geometric.transforms import NormalizeScale
@@ -6,6 +7,13 @@ from torch_geometric.loader import DataLoader
 import torch_geometric.utils as utils
 import torch_geometric.nn.conv as conv
 from torch_geometric.transforms import Compose
+
+
+import torch
+from torch_geometric.nn.conv import ChebConv
+from torch.nn import Linear
+from torch_cluster import knn_graph
+from torch_geometric.nn import global_max_pool
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,16 +24,20 @@ import os
 from datetime import datetime
 
 
-
+select_net_archi=1
 
 
 now = datetime.now()
 time_now_string = now.strftime("%d_%m_%y_%H:%M:%S")
-parent_directory = "/home/alex/Alex_pyt_geom/Models"
-path = os.path.join(parent_directory, time_now_string)
-os.mkdir(path)
 
-log_folder_path="/home/alex/Alex_documents/RGCNN_git/data/"
+log_folder_path="/home/alex/Alex_documents/RGCNN_git/data/logs/Network_performances/"
+model_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models"
+
+conf_matrix_path=log_folder_path+"Type_"+str(select_net_archi)+"_"+time_now_string+"_conf_matrix.npy"
+loss_log_path=log_folder_path+"Type_"+str(select_net_archi)+"_"+time_now_string+"_losses.npy"
+accuracy_log_path=log_folder_path+"Type_"+str(select_net_archi)+"_"+time_now_string+"test_accuracy.npy"
+
+########################################################################################
 
 
 
@@ -34,6 +46,10 @@ num_points = 1024
 batch_size = 32
 modelnet_num = 40
 nr_epochs=100
+
+
+path = os.path.join(model_directory, time_now_string)
+os.mkdir(path)
 
 transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
@@ -51,27 +67,6 @@ print(dataset_train[0])
 dataloader_train = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
 dataloader_test  = DataLoader(dataset_test, batch_size=batch_size)
 
-import torch.nn as nn
-class GetGraph(nn.Module):
-    def __init__(self):
-        """
-        Creates the weighted adjacency matrix 'W'
-        Taked directly from RGCNN
-        """
-
-        super(GetGraph, self).__init__()
-
-    def forward(self, point_cloud, batch):
-        point_cloud = point_cloud.reshape(batch_size, -1, 6)
-        point_cloud_transpose = point_cloud.permute(0, 2, 1)
-        point_cloud_inner = torch.matmul(point_cloud, point_cloud_transpose)
-        point_cloud_inner = -2 * point_cloud_inner
-        point_cloud_square = torch.sum(torch.mul(point_cloud, point_cloud), dim=2, keepdim=True)
-        point_cloud_square_tranpose = point_cloud_square.permute(0, 2, 1)
-        adj_matrix = point_cloud_square + point_cloud_inner + point_cloud_square_tranpose
-        adj_matrix = torch.exp(-adj_matrix)
-        edge_index, edge_weight = utils.dense_to_sparse(adj_matrix)
-        return edge_index, edge_weight
 
 def get_graph(point_cloud, batch):
     point_cloud = point_cloud.reshape(batch.unique().shape[0], num_points, -1)
@@ -82,12 +77,6 @@ def get_graph(point_cloud, batch):
     point_cloud_square_tranpose = point_cloud_square.permute(0, 2, 1)
     adj_matrix = point_cloud_square + point_cloud_inner + point_cloud_square_tranpose
     adj_matrix = torch.exp(-adj_matrix)
-
-
-    
-
-
-
     edge_index, edge_weight = utils.dense_to_sparse(adj_matrix)
     
     return edge_index, edge_weight ,adj_matrix
@@ -104,9 +93,7 @@ def get_one_matrix_knn(matrix, k,batch_size,batch):
        
     my_range=torch.unsqueeze(torch.range(0,indices.shape[1]-1,device='cuda'),1)
     my_range_repeated=torch.tile(my_range,[1,k])
-
     my_range_repeated=torch.unsqueeze(my_range_repeated,0)
-
     my_range_repeated_2=torch.tile(my_range_repeated,[batch_size,1,1])
 
     indices=indices+batch_correction
@@ -121,53 +108,46 @@ def get_one_matrix_knn(matrix, k,batch_size,batch):
 
     edge_weights=torch.reshape(values,[-1])
 
-    #knn_adj_matrix=utils.to_dense_adj(full_indices,batch,edge_weights)
+   
     
     return full_indices ,edge_weights
 
-# def get_graph_v2(point_cloud, batch):
-#     point_cloud = point_cloud.reshape(batch.unique().shape[0], -1, 6)
-#     adj_matrix = torch.exp(-(torch.sum(torch.mul(point_cloud, point_cloud), dim=2, keepdim=True) - 2 * torch.matmul(point_cloud, point_cloud.permute(0, 2, 1)) + torch.sum(torch.mul(point_cloud, point_cloud), dim=2, keepdim=True).permute(0, 2, 1)))
-
-#     return utils.dense_to_sparse(adj_matrix)
-
-import torch
-
-
-from torch import nn
-from torch_geometric.nn.conv import ChebConv
-from torch.nn import Linear
-from torch_cluster import knn_graph
-from torch_geometric.nn import global_max_pool
 
 class RGCNN_model(nn.Module):
     def __init__(self):
         super(RGCNN_model, self).__init__()
         self.conv1  = ChebConv(6, 128, 6)
+
+
         self.relu   = nn.ReLU()
 
      
-        self.fc1    = Linear(128, modelnet_num)
+        self.fc1_output    = Linear(128, modelnet_num)
 
 
-        #self.get_graph = GetGraph()
 
-    def forward(self, x, batch,num_points):
+
+    def forward(self, x, batch,num_points,select_archi):
         # time_start = time.time()
         batch_size=int(batch.size(0)/num_points)
 
-        with torch.no_grad():
-            edge_index, edge_weight,adj_matrix = get_graph(x, batch=batch)
-            edge_index_knn, edge_weight_knn =get_one_matrix_knn(matrix=adj_matrix,k=30,batch_size=batch_size,batch=batch)
-
-    
-
-        out = self.conv1(x=x, edge_index=edge_index_knn, edge_weight=edge_weight_knn, batch=batch)
-        out = self.relu(out)
-           
-        out = global_max_pool(out, batch)
-        out = self.fc1(out)
-       
+        if(select_net_archi==1):
+            with torch.no_grad():
+                edge_index, edge_weight,adj_matrix = get_graph(x, batch=batch)
+            out = self.conv1(x=x, edge_index=edge_index, edge_weight=edge_weight, batch=batch)
+            out = self.relu(out)
+            out = global_max_pool(out, batch)
+            out = self.fc1_output(out)
+        
+        else:
+            with torch.no_grad():
+                edge_index, edge_weight,adj_matrix = get_graph(x, batch=batch)
+                edge_index_knn, edge_weight_knn =get_one_matrix_knn(matrix=adj_matrix,k=30,batch_size=batch_size,batch=batch)
+            out = self.conv1(x=x, edge_index=edge_index_knn, edge_weight=edge_weight_knn, batch=batch)
+            out = self.relu(out)
+            out = global_max_pool(out, batch)
+            out = self.fc1_output(out)
+        
 
         return out
 
@@ -179,7 +159,9 @@ device = "cuda"
 model = model.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
-def train(model, optimizer, loader,num_points):
+
+
+def train(model, optimizer, loader,num_points,select_archi):
     model.train()
     total_loss = 0
     
@@ -189,15 +171,10 @@ def train(model, optimizer, loader,num_points):
         optimizer.zero_grad()
         x = torch.cat([data.pos, data.normal], dim=1)
         
-        logits  = model(x.to(device),  data.batch.to(device),num_points)
-
-       
-
-        
-
+        logits  = model(x.to(device),  data.batch.to(device),num_points,select_archi=select_net_archi)
         pred = logits.argmax(dim=-1)
 
-        
+
         loss    = criterion(logits, data.y.to(device))
         loss.backward()
         optimizer.step()
@@ -209,7 +186,7 @@ def train(model, optimizer, loader,num_points):
     return total_loss / len(loader.dataset) 
 
 @torch.no_grad()
-def test(model, loader,modelnet_num,num_points):
+def test(model, loader,modelnet_num,num_points,select_archi):
     confusion_matrix=np.zeros((modelnet_num,modelnet_num))
     category_counters=np.zeros(modelnet_num)
 
@@ -218,7 +195,7 @@ def test(model, loader,modelnet_num,num_points):
     total_correct = 0
     for data in loader:
         x = torch.cat([data.pos, data.normal], dim=1)
-        logits = model(x.to(device), data.batch.to(device),num_points)
+        logits = model(x.to(device), data.batch.to(device),num_points,select_archi=select_net_archi)
         pred = logits.argmax(dim=-1)
 
         iteration_batch_size=int(data.pos.shape[0]/num_points)
@@ -245,13 +222,13 @@ confusion_matrix_collection = np.zeros((1,modelnet_num))
 for epoch in range(nr_epochs):
     
     train_time_start = time.time()
-    loss = train(model, optimizer, dataloader_train,num_points=num_points)
+    loss = train(model, optimizer, dataloader_train,num_points=num_points,select_archi=select_net_archi)
     train_time_end=time.time()
     
     all_losses=np.append(all_losses, loss)
 
     eval_time_start = time.time()
-    test_acc, confusion_matrix = test(model, dataloader_test,modelnet_num,num_points)
+    test_acc, confusion_matrix = test(model, dataloader_test,modelnet_num,num_points,select_archi=select_net_archi)
     eval_time_end=time.time()
     test_accuracy=np.append(test_accuracy, test_acc)
     confusion_matrix_collection=np.append(confusion_matrix_collection,confusion_matrix,axis=0)
@@ -260,18 +237,20 @@ for epoch in range(nr_epochs):
     
 
     if(epoch%5==0):
-        np.save('/home/alex/Alex_documents/RGCNN_git/data/conf_matrix_2.npy', confusion_matrix_collection)
-        np.save('/home/alex/Alex_documents/RGCNN_git/data/losses_2.npy', all_losses)
-        np.save('/home/alex/Alex_documents/RGCNN_git/data/test_accuracy_2.npy', test_accuracy)
+        np.save(conf_matrix_path, confusion_matrix_collection)
+        np.save(loss_log_path, all_losses)
+        np.save(accuracy_log_path, test_accuracy)
+
+        torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
 
         print(confusion_matrix)
 
 
 
 
-np.save('/home/alex/Alex_documents/RGCNN_git/data/losses_2.npy', all_losses)
-np.save('/home/alex/Alex_documents/RGCNN_git/data/test_accuracy_2.npy', test_accuracy)
-np.save('/home/alex/Alex_documents/RGCNN_git/data/conf_matrix_2.npy', confusion_matrix_collection)
+np.save(loss_log_path, all_losses)
+np.save(accuracy_log_path, test_accuracy)
+np.save(conf_matrix_path, confusion_matrix_collection)
 
 
 plt.plot(all_losses, '-b', label='Training loss')
