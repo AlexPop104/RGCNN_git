@@ -55,22 +55,28 @@ class cls_model(nn.Module):
         self.regularizers = []
 
         # self.get_laplacian = GetLaplacian(normalize=True)
-        self.relu = nn.LeakyReLU()
+        self.relu1 = nn.ReLU()
+        self.relu2 = nn.ReLU()
+        self.relu3 = nn.ReLU()
+        self.relu4 = nn.ReLU()
+        self.relu5 = nn.ReLU()
+
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
         self.conv1 = conv.DenseChebConv(6, 128, 6)
         self.conv2 = conv.DenseChebConv(128, 512, 5)
         self.conv3 = conv.DenseChebConv(512, 1024, 3)
-
+        
         self.fc1 = nn.Linear(1024, 512, bias=True)
         self.fc2 = nn.Linear(512, 128, bias=True)
         self.fc3 = nn.Linear(128, class_num, bias=True)
         
+        self.fc_t = nn.Linear(128, class_num)
+
         self.max_pool = nn.MaxPool1d(self.vertice)
 
         if one_layer == True:
             self.fc = nn.Linear(128, class_num)
-            self.max_pool = nn.MaxPool1d(self.vertice)
 
     def forward(self, x):
         with torch.no_grad():
@@ -78,44 +84,39 @@ class cls_model(nn.Module):
             L = conv.get_laplacian(L)
 
         out = self.conv1(x, L)
-        out = self.relu(out)
+        out = self.relu1(out)
         
-        if self.one_layer==False:
+        if self.one_layer == False:
+            with torch.no_grad():
+                L = conv.pairwise_distance(out) # W - weight matrix
+                L = conv.get_laplacian(L)
             
-            '''
-            with torch.no_grad():
-                L = conv.pairwise_distance(out) # W - weight matrix
-                L = conv.get_laplacian(L)
-            '''
             out = self.conv2(out, L)
-            out = self.relu(out)
+            out = self.relu2(out)
 
-            '''
             with torch.no_grad():
                 L = conv.pairwise_distance(out) # W - weight matrix
                 L = conv.get_laplacian(L)
-            '''
-
+            
             out = self.conv3(out, L)
-            out = self.relu(out)
+            out = self.relu3(out)
             
             out, _ = t.max(out, 1)
-            print(out.shape)
 
+            # ~~~~ Fully Connected ~~~~
+            
             out = self.fc1(out)
-            out = self.relu(out)
-            out = self.dropout(out)
+            out = self.relu4(out)
+            #out = self.dropout(out)
 
             out = self.fc2(out)
-            out = self.relu(out)
-            out = self.dropout(out)
+            out = self.relu5(out)
+            #out = self.dropout(out)
 
             out = self.fc3(out)
+            
         else:
-            #print(out)
-
             out, _ = t.max(out, 1)
-
             out = self.fc(out)
 
         return out
@@ -134,9 +135,9 @@ def train(model, optimizer, loader):
         loss.backward()
         optimizer.step()
         total_loss += loss.item() * data.num_graphs
-        if i%100 == 0:
-            print(f"{i}: curr loss: {loss}")
-            print(f"{data.y} --- {logits.argmax(dim=1)}")
+        #if i%100 == 0:
+            #print(f"{i}: curr loss: {loss}")
+            #$print(f"{data.y} --- {logits.argmax(dim=1)}")
     return total_loss / len(loader.dataset)
 
 @torch.no_grad()
@@ -190,7 +191,7 @@ if __name__ == '__main__':
     train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
     test_loader = DataLoader(dataset_test, batch_size=batch_size)
     
-    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=True)
+    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False)
     model = model.to(device)
     
     print(model.parameters)
@@ -211,5 +212,5 @@ if __name__ == '__main__':
 
         writer.add_scalar("Acc/test", test_acc, epoch)
         print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
-        print(f'Train Time: \t{train_stop_time - train_start_time}, \
-            Test Time: \t{test_stop_time - test_start_time }')
+        print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
+        \tTest Time: \t{test_stop_time - test_start_time }')
