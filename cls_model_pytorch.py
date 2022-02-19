@@ -1,0 +1,215 @@
+from doctest import NORMALIZE_WHITESPACE
+from site import addpackage
+import time
+import numpy
+from torch.utils.tensorboard import SummaryWriter
+writer = SummaryWriter()
+
+from torch import Tensor, normal, tensor
+from torch import nn
+import torch
+from torch.nn import Parameter
+
+from typing import Optional
+from torch_geometric.datasets import ModelNet
+from torch_geometric.transforms import SamplePoints
+
+from torch_geometric.nn.conv import MessagePassing
+from torch_geometric.nn.dense.linear import Linear
+from torch_geometric.nn.inits import zeros
+from torch_geometric.typing import OptTensor
+from torch_geometric.utils import (add_self_loops, get_laplacian,
+                                   remove_self_loops)
+import torch as t
+import torch_geometric as tg
+
+from torch_geometric.utils import get_laplacian as get_laplacian_pyg
+from torch_geometric.transforms import Compose
+
+import ChebConv_rgcnn as conv
+import os
+from torch_geometric.transforms import LinearTransformation
+from torch_geometric.transforms import GenerateMeshNormals
+from torch_geometric.transforms import NormalizeScale
+from torch_geometric.loader import DataLoader
+from torch_geometric.data import Batch
+from datetime import datetime
+from torch_geometric.nn import global_max_pool
+
+
+
+class cls_model(nn.Module):
+    def __init__(self, vertice ,F, K, M, class_num, regularization=0, one_layer=True, dropout=0):
+        assert len(F) == len(K)
+        super(cls_model, self).__init__()
+
+        self.F = F
+        self.K = K
+        self.M = M
+
+        self.one_layer = one_layer
+
+        self.vertice = vertice
+        self.regularization = regularization    # gamma from the paper: 10^-9
+        self.dropout = dropout
+        self.regularizers = []
+
+        # self.get_laplacian = GetLaplacian(normalize=True)
+        self.relu = nn.LeakyReLU()
+        self.dropout = torch.nn.Dropout(p=self.dropout)
+
+        self.conv1 = conv.DenseChebConv(6, 128, 6)
+        self.conv2 = conv.DenseChebConv(128, 512, 5)
+        self.conv3 = conv.DenseChebConv(512, 1024, 3)
+
+        self.fc1 = nn.Linear(1024, 512, bias=True)
+        self.fc2 = nn.Linear(512, 128, bias=True)
+        self.fc3 = nn.Linear(128, class_num, bias=True)
+        
+        self.max_pool = nn.MaxPool1d(self.vertice)
+
+        if one_layer == True:
+            self.fc = nn.Linear(128, class_num)
+            self.max_pool = nn.MaxPool1d(self.vertice)
+
+    def forward(self, x):
+        with torch.no_grad():
+            L = conv.pairwise_distance(x) # W - weight matrix
+            L = conv.get_laplacian(L)
+
+        out = self.conv1(x, L)
+        out = self.relu(out)
+        
+        if self.one_layer==False:
+            
+            '''
+            with torch.no_grad():
+                L = conv.pairwise_distance(out) # W - weight matrix
+                L = conv.get_laplacian(L)
+            '''
+            out = self.conv2(out, L)
+            out = self.relu(out)
+
+            '''
+            with torch.no_grad():
+                L = conv.pairwise_distance(out) # W - weight matrix
+                L = conv.get_laplacian(L)
+            '''
+
+            out = self.conv3(out, L)
+            out = self.relu(out)
+            
+            out, _ = t.max(out, 1)
+            print(out.shape)
+
+            out = self.fc1(out)
+            out = self.relu(out)
+            out = self.dropout(out)
+
+            out = self.fc2(out)
+            out = self.relu(out)
+            out = self.dropout(out)
+
+            out = self.fc3(out)
+        else:
+            #print(out)
+
+            out, _ = t.max(out, 1)
+
+            out = self.fc(out)
+
+        return out
+
+criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
+
+def train(model, optimizer, loader):
+    model.train()
+    total_loss = 0
+    for i, data in enumerate(loader):
+        optimizer.zero_grad()
+        x = torch.cat([data.pos, data.normal], dim=1)
+        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+        logits  = model(x.to(device))
+        loss    = criterion(logits, data.y.to(device))
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item() * data.num_graphs
+        if i%100 == 0:
+            print(f"{i}: curr loss: {loss}")
+            print(f"{data.y} --- {logits.argmax(dim=1)}")
+    return total_loss / len(loader.dataset)
+
+@torch.no_grad()
+def test(model, loader):
+    model.eval()
+
+    total_correct = 0
+    for data in loader:
+        x = torch.cat([data.pos, data.normal], dim=1)
+        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+        logits = model(x.to(device))
+        pred = logits.argmax(dim=-1)
+        total_correct += int((pred == data.y.to(device)).sum())
+
+    return total_correct / len(loader.dataset)
+
+if __name__ == '__main__':
+    now = datetime.now()
+    directory = now.strftime("%d_%m_%y_%H:%M:%S")
+    parent_directory = "/home/victor/workspace/thesis_ws/models"
+    path = os.path.join(parent_directory, directory)
+    os.mkdir(path)
+
+    num_points = 1024
+    batch_size = 32
+    num_epochs = 50
+    learning_rate = 1e-3
+    modelnet_num = 10
+
+    F = [128, 512, 1024]  # Outputs size of convolutional filter.
+    K = [6, 5, 3]         # Polynomial orders.
+    M = [512, 128, modelnet_num]
+
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+    print(f"Training on {device}")
+
+        
+    transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
+
+    root = "/home/victor/workspace/thesis_ws/datasets/Modelnet" + str(modelnet_num)
+    print(root)
+    dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
+    dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms)
+
+    # Verification...
+    print(f"Train dataset shape: {dataset_train}")
+    print(f"Test dataset shape:  {dataset_test}")
+
+
+    train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
+    test_loader = DataLoader(dataset_test, batch_size=batch_size)
+    
+    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=True)
+    model = model.to(device)
+    
+    print(model.parameters)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+
+
+    for epoch in range(1, 51):
+        train_start_time = time.time()
+        loss = train(model, optimizer, train_loader)
+        train_stop_time = time.time()
+
+        writer.add_scalar("Loss/train", loss, epoch)
+        
+        test_start_time = time.time()
+        test_acc = test(model, test_loader)
+        test_stop_time = time.time()
+
+        writer.add_scalar("Acc/test", test_acc, epoch)
+        print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
+        print(f'Train Time: \t{train_stop_time - train_start_time}, \
+            Test Time: \t{test_stop_time - test_start_time }')

@@ -183,7 +183,7 @@ class RGCNN_model(nn.Module):
 
         #out = self.conv2(out, edge_index, edge_weight)
 
-        out = self.conv2(out, edge_index, edge_weight,batch)
+        out = self.conv2(out, edge_index, edge_weight, batch)
         out = self.relu(out)
 
         with torch.no_grad():
