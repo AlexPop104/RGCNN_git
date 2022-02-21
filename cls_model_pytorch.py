@@ -183,6 +183,7 @@ if __name__ == '__main__':
     dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
     dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms)
 
+
     # Verification...
     print(f"Train dataset shape: {dataset_train}")
     print(f"Test dataset shape:  {dataset_test}")
@@ -213,4 +214,4 @@ if __name__ == '__main__':
         writer.add_scalar("Acc/test", test_acc, epoch)
         print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
         print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
-        \tTest Time: \t{test_stop_time - test_start_time }')
+        Test Time: \t{test_stop_time - test_start_time }')

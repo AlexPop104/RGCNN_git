@@ -1,30 +1,16 @@
-from doctest import NORMALIZE_WHITESPACE
-from site import addpackage
-import numpy
-from numpy import dtype
-from numpy import ones
-
-from torch import Tensor, double, normal, tensor
-from torch import nn
-import torch
-from torch.nn import Parameter
-
 from typing import Optional
 
+from time import time
+import tensorflow as tf
+import torch
+import torch as t
+import torch_geometric as tg
+from torch import Tensor, nn
+from torch.nn import Parameter
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.nn.dense.linear import Linear
 from torch_geometric.nn.inits import zeros
-from torch_geometric.typing import OptTensor
-from torch_geometric.utils import (add_self_loops, get_laplacian,
-                                   remove_self_loops)
-import torch as t
-import torch_geometric as tg
-
-from torch_geometric.utils import get_laplacian as get_laplacian_pyg
-import os
-import tensorflow as tf
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
-import sys
+from torch_geometric.utils import get_laplacian
 
 def get_laplacian(adj_matrix, normalize=True):
     if normalize:
@@ -36,9 +22,6 @@ def get_laplacian(adj_matrix, normalize=True):
         L = eye - t.matmul(t.matmul(D, adj_matrix), D)
     else:
         D = t.sum(adj_matrix, dim=1)
-        # eye = t.ones_like(D)
-        # eye = t.diag(eye)
-        # D = 1 / t.sqrt(D)
         D = t.diag(D)
         L = D - adj_matrix
 
@@ -90,11 +73,6 @@ class DenseChebConv(nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.normalization = normalization
-        
-        
-        self.lins = nn.ModuleList([
-            Linear(in_channels, out_channels, bias=False) for _ in range(K)
-        ])
 
         self.lin = Linear(in_channels * K, out_channels, bias=False)
         
@@ -105,11 +83,8 @@ class DenseChebConv(nn.Module):
         
         self.reset_parameters()
 
-    def reset_parameters(self):
-        for lin in self.lins:
-            lin.reset_parameters()
-        
-        lin.reset_parameters()
+    def reset_parameters(self):        
+        self.lin.reset_parameters()
         zeros(self.bias)
 
     def forward(self, x, L, mask=None):
@@ -130,7 +105,7 @@ class DenseChebConv(nn.Module):
             x1 = t.matmul(L, x0)
             x = concat(x, x1)
 
-        for lin in self.lins[2:]:
+        for _ in range(2, self.K):
             x2 = 2 * t.matmul(L, x1) - x0
             x = concat(x, x2)
             x0, x1 = x1, x2
@@ -144,78 +119,9 @@ class DenseChebConv(nn.Module):
 
     def __repr__(self) -> str:
         return (f'{self.__class__.__name__}({self.in_channels}, '
-                f'{self.out_channels}, K={len(self.lins)}, '
+                f'{self.out_channels}, K={self.K}, '
                 f'normalization={self.normalization})')
 
-class ChebConv_rgcnn(MessagePassing):
-    r"""ChebConv spectral convolutional operator 
-    
-    """
-
-    def __init__(self, in_channels: int, out_channels: int, K: int, 
-                 normalization: Optional[str]='sym', bias: bool=True, **kwargs):
-        assert K > 0
-        assert normalization in [None, 'sym', 'rw'], 'Invalid normalization type'
-
-        self.K = K
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.normalization = normalization
-        self.lins = nn.ModuleList([
-            Linear(in_channels, out_channels, bias=False,
-            weight_initializer='glorot') for _ in range(K)
-        ])
-
-        if bias:
-            self.bias = Parameter(torch.Tensor(out_channels))
-        else:
-            self.register_parameter('bias', None)
-        
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        for lin in self.lins:
-            lin.reset_parameters()
-        zeros(self.bias)
-    
-    def __norm__(self, adj_matrix, num_nodes: Optional[int],
-                 normalization: Optional[bool],
-                 lambda_max, dtype: Optional[int] = None):
-        if normalization:
-            L = get_laplacian(adj_matrix=adj_matrix, normalize=True)
-        else: 
-            L = get_laplacian(adj_matrix=adj_matrix, normalize=False)
-        
-        return L
-    
-    def forward(self, x: Tensor, L: Tensor):
-        N, M, Fin = x.shape
-        N, M, Fin = int(N), int(M), int(Fin)
-
-        x0 = x # N x M x Fin
-        x = x.expand(0)
-
-        def concat(x, x_):
-            x_ = x_.expand(0) # 1 x M x Fin*N
-            return t.cat([x, x_], dim=0) # K x M x Fin*N
-        
-        if self.K > 1:
-            x1 = t.matmul(L, x0)
-            x = concat(x, x1)
-        for k in range(2, K):
-            x2 = 2 * t.matmul(L, x1) - x0
-            x = concat(x, x2)
-            x0, x1 = x1, x2
-
-        # K x N x M x Fin
-        x = x.permute([1, 2, 3, 0]) # N x M x Fin X K
-        x = x.reshape([N * M, Fin * self.K]) 
-    
-    def message(self, x_j, norm):
-        return norm.view(-1, 1) * x_j
-
-
-from time import time
 
 if __name__ == "__main__":
     device = "cuda"
