@@ -24,7 +24,7 @@ import os
 from datetime import datetime
 
 
-select_net_archi=5
+select_net_archi=2
 
 if(select_net_archi==1):
     archi_type="RGCNN_1_layer_FC"

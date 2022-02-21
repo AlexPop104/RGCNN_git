@@ -31,7 +31,7 @@ from torch_geometric.transforms import LinearTransformation
 from torch_geometric.transforms import GenerateMeshNormals
 from torch_geometric.transforms import NormalizeScale
 from torch_geometric.loader import DataLoader
-from torch_geometric.data import Batch
+from torch_geometric.data import Batch, batch
 from datetime import datetime
 from torch_geometric.nn import global_max_pool
 
@@ -40,7 +40,7 @@ from torch_geometric.nn import global_max_pool
 
 
 class cls_model(nn.Module):
-    def __init__(self, vertice ,F, K, M, class_num, regularization=0, one_layer=True, dropout=0):
+    def __init__(self, vertice ,F, K, M, class_num, batch_size,regularization=0, one_layer=True, dropout=0,):
         assert len(F) == len(K)
         super(cls_model, self).__init__()
 
@@ -79,7 +79,7 @@ class cls_model(nn.Module):
         if one_layer == True:
             self.fc = nn.Linear(128, class_num)
 
-    def forward(self, x):
+    def forward(self, x,batch_size):
         with torch.no_grad():
             L = conv.pairwise_distance(x) # W - weight matrix
             #L=conv.get_one_matrix_knn(L, 30,64,1024)
@@ -126,14 +126,14 @@ class cls_model(nn.Module):
 
 criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 
-def train(model, optimizer, loader):
+def train(model, optimizer, loader,batch_size):
     model.train()
     total_loss = 0
     for i, data in enumerate(loader):
         optimizer.zero_grad()
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
-        logits  = model(x.to(device))
+        logits  = model(x.to(device),batch_size=batch_size)
         loss    = criterion(logits, data.y.to(device))
         loss.backward()
         optimizer.step()
@@ -144,7 +144,7 @@ def train(model, optimizer, loader):
     return total_loss / len(loader.dataset)
 
 @torch.no_grad()
-def test(model, loader,modelnet_num,num_points):
+def test(model, loader,modelnet_num,num_points,batch_size):
     confusion_matrix=np.zeros((modelnet_num,modelnet_num))
     category_counters=np.zeros(modelnet_num)
 
@@ -156,7 +156,7 @@ def test(model, loader,modelnet_num,num_points):
     for data in loader:
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
-        logits = model(x.to(device))
+        logits = model(x.to(device),batch_size=batch_size)
         pred = logits.argmax(dim=-1)
 
         iteration_batch_size=int(data.pos.shape[0]/num_points)
@@ -218,7 +218,7 @@ if __name__ == '__main__':
     train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
     test_loader = DataLoader(dataset_test, batch_size=batch_size)
     
-    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False)
+    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False,batch_size=batch_size)
     model = model.to(device)
     
     print(model.parameters)
@@ -231,7 +231,7 @@ if __name__ == '__main__':
 
     for epoch in range(1, num_epochs):
         train_start_time = time.time()
-        loss = train(model, optimizer, train_loader)
+        loss = train(model, optimizer, train_loader,batch_size=batch_size)
         train_stop_time = time.time()
 
         all_losses=np.append(all_losses, loss)
@@ -239,7 +239,7 @@ if __name__ == '__main__':
         # writer.add_scalar("Loss/train", loss, epoch)
         
         test_start_time = time.time()
-        test_acc, confusion_matrix = test(model, test_loader,modelnet_num,num_points)
+        test_acc, confusion_matrix = test(model, test_loader,modelnet_num,num_points,batch_size)
         test_stop_time = time.time()
         
         test_accuracy=np.append(test_accuracy, test_acc)

@@ -63,6 +63,7 @@ def pairwise_distance(point_cloud):
 
 def get_one_matrix_knn(matrix, k,batch_size,nr_points):
 
+
     values,indices = torch.topk(matrix, k,sorted=False)
     
     batch_correction=torch.range(0,batch_size-1,device='cuda')*nr_points
