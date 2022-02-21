@@ -1,21 +1,19 @@
 from doctest import NORMALIZE_WHITESPACE
 from site import addpackage
 import time
-import numpy
+
 from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter()
 
-from torch import Tensor, normal, tensor
 from torch import nn
 import torch
 from torch.nn import Parameter
 
-from typing import Optional
+
 from torch_geometric.datasets import ModelNet
 from torch_geometric.transforms import SamplePoints
 
-from torch_geometric.nn.conv import MessagePassing
-from torch_geometric.nn.dense.linear import Linear
+
 from torch_geometric.nn.inits import zeros
 from torch_geometric.typing import OptTensor
 from torch_geometric.utils import (add_self_loops, get_laplacian,
@@ -28,18 +26,14 @@ from torch_geometric.transforms import Compose
 
 import ChebConv_rgcnn as conv
 import os
-from torch_geometric.transforms import LinearTransformation
-from torch_geometric.transforms import GenerateMeshNormals
 from torch_geometric.transforms import NormalizeScale
 from torch_geometric.loader import DataLoader
-from torch_geometric.data import Batch
 from datetime import datetime
-from torch_geometric.nn import global_max_pool
-
+from torch.nn import MSELoss
 
 
 class cls_model(nn.Module):
-    def __init__(self, vertice ,F, K, M, class_num, regularization=0, one_layer=True, dropout=0):
+    def __init__(self, vertice ,F, K, M, class_num, regularization=0, one_layer=True, dropout=0, reg_prior:bool=True):
         assert len(F) == len(K)
         super(cls_model, self).__init__()
 
@@ -49,6 +43,7 @@ class cls_model(nn.Module):
 
         self.one_layer = one_layer
 
+        self.reg_prior = reg_prior
         self.vertice = vertice
         self.regularization = regularization    # gamma from the paper: 10^-9
         self.dropout = dropout
@@ -78,6 +73,10 @@ class cls_model(nn.Module):
         if one_layer == True:
             self.fc = nn.Linear(128, class_num)
 
+        self.regularizer = 0
+        self.regularization = []
+
+
     def forward(self, x):
         with torch.no_grad():
             L = conv.pairwise_distance(x) # W - weight matrix
@@ -85,6 +84,9 @@ class cls_model(nn.Module):
 
         out = self.conv1(x, L)
         out = self.relu1(out)
+
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), x)))
         
         if self.one_layer == False:
             with torch.no_grad():
@@ -93,7 +95,9 @@ class cls_model(nn.Module):
             
             out = self.conv2(out, L)
             out = self.relu2(out)
-
+            if self.reg_prior:
+                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), x)))
+    
             with torch.no_grad():
                 L = conv.pairwise_distance(out) # W - weight matrix
                 L = conv.get_laplacian(L)
@@ -101,6 +105,9 @@ class cls_model(nn.Module):
             out = self.conv3(out, L)
             out = self.relu3(out)
             
+            if self.reg_prior:
+                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), x)))
+    
             out, _ = t.max(out, 1)
 
             # ~~~~ Fully Connected ~~~~
@@ -119,19 +126,21 @@ class cls_model(nn.Module):
             out, _ = t.max(out, 1)
             out = self.fc(out)
 
-        return out
+        return out, self.regularizers
 
 criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 
-def train(model, optimizer, loader):
+def train(model, optimizer, loader, regularization):
     model.train()
     total_loss = 0
     for i, data in enumerate(loader):
         optimizer.zero_grad()
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
-        logits  = model(x.to(device))
+        logits, regularizers  = model(x.to(device))
         loss    = criterion(logits, data.y.to(device))
+        s = t.sum(t.as_tensor(regularizers))
+        loss = loss + regularization * s
         loss.backward()
         optimizer.step()
         total_loss += loss.item() * data.num_graphs
@@ -148,7 +157,7 @@ def test(model, loader):
     for data in loader:
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
-        logits = model(x.to(device))
+        logits, _ = model(x.to(device))
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == data.y.to(device)).sum())
 
@@ -162,7 +171,7 @@ if __name__ == '__main__':
     os.mkdir(path)
 
     num_points = 1024
-    batch_size = 32
+    batch_size = 16
     num_epochs = 50
     learning_rate = 1e-3
     modelnet_num = 10
@@ -190,19 +199,19 @@ if __name__ == '__main__':
 
 
     train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
-    test_loader = DataLoader(dataset_test, batch_size=batch_size)
+    test_loader  = DataLoader(dataset_test, batch_size=batch_size)
     
-    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False)
+    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False, reg_prior=False)
     model = model.to(device)
     
     print(model.parameters)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-
+    regularization = 1e-9
     for epoch in range(1, 51):
         train_start_time = time.time()
-        loss = train(model, optimizer, train_loader)
+        loss = train(model, optimizer, train_loader, regularization=regularization)
         train_stop_time = time.time()
 
         writer.add_scalar("Loss/train", loss, epoch)
