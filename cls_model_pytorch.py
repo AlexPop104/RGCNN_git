@@ -78,6 +78,7 @@ class cls_model(nn.Module):
 
 
     def forward(self, x):
+        self.regularizers = []
         with torch.no_grad():
             L = conv.pairwise_distance(x) # W - weight matrix
             L = conv.get_laplacian(L)
@@ -171,7 +172,7 @@ if __name__ == '__main__':
     os.mkdir(path)
 
     num_points = 1024
-    batch_size = 16
+    batch_size = 32
     num_epochs = 50
     learning_rate = 1e-3
     modelnet_num = 10
@@ -201,7 +202,7 @@ if __name__ == '__main__':
     train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
     test_loader  = DataLoader(dataset_test, batch_size=batch_size)
     
-    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False, reg_prior=False)
+    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False, reg_prior=True)
     model = model.to(device)
     
     print(model.parameters)
