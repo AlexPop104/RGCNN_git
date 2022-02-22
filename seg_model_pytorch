@@ -159,8 +159,9 @@ def test(model, loader):
 
     total_correct = 0
     for data in loader:
-        x = torch.cat([data.pos, data.normal], dim=1)
-        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+        cat = one_hot(data.category, num_classes=16)
+        cat = torch.tile(cat, [1, 2048, 1]) 
+        x = torch.cat([data.pos, data.x, cat], dim=2)  ### Pass this to the model
         logits, _ = model(x.to(device))
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == data.y.to(device)).sum())
