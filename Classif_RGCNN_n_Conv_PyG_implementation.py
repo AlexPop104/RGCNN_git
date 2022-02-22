@@ -124,7 +124,7 @@ def get_one_matrix_knn(matrix, k,batch_size,batch):
 
     edge_weights=torch.reshape(values,[-1])
 
-    
+    knn_adj_matrix=utils.to_dense_adj(full_indices,batch,edge_weights)
 
     return full_indices ,edge_weights
 

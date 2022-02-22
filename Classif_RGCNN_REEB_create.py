@@ -187,7 +187,7 @@ def expand(x, k, visited, nbrs, valid_idxs, scc, tau, knn, cnt=0):
     # marked[indices[0, distances[0] < tau]] = True
 
 
-#def extract_reeb_graph(point_cloud, knn, ns, para):  # Original version
+
 
 def extract_reeb_graph(point_cloud, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber):  
 

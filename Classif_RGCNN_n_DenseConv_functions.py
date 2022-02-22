@@ -88,7 +88,13 @@ def get_one_matrix_knn(matrix, k,batch_size,nr_points):
 
     edge_weights=torch.reshape(values,[-1])
 
-    knn_weight_matrix=tg.utils.to_dense_adj(edge_indices,edge_weights)
+    batch_indexes=torch.range(0,batch_size-1,device='cuda')
+    batch_indexes=torch.reshape(batch_indexes,[batch_size,1])
+    batch_indexes=torch.tile(batch_indexes,(1,nr_points))
+    batch_indexes=torch.reshape(batch_indexes,[batch_size*1024])
+    batch_indexes=batch_indexes.long()
+
+    knn_weight_matrix=tg.utils.to_dense_adj(edge_indices,batch_indexes,edge_weights)
 
     return knn_weight_matrix
 
