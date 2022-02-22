@@ -87,7 +87,7 @@ class cls_model(nn.Module):
         out = self.relu1(out)
 
         if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), x)))
+            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), x))**2)
         
         if self.one_layer == False:
             with torch.no_grad():
@@ -97,7 +97,7 @@ class cls_model(nn.Module):
             out = self.conv2(out, L)
             out = self.relu2(out)
             if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), x)))
+                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), x))**2)
     
             with torch.no_grad():
                 L = conv.pairwise_distance(out) # W - weight matrix
@@ -107,22 +107,32 @@ class cls_model(nn.Module):
             out = self.relu3(out)
             
             if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), x)))
+                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), x))**2)
     
             out, _ = t.max(out, 1)
 
             # ~~~~ Fully Connected ~~~~
             
             out = self.fc1(out)
+
+            if self.reg_prior:
+                self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
+                self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
+
             out = self.relu4(out)
             #out = self.dropout(out)
 
             out = self.fc2(out)
+            if self.reg_prior:
+                self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
+                self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
             out = self.relu5(out)
             #out = self.dropout(out)
 
             out = self.fc3(out)
-            
+            if self.reg_prior:
+                self.regularizers.append(t.linalg.norm(self.fc3.weight.data[0]) ** 2)
+                self.regularizers.append(t.linalg.norm(self.fc3.bias.data[0]) ** 2)
         else:
             out, _ = t.max(out, 1)
             out = self.fc(out)
