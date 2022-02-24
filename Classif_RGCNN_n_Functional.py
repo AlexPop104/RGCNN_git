@@ -24,7 +24,7 @@ import torch_geometric as tg
 from torch_geometric.utils import get_laplacian as get_laplacian_pyg
 from torch_geometric.transforms import Compose
 
-import Classif_RGCNN_n_DenseConv_functions as conv
+import Classif_RGCNN_n_DenseConv_functions_test as conv
 import os
 
 from torch_geometric.transforms import LinearTransformation

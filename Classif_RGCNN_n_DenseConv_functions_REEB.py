@@ -360,7 +360,7 @@ def extract_reeb_graph(point_cloud, knn, ns, reeb_nodes_num, reeb_sim_margin,poi
     sccs = np.asarray([np.pad(x, (0, largest_dim - len(x)), 'edge') for x in sccs])
     # assert np.all(np.isfinite(laplacian)) and np.all(np.isfinite(sccs))
     # print(vertices.shape, laplacian.shape)
-    print(np.shape(vertices))
+    #print(np.shape(vertices))
     return vertices, laplacian, list(sccs) , edges
     #return vertices, list(sccs)
 

@@ -4,7 +4,7 @@ import numpy as np
 
 from torch_geometric.loader import DenseDataLoader
 import os
-import Classif_RGCNN_n_DenseConv_functions as conv
+import Classif_RGCNN_n_DenseConv_functions_test as conv
 import torch as t
 from torch_geometric.transforms import FixedPoints
 from torch_geometric.datasets import ShapeNet
@@ -143,7 +143,8 @@ def train(model, optimizer, loader, regularization):
         y = one_hot(data.y, num_classes=50)
         y = y.type(t.FloatTensor)
         logits, regularizers = model(x.to(device))
-        loss = criterion(logits, y.to(device))
+        y_final=y.to(device)
+        loss = criterion(logits, y_final)
         s = t.sum(t.as_tensor(regularizers))
         loss = loss + regularization * s
         loss.backward()
@@ -185,8 +186,8 @@ if __name__ == '__main__':
     accuracy_log_path=log_folder_path+"Type_"+directory+"test_accuracy.npy"
 
     num_points = 2048
-    batch_size = 4
-    num_epochs = 50
+    batch_size = 16
+    num_epochs = 100
     learning_rate = 1e-3
 
     F = [128, 512, 1024]  # Outputs size of convolutional filter.
