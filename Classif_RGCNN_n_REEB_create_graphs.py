@@ -52,7 +52,7 @@ from sklearn.metrics import pairwise_distances_argmin
 
 
 
-def Create_Reeb_from_Dataset(loader,sccs_path,reeb_laplacian_path,time_execution):
+def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,time_execution):
     knn = 20
     ns = 20
     tau = 2
@@ -77,44 +77,42 @@ def Create_Reeb_from_Dataset(loader,sccs_path,reeb_laplacian_path,time_execution
         point_cloud=np.asarray(data.pos)
 
         point_cloud=np.reshape(point_cloud,(batch_size,nr_points,data.pos.shape[1]))
-        Reeb_Graph_start_time = time.time()
-
-        for k in range(batch_size):
-            vertices, laplacian_Reeb, sccs ,edges= conv.extract_reeb_graph(point_cloud[k], knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
-        Reeb_Graph_end_time = time.time()
-
-        print(Reeb_Graph_end_time-Reeb_Graph_start_time)
-        time_execution +=Reeb_Graph_end_time-Reeb_Graph_start_time
-
-
-        np_sccs_batch=np.asarray(sccs)
-        np_reeb_laplacian=np.asarray(laplacian_Reeb)
+        
 
         
 
-        nr_columns_batch= np_sccs_batch.shape[1]
-        nr_columns_all=all_sccs.shape[1]
+        for k in range(batch_size):
+            Reeb_Graph_start_time = time.time()
+            vertices, laplacian_Reeb, sccs ,edges= conv.extract_reeb_graph(point_cloud[k], knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
+            Reeb_Graph_end_time = time.time()
+            print(Reeb_Graph_end_time-Reeb_Graph_start_time)
+            time_execution +=Reeb_Graph_end_time-Reeb_Graph_start_time
+            np_sccs_batch=np.asarray(sccs)
+            np_reeb_laplacian=np.asarray(laplacian_Reeb)
+            nr_columns_batch= np_sccs_batch.shape[1]
+            nr_columns_all=all_sccs.shape[1]
 
-        nr_lines_batch=np_sccs_batch.shape[0]
-        nr_lines_all=all_sccs.shape[0]
+            nr_lines_batch=np_sccs_batch.shape[0]
+            nr_lines_all=all_sccs.shape[0]
 
-       
-    
-        if (nr_columns_batch>nr_columns_all):
-            ceva=all_sccs[:,nr_columns_all-1]
-            ceva=ceva.reshape((nr_lines_all,1))
-            ceva=np.tile(ceva,(nr_columns_batch-nr_columns_all))
-            all_sccs=np.concatenate((all_sccs,ceva),1)
+        
+        
+            if (nr_columns_batch>nr_columns_all):
+                ceva=all_sccs[:,nr_columns_all-1]
+                ceva=ceva.reshape((nr_lines_all,1))
+                ceva=np.tile(ceva,(nr_columns_batch-nr_columns_all))
+                all_sccs=np.concatenate((all_sccs,ceva),1)
 
 
-        else:
-            ceva=np_sccs_batch[:,nr_columns_batch-1]
-            ceva=ceva.reshape((nr_lines_batch,1))
-            ceva=np.tile(ceva,(nr_columns_all-nr_columns_batch))
-            np_sccs_batch=np.concatenate((np_sccs_batch,ceva),1)
+            else:
+                ceva=np_sccs_batch[:,nr_columns_batch-1]
+                ceva=ceva.reshape((nr_lines_batch,1))
+                ceva=np.tile(ceva,(nr_columns_all-nr_columns_batch))
+                np_sccs_batch=np.concatenate((np_sccs_batch,ceva),1)
 
-        all_sccs=np.concatenate((all_sccs,np_sccs_batch),0)
-        all_reeb_laplacians=np.concatenate((all_reeb_laplacians,np_reeb_laplacian),0)
+            all_sccs=np.concatenate((all_sccs,np_sccs_batch),0)
+            all_reeb_laplacians=np.concatenate((all_reeb_laplacians,np_reeb_laplacian),0)
+        
 
         
         print(all_sccs.shape)
@@ -129,7 +127,7 @@ def Create_Reeb_from_Dataset(loader,sccs_path,reeb_laplacian_path,time_execution
 
     return all_sccs,all_reeb_laplacians
 
-def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,time_execution):
+def Create_Reeb_from_Dataset(loader,sccs_path,reeb_laplacian_path,time_execution):
     
     knn = 20
     ns = 20
@@ -217,7 +215,7 @@ if __name__ == '__main__':
     os.mkdir(path)
 
     num_points = 1024
-    batch_size = 4
+    batch_size = 8
     num_epochs = 100
     learning_rate = 1e-3
     modelnet_num = 40
@@ -268,8 +266,8 @@ if __name__ == '__main__':
     timp_train=0
     timp_test=0
 
-    all_sccs_test, all_reeb_laplacians_test= Create_Reeb_from_Dataset(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,time_execution=timp_test)
-    all_sccs_train, all_reeb_laplacians_train= Create_Reeb_from_Dataset(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,time_execution=timp_train)
+    all_sccs_test, all_reeb_laplacians_test= Create_Reeb_from_Dataset_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,time_execution=timp_test)
+    all_sccs_train, all_reeb_laplacians_train= Create_Reeb_from_Dataset_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,time_execution=timp_train)
     
 
 
