@@ -125,6 +125,9 @@ def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,time_e
     np.save(sccs_path, all_sccs)
     np.save(reeb_laplacian_path, all_reeb_laplacians)
 
+    all_scc=np.delete(all_sccs,[0,1,2],0)
+    all_reeb_laplacians=np.delete(all_reeb_laplacians,[0,1,2],0)
+
     return all_sccs,all_reeb_laplacians
 
 def Create_Reeb_from_Dataset(loader,sccs_path,reeb_laplacian_path,time_execution):

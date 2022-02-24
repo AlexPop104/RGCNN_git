@@ -81,6 +81,7 @@ class cls_model(nn.Module):
 
         # self.conv1 = conv.DenseChebConv(6, 1000, 3)     # Values from REEB graph Guided Conv Paper
         # self.conv2 = conv.DenseChebConv(1000, 1000, 6)  # Values from REEB graph Guided Conv Paper
+        
 
         self.conv1 = conv.DenseChebConv(6, 128, 6)     
         self.conv2 = conv.DenseChebConv(128, 512, 5)  
@@ -120,19 +121,19 @@ class cls_model(nn.Module):
         
         if self.one_layer == False:
 
-            # with torch.no_grad():
-            #     Vertices_final_Reeb=torch.zeros([batch_size,laplacian_Reeb.shape[2], out.shape[2]], dtype=torch.float32,device='cuda')
+            with torch.no_grad():
+                Vertices_final_Reeb=torch.zeros([batch_size,laplacian_Reeb.shape[2], out.shape[2]], dtype=torch.float32,device='cuda')
 
-            #     for batch_iter in range(batch_size):   
-            #         for i in range(laplacian_Reeb.shape[1]):
-            #             Vertices_pool_Reeb=torch.zeros([sccs[batch_iter,i].shape[0],out.shape[2]], dtype=torch.float32,device='cuda')
+                for batch_iter in range(batch_size):   
+                    for i in range(laplacian_Reeb.shape[1]):
+                        Vertices_pool_Reeb=torch.zeros([sccs[batch_iter,i].shape[0],out.shape[2]], dtype=torch.float32,device='cuda')
                         
-            #             Vertices_pool_Reeb=out[batch_iter,sccs[batch_iter,i]]
+                        Vertices_pool_Reeb=out[batch_iter,sccs[batch_iter,i]]
 
-            #             Vertices_final_Reeb[batch_iter,i],_ =t.max(Vertices_pool_Reeb, 0)
+                        Vertices_final_Reeb[batch_iter,i],_ =t.max(Vertices_pool_Reeb, 0)
                         
                     
-            #     laplacian_Reeb_final= torch.tensor(laplacian_Reeb, dtype=torch.float32,device='cuda')
+                laplacian_Reeb_final= torch.tensor(laplacian_Reeb, dtype=torch.float32,device='cuda')
                 
 
 
@@ -148,29 +149,29 @@ class cls_model(nn.Module):
                 self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(out.permute(0, 2, 1), L), x)))
 
 
-            # out_Reeb=self.conv_Reeb(Vertices_final_Reeb,laplacian_Reeb_final)
-            # out_Reeb=self.relu_REEB(out_Reeb)
+            out_Reeb=self.conv_Reeb(Vertices_final_Reeb,laplacian_Reeb_final)
+            out_Reeb=self.relu_REEB(out_Reeb)
 
             # if self.reg_prior:
             #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(out_Reeb.permute(0, 2, 1), laplacian_Reeb_final), x)))
 
 
-            with torch.no_grad():
-                    L = conv.pairwise_distance(out) # W - weight matrix
-                    #L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
-                    L = conv.get_laplacian(L)
+            # with torch.no_grad():
+            #         L = conv.pairwise_distance(out) # W - weight matrix
+            #         #L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+            #         L = conv.get_laplacian(L)
                 
-            out = self.conv3(out, L)
-            out = self.relu3(out)
+            # out = self.conv3(out, L)
+            # out = self.relu3(out)
 
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(out.permute(0, 2, 1), L), x)))
+            # if self.reg_prior:
+            #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(out.permute(0, 2, 1), L), x)))
         
             out, _ = t.max(out, 1)
-            #out_Reeb, _ = t.max(out_Reeb, 1)
+            out_Reeb, _ = t.max(out_Reeb, 1)
 
-            out_final=out
-            #out_final=torch.cat((out_Reeb,out),1)
+            #out_final=out
+            out_final=torch.cat((out_Reeb,out),1)
             #out_final=torch.cat((out,out),1)
 
             # ~~~~ Fully Connected ~~~~
@@ -315,7 +316,7 @@ if __name__ == '__main__':
     batch_size = 64
     num_epochs = 100
     learning_rate = 1e-3
-    modelnet_num = 40
+    modelnet_num = 10
 
     k_KNN=55
 
@@ -388,12 +389,7 @@ if __name__ == '__main__':
     all_sccs_train, all_reeb_laplacian_train=Reeb_create.Create_Reeb_from_Dataset_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,time_execution=timp_train)
         
    
-    all_sccs_train=np.delete(all_sccs_train,[0,1,2],0)
-    all_sccs_test=np.delete(all_sccs_test,[0,1,2],0)
-
-    all_Reeb_laplacian_train=np.delete(all_Reeb_laplacian_train,[0,1,2],0)
-    all_Reeb_laplacian_test=np.delete(all_Reeb_laplacian_test,[0,1,2],0)
-
+    
     
 
     regularization = 1e-9
@@ -408,7 +404,7 @@ if __name__ == '__main__':
     for epoch in range(0, num_epochs):
         train_start_time = time.time()
 
-        loss = train(model, optimizer,loader=train_loader,all_sccs=all_sccs_train,all_Reeb_laplacian=all_Reeb_laplacian_train,k=k_KNN,num_points=num_points,regularization=regularization)
+        loss = train(model, optimizer,loader=train_loader,all_sccs=all_sccs_train,all_Reeb_laplacian=all_reeb_laplacian_train,k=k_KNN,num_points=num_points,regularization=regularization)
 
         train_stop_time = time.time()
 
@@ -417,7 +413,7 @@ if __name__ == '__main__':
         # writer.add_scalar("Loss/train", loss, epoch)
         
         test_start_time = time.time()
-        test_acc, confusion_matrix = test(model, loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_Reeb_laplacian_test,k=k_KNN,modelnet_num=modelnet_num,num_points=num_points)
+        test_acc, confusion_matrix = test(model, loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,k=k_KNN,modelnet_num=modelnet_num,num_points=num_points)
         test_stop_time = time.time()
         
         test_accuracy=np.append(test_accuracy, test_acc)
