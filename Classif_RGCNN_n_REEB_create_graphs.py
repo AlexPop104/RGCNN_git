@@ -51,203 +51,154 @@ from sklearn.metrics import pairwise_distances_argmin
 
 
 
-class cls_model(nn.Module):
-    def __init__(self, vertice ,F, K, M, class_num, batch_size,regularization=0, one_layer=True, dropout=0, reg_prior:bool=True):
-        assert len(F) == len(K)
-        super(cls_model, self).__init__()
 
-        self.F = F
-        self.K = K
-        self.M = M
-
-        self.one_layer = one_layer
-
-        self.reg_prior = reg_prior
-        self.vertice = vertice
-        self.regularization = regularization    # gamma from the paper: 10^-9
-        self.dropout = dropout
-        self.regularizers = []
-
-        # self.get_laplacian = GetLaplacian(normalize=True)
-        self.relu1 = nn.ReLU()
-        self.relu2 = nn.ReLU()
-        self.relu3 = nn.ReLU()
-        self.relu4 = nn.ReLU()
-        self.relu5 = nn.ReLU()
-        self.relu_REEB = nn.ReLU()
-
-        self.dropout = torch.nn.Dropout(p=self.dropout)
-
-        self.conv1 = conv.DenseChebConv(6, 1000, 3)
-        self.conv2 = conv.DenseChebConv(1000, 1000, 6)
-
-
-        self.conv3 = conv.DenseChebConv(512, 1024, 3)
-
-        self.conv_Reeb = conv.DenseChebConv(1000, 1000, 3)
-
-        
-        self.fc1 = nn.Linear(2000, 512, bias=True)
-        self.fc2 = nn.Linear(512, 128, bias=True)
-        self.fc3 = nn.Linear(128, class_num, bias=True)
-        
-        self.fc_t = nn.Linear(128, class_num)
-
-        self.max_pool = nn.MaxPool1d(self.vertice)
-
-        if one_layer == True:
-            self.fc = nn.Linear(128, class_num)
-
-        self.regularizer = 0
-        self.regularization = []
-
-    def forward(self, x,k,batch_size,num_points,vertices_Reeb,laplacian_Reeb,sccs):
-       
-        self.regularizers = []
-        with torch.no_grad():
-
-            L = conv.pairwise_distance(x) # W - weight matrix
-            L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
-            L = conv.get_laplacian(L)
-
-        out = self.conv1(x, L)
-        out = self.relu1(out)
-
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(out.permute(0, 2, 1), L), x)))
-        
-        if self.one_layer == False:
-
-            Vertices_final_Reeb=torch.zeros([20, out.shape[2]], dtype=torch.float32,device='cuda')
-
-            for i in range(20):
-                Vertices_pool_Reeb=torch.zeros([sccs[i].shape[0],out.shape[2]], dtype=torch.float32,device='cuda')
-                for j in range(sccs[i].shape[0]):
-                    Vertices_pool_Reeb[j]=out[0,sccs[i][j]]
-                
-                Vertices_final_Reeb[i], _ =t.max(Vertices_pool_Reeb, 0)
-                
-            Vertices_final_Reeb=Vertices_final_Reeb.unsqueeze(0)    
-            laplacian_Reeb_final= torch.tensor(laplacian_Reeb, dtype=torch.float32,device='cuda')
-            laplacian_Reeb_final=laplacian_Reeb_final.unsqueeze(0) 
-
-
-            with torch.no_grad():
-                L = conv.pairwise_distance(out) # W - weight matrix
-                L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
-                L = conv.get_laplacian(L)
-            
-            out = self.conv2(out, L)
-            out = self.relu2(out)
-
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(out.permute(0, 2, 1), L), x)))
-
-
-            out_Reeb=self.conv_Reeb(Vertices_final_Reeb,laplacian_Reeb_final)
-            out_Reeb=self.relu_REEB(out_Reeb)
-
-
-           
-            
-            out, _ = t.max(out, 1)
-            out_Reeb, _ = t.max(out_Reeb, 1)
-
-            out_final=torch.cat((out_Reeb,out),1)
-
-            # ~~~~ Fully Connected ~~~~
-            
-            out_final = self.fc1(out_final)
-            out_final = self.relu4(out_final)
-
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
-            #out = self.dropout(out)
-
-            out_final = self.fc2(out_final)
-            out_final = self.relu5(out_final)
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
-            #out = self.dropout(out)
-
-            out_final = self.fc3(out_final)
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc3.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc3.bias.data[0]) ** 2)
-            
-        else:
-            out_final, _ = t.max(out, 1)
-            out_final = self.fc(out)
-
-        return out_final, self.regularizers
-
-criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
-
-def train(model, optimizer, loader,k,batch_size,num_points,regularization):
-    model.train()
-    total_loss = 0
-    for i, data in enumerate(loader):
-        optimizer.zero_grad()
-        x = torch.cat([data.pos, data.normal], dim=1)
-        x = x.reshape(data.batch.unique().shape[0], num_points, 6) 
-        knn = 20
-        ns = 20
-        tau = 2
-        reeb_nodes_num=20
-        reeb_sim_margin=20
-        pointNumber=200
-
-        point_cloud=np.asarray(x[0,:,0:3])
-        Reeb_Graph_start_time = time.time()
-        vertices_Reeb, laplacian_Reeb, sccs = conv.extract_reeb_graph(point_cloud, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
-        Reeb_Graph_end_time = time.time()
-
-        print(Reeb_Graph_end_time-Reeb_Graph_start_time)
-
-        logits, regularizers  = model(x.to(device),k,batch_size=data.batch.unique().shape[0],num_points=num_points,vertices_Reeb=vertices_Reeb,laplacian_Reeb=laplacian_Reeb,sccs=sccs)
-        
-        loss    = criterion(logits, data.y.to(device))
-        s = t.sum(t.as_tensor(regularizers))
-        loss = loss + regularization * s
-        loss.backward()
-        optimizer.step()
-        total_loss += loss.item() * data.num_graphs
-        #if i%100 == 0:
-            #print(f"{i}: curr loss: {loss}")
-            #$print(f"{data.y} --- {logits.argmax(dim=1)}")
-    return total_loss / len(loader.dataset)
-
-@torch.no_grad()
-def test(model, loader,modelnet_num,num_points,batch_size):
-    confusion_matrix=np.zeros((modelnet_num,modelnet_num))
-    category_counters=np.zeros(modelnet_num)
+def Create_Reeb_from_Dataset(loader,sccs_path,reeb_laplacian_path,time_execution):
+    knn = 20
+    ns = 20
+    tau = 2
+    reeb_nodes_num=20
+    reeb_sim_margin=20
+    pointNumber=200
+    
+    all_sccs=np.eye(3)
+    all_reeb_laplacians = np.zeros((3,reeb_nodes_num))
 
     
 
-    model.eval()
+    
+    for i, data in enumerate(loader):
 
-    total_correct = 0
-    for data in loader:
-        x = torch.cat([data.pos, data.normal], dim=1)
-        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
-        logits, _ = model(x.to(device),k_KNN,batch_size=data.batch.unique().shape[0],num_points=num_points)
-        pred = logits.argmax(dim=-1)
-
-        iteration_batch_size=int(data.pos.shape[0]/num_points)
-
-        for j in range(iteration_batch_size):
-            confusion_matrix[pred[j]][data.y[j]]+=1
-            category_counters[pred[j]]+=1
+        print(i+1)
+        
+        batch_size=int(data.batch.unique().shape[0])
+        nr_points=int (data.pos.shape[0]/batch_size)
 
 
-        total_correct += int((pred == data.y.to(device)).sum())
+        point_cloud=np.asarray(data.pos)
 
-    for j in range(modelnet_num):
-            confusion_matrix[j,:] =confusion_matrix[j,:]/ category_counters[j]
+        point_cloud=np.reshape(point_cloud,(batch_size,nr_points,data.pos.shape[1]))
+        Reeb_Graph_start_time = time.time()
 
-    return total_correct / len(loader.dataset) , confusion_matrix
+        for k in range(batch_size):
+            vertices, laplacian_Reeb, sccs ,edges= conv.extract_reeb_graph(point_cloud[k], knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
+        Reeb_Graph_end_time = time.time()
+
+        print(Reeb_Graph_end_time-Reeb_Graph_start_time)
+        time_execution +=Reeb_Graph_end_time-Reeb_Graph_start_time
+
+
+        np_sccs_batch=np.asarray(sccs)
+        np_reeb_laplacian=np.asarray(laplacian_Reeb)
+
+        
+
+        nr_columns_batch= np_sccs_batch.shape[1]
+        nr_columns_all=all_sccs.shape[1]
+
+        nr_lines_batch=np_sccs_batch.shape[0]
+        nr_lines_all=all_sccs.shape[0]
+
+       
+    
+        if (nr_columns_batch>nr_columns_all):
+            ceva=all_sccs[:,nr_columns_all-1]
+            ceva=ceva.reshape((nr_lines_all,1))
+            ceva=np.tile(ceva,(nr_columns_batch-nr_columns_all))
+            all_sccs=np.concatenate((all_sccs,ceva),1)
+
+
+        else:
+            ceva=np_sccs_batch[:,nr_columns_batch-1]
+            ceva=ceva.reshape((nr_lines_batch,1))
+            ceva=np.tile(ceva,(nr_columns_all-nr_columns_batch))
+            np_sccs_batch=np.concatenate((np_sccs_batch,ceva),1)
+
+        all_sccs=np.concatenate((all_sccs,np_sccs_batch),0)
+        all_reeb_laplacians=np.concatenate((all_reeb_laplacians,np_reeb_laplacian),0)
+
+        
+        print(all_sccs.shape)
+        print(all_reeb_laplacians.shape)
+
+        if((i+1)%5==0):
+            np.save(sccs_path, all_sccs)
+            np.save(reeb_laplacian_path, all_reeb_laplacians)
+
+    np.save(sccs_path, all_sccs)
+    np.save(reeb_laplacian_path, all_reeb_laplacians)
+
+    return all_sccs,all_reeb_laplacians
+
+def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,time_execution):
+    
+    knn = 20
+    ns = 20
+    tau = 2
+    reeb_nodes_num=20
+    reeb_sim_margin=20
+    pointNumber=200
+
+    
+    all_sccs=np.eye(3)
+    all_reeb_laplacians = np.zeros((3,reeb_nodes_num))
+    
+    for i, data in enumerate(loader):
+
+        print(i+1)
+        
+
+
+        point_cloud=np.asarray(data.pos)
+        Reeb_Graph_start_time = time.time()
+        vertices, laplacian_Reeb, sccs ,edges= conv.extract_reeb_graph(point_cloud, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
+        Reeb_Graph_end_time = time.time()
+
+        print(Reeb_Graph_end_time-Reeb_Graph_start_time)
+        time_execution +=Reeb_Graph_end_time-Reeb_Graph_start_time
+
+
+        np_sccs_batch=np.asarray(sccs)
+        np_reeb_laplacian=np.asarray(laplacian_Reeb)
+
+        
+
+        nr_columns_batch= np_sccs_batch.shape[1]
+        nr_columns_all=all_sccs.shape[1]
+
+        nr_lines_batch=np_sccs_batch.shape[0]
+        nr_lines_all=all_sccs.shape[0]
+
+       
+    
+        if (nr_columns_batch>nr_columns_all):
+            ceva=all_sccs[:,nr_columns_all-1]
+            ceva=ceva.reshape((nr_lines_all,1))
+            ceva=np.tile(ceva,(nr_columns_batch-nr_columns_all))
+            all_sccs=np.concatenate((all_sccs,ceva),1)
+
+
+        else:
+            ceva=np_sccs_batch[:,nr_columns_batch-1]
+            ceva=ceva.reshape((nr_lines_batch,1))
+            ceva=np.tile(ceva,(nr_columns_all-nr_columns_batch))
+            np_sccs_batch=np.concatenate((np_sccs_batch,ceva),1)
+
+        all_sccs=np.concatenate((all_sccs,np_sccs_batch),0)
+        all_reeb_laplacians=np.concatenate((all_reeb_laplacians,np_reeb_laplacian),0)
+
+        
+        print(all_sccs.shape)
+        print(all_reeb_laplacians.shape)
+
+        if((i+1)%5==0):
+            np.save(sccs_path, all_sccs)
+            np.save(reeb_laplacian_path, all_reeb_laplacians)
+
+    np.save(sccs_path, all_sccs)
+    np.save(reeb_laplacian_path, all_reeb_laplacians)
+
+    return all_sccs,all_reeb_laplacians
+
 
 if __name__ == '__main__':
     
@@ -266,7 +217,7 @@ if __name__ == '__main__':
     os.mkdir(path)
 
     num_points = 1024
-    batch_size = 1
+    batch_size = 4
     num_epochs = 100
     learning_rate = 1e-3
     modelnet_num = 40
@@ -293,18 +244,13 @@ if __name__ == '__main__':
     print(f"Test dataset shape:  {dataset_test}")
 
 
-    train_loader = DataLoader(dataset_train, batch_size=batch_size, pin_memory=True)
+    train_loader = DataLoader(dataset_train, batch_size=batch_size,shuffle=True, pin_memory=True)
     test_loader = DataLoader(dataset_test, batch_size=batch_size)
     
-    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False,batch_size=batch_size, reg_prior=True)
-    model = model.to(device)
     
-    print(model.parameters)
+    
 
-    all_sccs=np.eye(3)
-    all_reeb_laplacians = np.zeros((3,20))
-
-    timp_train=0
+    
 
     path_logs="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/"
 
@@ -319,139 +265,86 @@ if __name__ == '__main__':
     sccs_path_test=path_logs+time_stamp+"sccs_test.npy"
     reeb_laplacian_path_test=path_logs+time_stamp+"reeb_laplacian_test.npy"
 
-    for i, data in enumerate(train_loader):
-
-        print(i+1)
-        knn = 20
-        ns = 20
-        tau = 2
-        reeb_nodes_num=20
-        reeb_sim_margin=20
-        pointNumber=200
-
-
-
-        point_cloud=np.asarray(data.pos)
-        Reeb_Graph_start_time = time.time()
-        vertices, laplacian_Reeb, sccs ,edges= conv.extract_reeb_graph(point_cloud, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
-        Reeb_Graph_end_time = time.time()
-
-        print(Reeb_Graph_end_time-Reeb_Graph_start_time)
-        timp_train +=Reeb_Graph_end_time-Reeb_Graph_start_time
-
-
-        np_sccs_batch=np.asarray(sccs)
-        np_reeb_laplacian=np.asarray(laplacian_Reeb)
-
-        
-
-        nr_columns_batch= np_sccs_batch.shape[1]
-        nr_columns_all=all_sccs.shape[1]
-
-        nr_lines_batch=np_sccs_batch.shape[0]
-        nr_lines_all=all_sccs.shape[0]
-
-       
-    
-        if (nr_columns_batch>nr_columns_all):
-            ceva=all_sccs[:,nr_columns_all-1]
-            ceva=ceva.reshape((nr_lines_all,1))
-            ceva=np.tile(ceva,(nr_columns_batch-nr_columns_all))
-            all_sccs=np.concatenate((all_sccs,ceva),1)
-
-
-        else:
-            ceva=np_sccs_batch[:,nr_columns_batch-1]
-            ceva=ceva.reshape((nr_lines_batch,1))
-            ceva=np.tile(ceva,(nr_columns_all-nr_columns_batch))
-            np_sccs_batch=np.concatenate((np_sccs_batch,ceva),1)
-
-        all_sccs=np.concatenate((all_sccs,np_sccs_batch),0)
-        all_reeb_laplacians=np.concatenate((all_reeb_laplacians,np_reeb_laplacian),0)
-
-        
-        print(all_sccs.shape)
-        print(all_reeb_laplacians.shape)
-
-        if((i+1)%5==0):
-            np.save(sccs_path_train, all_sccs)
-            np.save(reeb_laplacian_path_train, all_reeb_laplacians)
-
-    np.save(sccs_path_train, all_sccs)
-    np.save(reeb_laplacian_path_train, all_reeb_laplacians)
-
-    
-
-    all_sccs=np.eye(3)
-    all_reeb_laplacians = np.zeros((3,20))
-
+    timp_train=0
     timp_test=0
 
-    for i, data in enumerate(test_loader):
-
-        print(i+1)
-        knn = 20
-        ns = 20
-        tau = 2
-        reeb_nodes_num=20
-        reeb_sim_margin=20
-        pointNumber=200
+    all_sccs_test, all_reeb_laplacians_test= Create_Reeb_from_Dataset(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,time_execution=timp_test)
+    all_sccs_train, all_reeb_laplacians_train= Create_Reeb_from_Dataset(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,time_execution=timp_train)
+    
 
 
+    
 
-        point_cloud=np.asarray(data.pos)
-        Reeb_Graph_start_time = time.time()
-        vertices, laplacian_Reeb, sccs ,edges= conv.extract_reeb_graph(point_cloud, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
-        Reeb_Graph_end_time = time.time()
+    # all_sccs=np.eye(3)
+    # all_reeb_laplacians = np.zeros((3,20))
 
-        print(Reeb_Graph_end_time-Reeb_Graph_start_time)
-        timp_test +=Reeb_Graph_end_time-Reeb_Graph_start_time
+    # timp_test=0
+
+    # for i, data in enumerate(test_loader):
+
+    #     print(i+1)
+    #     knn = 20
+    #     ns = 20
+    #     tau = 2
+    #     reeb_nodes_num=20
+    #     reeb_sim_margin=20
+    #     pointNumber=200
 
 
-        np_sccs_batch=np.asarray(sccs)
-        np_reeb_laplacian=np.asarray(laplacian_Reeb)
+
+    #     point_cloud=np.asarray(data.pos)
+    #     Reeb_Graph_start_time = time.time()
+    #     vertices, laplacian_Reeb, sccs ,edges= conv.extract_reeb_graph(point_cloud, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
+    #     Reeb_Graph_end_time = time.time()
+
+    #     print(Reeb_Graph_end_time-Reeb_Graph_start_time)
+    #     timp_test +=Reeb_Graph_end_time-Reeb_Graph_start_time
+
+
+    #     np_sccs_batch=np.asarray(sccs)
+    #     np_reeb_laplacian=np.asarray(laplacian_Reeb)
 
         
 
-        nr_columns_batch= np_sccs_batch.shape[1]
-        nr_columns_all=all_sccs.shape[1]
+    #     nr_columns_batch= np_sccs_batch.shape[1]
+    #     nr_columns_all=all_sccs.shape[1]
 
-        nr_lines_batch=np_sccs_batch.shape[0]
-        nr_lines_all=all_sccs.shape[0]
+    #     nr_lines_batch=np_sccs_batch.shape[0]
+    #     nr_lines_all=all_sccs.shape[0]
 
        
     
-        if (nr_columns_batch>nr_columns_all):
-            ceva=all_sccs[:,nr_columns_all-1]
-            ceva=ceva.reshape((nr_lines_all,1))
-            ceva=np.tile(ceva,(nr_columns_batch-nr_columns_all))
-            all_sccs=np.concatenate((all_sccs,ceva),1)
+    #     if (nr_columns_batch>nr_columns_all):
+    #         ceva=all_sccs[:,nr_columns_all-1]
+    #         ceva=ceva.reshape((nr_lines_all,1))
+    #         ceva=np.tile(ceva,(nr_columns_batch-nr_columns_all))
+    #         all_sccs=np.concatenate((all_sccs,ceva),1)
 
 
-        else:
-            ceva=np_sccs_batch[:,nr_columns_batch-1]
-            ceva=ceva.reshape((nr_lines_batch,1))
-            ceva=np.tile(ceva,(nr_columns_all-nr_columns_batch))
-            np_sccs_batch=np.concatenate((np_sccs_batch,ceva),1)
+    #     else:
+    #         ceva=np_sccs_batch[:,nr_columns_batch-1]
+    #         ceva=ceva.reshape((nr_lines_batch,1))
+    #         ceva=np.tile(ceva,(nr_columns_all-nr_columns_batch))
+    #         np_sccs_batch=np.concatenate((np_sccs_batch,ceva),1)
 
-        all_sccs=np.concatenate((all_sccs,np_sccs_batch),0)
-        all_reeb_laplacians=np.concatenate((all_reeb_laplacians,np_reeb_laplacian),0)
+    #     all_sccs=np.concatenate((all_sccs,np_sccs_batch),0)
+    #     all_reeb_laplacians=np.concatenate((all_reeb_laplacians,np_reeb_laplacian),0)
 
         
-        print(all_sccs.shape)
-        print(all_reeb_laplacians.shape)
+    #     print(all_sccs.shape)
+    #     print(all_reeb_laplacians.shape)
 
-        if((i+1)%5==0):
-            np.save(sccs_path_test, all_sccs)
-            np.save(reeb_laplacian_path_test, all_reeb_laplacians)
+    #     if((i+1)%5==0):
+    #         np.save(sccs_path_test, all_sccs)
+    #         np.save(reeb_laplacian_path_test, all_reeb_laplacians)
 
-    np.save(sccs_path_test, all_sccs)
-    np.save(reeb_laplacian_path_test, all_reeb_laplacians)
+    # np.save(sccs_path_test, all_sccs)
+    # np.save(reeb_laplacian_path_test, all_reeb_laplacians)
 
     print("Train Reeb Computation time:")
     print(timp_train)
-    print("Test Reeb Computation time:")
-    print(timp_test)
+    # print("Test Reeb Computation time:")
+    # print(timp_test)
 
         # fig = matplotlib.pyplot.figure()
         # ax = fig.add_subplot(111, projection='3d')
@@ -466,45 +359,3 @@ if __name__ == '__main__':
 
     
 
-#     regularization = 1e-9
-
-#     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    
-#     all_losses=np.array([])
-#     test_accuracy=np.array([])
-#     confusion_matrix_collection = np.zeros((1,modelnet_num))
-
-
-#     for epoch in range(1, num_epochs):
-#         train_start_time = time.time()
-#         loss = train(model, optimizer, train_loader,k_KNN,batch_size,num_points,regularization=regularization)
-#         train_stop_time = time.time()
-
-#         all_losses=np.append(all_losses, loss)
-
-#         # writer.add_scalar("Loss/train", loss, epoch)
-        
-#         test_start_time = time.time()
-#         test_acc, confusion_matrix = test(model, test_loader,modelnet_num,num_points,batch_size)
-#         test_stop_time = time.time()
-        
-#         test_accuracy=np.append(test_accuracy, test_acc)
-#         print(test_accuracy.shape)
-#         confusion_matrix_collection=np.append(confusion_matrix_collection,confusion_matrix,axis=0)
-#         # writer.add_scalar("Acc/test", test_acc, epoch)
-#         print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
-#         print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
-#         \tTest Time: \t{test_stop_time - test_start_time }')
-
-#         if(epoch%5==0):
-#             np.save(conf_matrix_path, confusion_matrix_collection)
-#             np.save(loss_log_path, all_losses)
-#             np.save(accuracy_log_path, test_accuracy)
-
-#             torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
-
-#             print(confusion_matrix)
-
-# np.save(loss_log_path, all_losses)
-# np.save(accuracy_log_path, test_accuracy)
-# np.save(conf_matrix_path, confusion_matrix_collection)

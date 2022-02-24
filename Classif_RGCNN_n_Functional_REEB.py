@@ -24,7 +24,8 @@ import torch_geometric as tg
 from torch_geometric.utils import get_laplacian as get_laplacian_pyg
 from torch_geometric.transforms import Compose
 
-import Classif_RGCNN_n_DenseConv_functions_REEB as conv
+import Classif_RGCNN_n_DenseConv_functions_test as conv
+import Classif_RGCNN_n_REEB_create_graphs as Reeb_create
 import os
 
 from torch_geometric.transforms import LinearTransformation
@@ -83,8 +84,6 @@ class cls_model(nn.Module):
 
         self.conv1 = conv.DenseChebConv(6, 128, 6)     
         self.conv2 = conv.DenseChebConv(128, 512, 5)  
-
-
         self.conv3 = conv.DenseChebConv(512, 1024, 3)
 
         self.conv_Reeb = conv.DenseChebConv(128, 512, 5)
@@ -145,8 +144,8 @@ class cls_model(nn.Module):
             out = self.conv2(out, L)
             out = self.relu2(out)
 
-            # if self.reg_prior:
-            #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(out.permute(0, 2, 1), L), x)))
+            if self.reg_prior:
+                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(out.permute(0, 2, 1), L), x)))
 
 
             # out_Reeb=self.conv_Reeb(Vertices_final_Reeb,laplacian_Reeb_final)
@@ -156,8 +155,17 @@ class cls_model(nn.Module):
             #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(out_Reeb.permute(0, 2, 1), laplacian_Reeb_final), x)))
 
 
-           
-            
+            with torch.no_grad():
+                    L = conv.pairwise_distance(out) # W - weight matrix
+                    #L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+                    L = conv.get_laplacian(L)
+                
+            out = self.conv3(out, L)
+            out = self.relu3(out)
+
+            if self.reg_prior:
+                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(out.permute(0, 2, 1), L), x)))
+        
             out, _ = t.max(out, 1)
             #out_Reeb, _ = t.max(out_Reeb, 1)
 
@@ -167,12 +175,12 @@ class cls_model(nn.Module):
 
             # ~~~~ Fully Connected ~~~~
             
-            # out_final = self.fc1(out_final)
-            # out_final = self.relu4(out_final)
+            out_final = self.fc1(out_final)
+            out_final = self.relu4(out_final)
 
-            # if self.reg_prior:
-            #     self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
-            #     self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
+            if self.reg_prior:
+                self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
+                self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
             #out = self.dropout(out)
 
             out_final = self.fc2(out_final)
@@ -304,7 +312,7 @@ if __name__ == '__main__':
     os.mkdir(path)
 
     num_points = 1024
-    batch_size = 16
+    batch_size = 64
     num_epochs = 100
     learning_rate = 1e-3
     modelnet_num = 40
@@ -340,30 +348,51 @@ if __name__ == '__main__':
     print(model.parameters)
 
     
-    all_reeb_laplacians = np.zeros((3,20))
+    # all_reeb_laplacians = np.zeros((3,20))
 
   
 
-    path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04reeb_laplacian_train.npy"
-    path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04reeb_laplacian_test.npy"
+    # path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04reeb_laplacian_train.npy"
+    # path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04reeb_laplacian_test.npy"
 
-    path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04sccs_train.npy"
-    path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04sccs_test.npy"
+    # path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04sccs_train.npy"
+    # path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04sccs_test.npy"
 
 
-    all_sccs_train=np.load(path_sccs_train)
-    all_sccs_test=np.load(path_sccs_test)
+    # all_sccs_train=np.load(path_sccs_train)
+    # all_sccs_test=np.load(path_sccs_test)
 
-    all_Reeb_laplacian_train=np.load(path_Reeb_laplacian_train)
-    all_Reeb_laplacian_test=np.load(path_Reeb_laplacian_test)
+    # all_Reeb_laplacian_train=np.load(path_Reeb_laplacian_train)
+    # all_Reeb_laplacian_test=np.load(path_Reeb_laplacian_test)
 
+    # all_sccs_train=np.delete(all_sccs_train,[0,1,2],0)
+    # all_sccs_test=np.delete(all_sccs_test,[0,1,2],0)
+
+    # all_Reeb_laplacian_train=np.delete(all_Reeb_laplacian_train,[0,1,2],0)
+    # all_Reeb_laplacian_test=np.delete(all_Reeb_laplacian_test,[0,1,2],0)
+
+
+
+    path_logs="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/"
+
+    sccs_path_train=path_logs+directory+"sccs_train.npy"
+    reeb_laplacian_path_train=path_logs+directory+"reeb_laplacian_train.npy"
+
+    sccs_path_test=path_logs+directory+"sccs_test.npy"
+    reeb_laplacian_path_test=path_logs+directory+"reeb_laplacian_test.npy"
+
+    timp_train=0
+    timp_test=0
+
+    all_sccs_test, all_reeb_laplacian_test= Reeb_create.Create_Reeb_from_Dataset(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,time_execution=timp_test)
+    all_sccs_train, all_reeb_laplacian_train=Reeb_create.Create_Reeb_from_Dataset(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,time_execution=timp_train)
+        
+   
     all_sccs_train=np.delete(all_sccs_train,[0,1,2],0)
     all_sccs_test=np.delete(all_sccs_test,[0,1,2],0)
 
     all_Reeb_laplacian_train=np.delete(all_Reeb_laplacian_train,[0,1,2],0)
     all_Reeb_laplacian_test=np.delete(all_Reeb_laplacian_test,[0,1,2],0)
-        
-   
 
     
 

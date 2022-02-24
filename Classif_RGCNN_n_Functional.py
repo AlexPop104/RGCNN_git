@@ -246,6 +246,7 @@ if __name__ == '__main__':
 
 
     train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
+    #train_loader = DataLoader(dataset_train, batch_size=batch_size,shuffle=False, pin_memory=True)
     test_loader = DataLoader(dataset_test, batch_size=batch_size)
     
     model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False,batch_size=batch_size, reg_prior=True)
