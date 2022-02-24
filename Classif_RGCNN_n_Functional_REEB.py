@@ -384,8 +384,8 @@ if __name__ == '__main__':
     timp_train=0
     timp_test=0
 
-    all_sccs_test, all_reeb_laplacian_test= Reeb_create.Create_Reeb_from_Dataset(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,time_execution=timp_test)
-    all_sccs_train, all_reeb_laplacian_train=Reeb_create.Create_Reeb_from_Dataset(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,time_execution=timp_train)
+    all_sccs_test, all_reeb_laplacian_test= Reeb_create.Create_Reeb_from_Dataset_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,time_execution=timp_test)
+    all_sccs_train, all_reeb_laplacian_train=Reeb_create.Create_Reeb_from_Dataset_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,time_execution=timp_train)
         
    
     all_sccs_train=np.delete(all_sccs_train,[0,1,2],0)
