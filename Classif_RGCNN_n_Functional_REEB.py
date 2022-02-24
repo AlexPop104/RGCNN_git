@@ -79,18 +79,21 @@ class cls_model(nn.Module):
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
-        # self.conv1 = conv.DenseChebConv(6, 1000, 3)     # Values from REEB graph Guided Conv Paper
-        # self.conv2 = conv.DenseChebConv(1000, 1000, 6)  # Values from REEB graph Guided Conv Paper
+        self.conv1 = conv.DenseChebConv(6, 1000, 3)     # Values from REEB graph Guided Conv Paper
+        self.conv2 = conv.DenseChebConv(1000, 1000, 3)  # Values from REEB graph Guided Conv Paper
         
 
-        self.conv1 = conv.DenseChebConv(6, 128, 6)     
-        self.conv2 = conv.DenseChebConv(128, 512, 5)  
-        self.conv3 = conv.DenseChebConv(512, 1024, 3)
+        # self.conv1 = conv.DenseChebConv(6, 128, 6)     
+        # self.conv2 = conv.DenseChebConv(128, 512, 5)  
+        # self.conv3 = conv.DenseChebConv(512, 1024, 3)
 
-        self.conv_Reeb = conv.DenseChebConv(128, 512, 5)
+        #self.conv_Reeb = conv.DenseChebConv(128, 512, 5)
+        self.conv_Reeb = conv.DenseChebConv(1000, 1000, 6)
 
         
-        self.fc1 = nn.Linear(1024, 512, bias=True)
+        #self.fc1 = nn.Linear(1024, 512, bias=True)
+
+        self.fc1 = nn.Linear(2000, 512, bias=True)
         self.fc2 = nn.Linear(512, 128, bias=True)
         self.fc3 = nn.Linear(128, class_num, bias=True)
         
