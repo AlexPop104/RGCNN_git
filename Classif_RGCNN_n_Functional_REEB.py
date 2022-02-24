@@ -78,16 +78,19 @@ class cls_model(nn.Module):
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
-        self.conv1 = conv.DenseChebConv(6, 1000, 3)
-        self.conv2 = conv.DenseChebConv(1000, 1000, 6)
+        # self.conv1 = conv.DenseChebConv(6, 1000, 3)     # Values from REEB graph Guided Conv Paper
+        # self.conv2 = conv.DenseChebConv(1000, 1000, 6)  # Values from REEB graph Guided Conv Paper
+
+        self.conv1 = conv.DenseChebConv(6, 128, 6)     
+        self.conv2 = conv.DenseChebConv(128, 512, 5)  
 
 
         self.conv3 = conv.DenseChebConv(512, 1024, 3)
 
-        self.conv_Reeb = conv.DenseChebConv(1000, 1000, 3)
+        self.conv_Reeb = conv.DenseChebConv(128, 512, 5)
 
         
-        self.fc1 = nn.Linear(2000, 512, bias=True)
+        self.fc1 = nn.Linear(1024, 512, bias=True)
         self.fc2 = nn.Linear(512, 128, bias=True)
         self.fc3 = nn.Linear(128, class_num, bias=True)
         
@@ -107,7 +110,7 @@ class cls_model(nn.Module):
         with torch.no_grad():
 
             L = conv.pairwise_distance(x) # W - weight matrix
-            L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+            #L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
             L = conv.get_laplacian(L)
 
         out = self.conv1(x, L)
@@ -118,52 +121,58 @@ class cls_model(nn.Module):
         
         if self.one_layer == False:
 
-            Vertices_final_Reeb=torch.zeros([laplacian_Reeb.shape[1], out.shape[2]], dtype=torch.float32,device='cuda')
+            # with torch.no_grad():
+            #     Vertices_final_Reeb=torch.zeros([batch_size,laplacian_Reeb.shape[2], out.shape[2]], dtype=torch.float32,device='cuda')
 
-            for i in range(laplacian_Reeb.shape[1]):
-                Vertices_pool_Reeb=torch.zeros([sccs[i].shape[0],out.shape[2]], dtype=torch.float32,device='cuda')
-                
-                Vertices_pool_Reeb=out[0,sccs[i]]
+            #     for batch_iter in range(batch_size):   
+            #         for i in range(laplacian_Reeb.shape[1]):
+            #             Vertices_pool_Reeb=torch.zeros([sccs[batch_iter,i].shape[0],out.shape[2]], dtype=torch.float32,device='cuda')
+                        
+            #             Vertices_pool_Reeb=out[batch_iter,sccs[batch_iter,i]]
 
-                Vertices_final_Reeb[i],_ =t.max(Vertices_pool_Reeb, 0)
+            #             Vertices_final_Reeb[batch_iter,i],_ =t.max(Vertices_pool_Reeb, 0)
+                        
+                    
+            #     laplacian_Reeb_final= torch.tensor(laplacian_Reeb, dtype=torch.float32,device='cuda')
                 
-            Vertices_final_Reeb=Vertices_final_Reeb.unsqueeze(0)    
-            laplacian_Reeb_final= torch.tensor(laplacian_Reeb, dtype=torch.float32,device='cuda')
-            laplacian_Reeb_final=laplacian_Reeb_final.unsqueeze(0) 
 
 
             with torch.no_grad():
                 L = conv.pairwise_distance(out) # W - weight matrix
-                L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+                #L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
                 L = conv.get_laplacian(L)
             
             out = self.conv2(out, L)
             out = self.relu2(out)
 
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(out.permute(0, 2, 1), L), x)))
+            # if self.reg_prior:
+            #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(out.permute(0, 2, 1), L), x)))
 
 
-            out_Reeb=self.conv_Reeb(Vertices_final_Reeb,laplacian_Reeb_final)
-            out_Reeb=self.relu_REEB(out_Reeb)
+            # out_Reeb=self.conv_Reeb(Vertices_final_Reeb,laplacian_Reeb_final)
+            # out_Reeb=self.relu_REEB(out_Reeb)
+
+            # if self.reg_prior:
+            #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(out_Reeb.permute(0, 2, 1), laplacian_Reeb_final), x)))
 
 
            
             
             out, _ = t.max(out, 1)
-            out_Reeb, _ = t.max(out_Reeb, 1)
+            #out_Reeb, _ = t.max(out_Reeb, 1)
 
-            out_final=torch.cat((out_Reeb,out),1)
-            # out_final=torch.cat((out,out),1)
+            out_final=out
+            #out_final=torch.cat((out_Reeb,out),1)
+            #out_final=torch.cat((out,out),1)
 
             # ~~~~ Fully Connected ~~~~
             
-            out_final = self.fc1(out_final)
-            out_final = self.relu4(out_final)
+            # out_final = self.fc1(out_final)
+            # out_final = self.relu4(out_final)
 
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
+            # if self.reg_prior:
+            #     self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
+            #     self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
             #out = self.dropout(out)
 
             out_final = self.fc2(out_final)
@@ -201,6 +210,9 @@ def train(model, optimizer, loader,all_sccs,all_Reeb_laplacian,k,num_points,regu
 
         sccs_batch=sccs_batch.astype(int)
 
+        sccs_batch=np.reshape(sccs_batch,(data.batch.unique().shape[0],all_Reeb_laplacian.shape[1],all_sccs.shape[1]))
+        reeb_laplace_batch=np.reshape(reeb_laplace_batch,(data.batch.unique().shape[0],all_Reeb_laplacian.shape[1],all_Reeb_laplacian.shape[1]))
+
         # knn = 20
         # ns = 20
         # tau = 2
@@ -213,10 +225,12 @@ def train(model, optimizer, loader,all_sccs,all_Reeb_laplacian,k,num_points,regu
         # vertices_Reeb, laplacian_Reeb, sccs = conv.extract_reeb_graph(point_cloud, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
         # Reeb_Graph_end_time = time.time()
         
-        
+        #train_start_time = time.time()
         logits, regularizers  = model(x.to(device),k,batch_size=data.batch.unique().shape[0],num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
+        #train_end_time = time.time()
         
-        
+        #print(train_end_time-train_start_time)
+
         loss    = criterion(logits, data.y.to(device))
         s = t.sum(t.as_tensor(regularizers))
         loss = loss + regularization * s
@@ -249,6 +263,9 @@ def test(model, loader,all_sccs,all_Reeb_laplacian,k,modelnet_num,num_points):
         reeb_laplace_batch=all_Reeb_laplacian[i*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1]:(i+1)*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
 
         
+        sccs_batch=np.reshape(sccs_batch,(data.batch.unique().shape[0],all_Reeb_laplacian.shape[1],all_sccs.shape[1]))
+        reeb_laplace_batch=np.reshape(reeb_laplace_batch,(data.batch.unique().shape[0],all_Reeb_laplacian.shape[1],all_Reeb_laplacian.shape[1]))
+
         logits, _ = model(x.to(device),k,batch_size=data.batch.unique().shape[0],num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
         pred = logits.argmax(dim=-1)
 
@@ -287,7 +304,7 @@ if __name__ == '__main__':
     os.mkdir(path)
 
     num_points = 1024
-    batch_size = 1
+    batch_size = 16
     num_epochs = 100
     learning_rate = 1e-3
     modelnet_num = 40
