@@ -30,6 +30,7 @@ from torch_geometric.transforms import NormalizeScale
 from torch_geometric.loader import DataLoader
 from datetime import datetime
 from torch.nn import MSELoss
+from torch.optim import lr_scheduler
 
 
 class cls_model(nn.Module):
@@ -218,6 +219,7 @@ if __name__ == '__main__':
     print(model.parameters)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
 
     regularization = 1e-9
     for epoch in range(1, 51):
@@ -235,3 +237,5 @@ if __name__ == '__main__':
         print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
         print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
         Test Time: \t{test_stop_time - test_start_time }')
+
+        my_lr_scheduler.step()

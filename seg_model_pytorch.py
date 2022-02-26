@@ -206,7 +206,7 @@ def train(model, optimizer, loader, regularization):
         if i%100 == 0:
             print(f"{i}: curr loss: {loss}")
             #print(f"{data.y} --- {logits.argmax(dim=1)}")
-    return total_loss * batch_size / len(loader[0])
+    return total_loss * batch_size / len(dataset_train)
 
 
 @torch.no_grad()
