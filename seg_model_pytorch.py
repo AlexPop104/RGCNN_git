@@ -221,8 +221,7 @@ def test(model, loader):
         cat = one_hot(data.category, num_classes=16)
         cat = torch.tile(cat, [1, num_points, 1]) 
         x = torch.cat([data.pos, data.x, cat], dim=2)  ### Pass this to the model
-        y = one_hot(data.y, num_classes=50)
-
+        y = data.y
         logits, _ = model(x.to(device))
         logits = logits.to('cpu')
         pred = logits.argmax(dim=2)
@@ -234,7 +233,6 @@ def test(model, loader):
         predictions[start:stop] = pred
         lab = data.y
         labels[start:stop] = lab.reshape([-1, num_points])
-    print(predictions.shape)
     ncorrects = np.sum(predictions == labels)
     accuracy  = ncorrects * 100 / (len(dataset_test) * num_points)
     print(f"Accuracy: {accuracy}, ncorrect: {ncorrects} / {len(dataset_test) * num_points}")
@@ -266,10 +264,6 @@ def start_training(model, train_loader, test_loader, optimizer, epochs=50, learn
 
         my_lr_scheduler.step()
 
-        for name, param in model.named_parameters():
-            if param.requires_grad:
-                print(name, param.data)
-
     print(f"Training finished")
     print(model.parameters())
 
@@ -281,7 +275,7 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 1024
+    num_points = 512
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -293,7 +287,7 @@ if __name__ == '__main__':
     dataset_test = ShapeNet(root=root, split="test", transform=FixedPoints(num_points))
    
 
-    batch_size = 16
+    batch_size = 64
     num_epochs = 50
     learning_rate = 1e-4
     decay_rate = 0.95
