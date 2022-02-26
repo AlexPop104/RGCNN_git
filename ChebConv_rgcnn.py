@@ -66,7 +66,7 @@ def pairwise_distance(point_cloud):
 
 
 class DenseChebConv(nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, K: int, normalization: Optional[bool]=True, bias: bool=True, **kwargs):
+    def __init__(self, in_channels: int, out_channels: int, K: int, normalization: Optional[bool]=True, bias: bool=False, **kwargs):
         assert K > 0
         super(DenseChebConv, self).__init__()
         self.K = K
@@ -74,18 +74,14 @@ class DenseChebConv(nn.Module):
         self.out_channels = out_channels
         self.normalization = normalization
 
-        self.lin = Linear(in_channels * K, out_channels, bias=False)
-        
-        if bias:
-            self.bias = Parameter(torch.Tensor(out_channels))
-        else:
-            self.register_parameter('bias', None)
+        self.lin = Linear(in_channels * K, out_channels, bias=bias)
         
         self.reset_parameters()
 
+
     def reset_parameters(self):        
         self.lin.reset_parameters()
-        zeros(self.bias)
+
 
     def forward(self, x, L, mask=None):
         x = x.unsqueeze if x.dim() == 2 else x

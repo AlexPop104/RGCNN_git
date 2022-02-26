@@ -77,3 +77,11 @@ runs/Feb21_21-05-58_victor-G5-5587/events.out.tfevents.1645470359.victor-G5-5587
 runs/Feb21_21-06-25_victor-G5-5587/events.out.tfevents.1645470386.victor-G5-5587.29555.0
 runs
 Test_Shapenet_Dataset.ipynb
+labels.npy
+model95.pt
+pos.npy
+predicted.npy
+test_pytorch_alex_labels.npy
+test_pytorch_alex_points.npy
+test_pytorch_alex.npy
+test_alex_seg_model_pytorch.py
