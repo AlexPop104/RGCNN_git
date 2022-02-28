@@ -1,7 +1,7 @@
+from collections import defaultdict
 from datetime import datetime
 from typing import Optional
 from venv import create
-from more_itertools import one
 from torch_geometric.loader import DenseDataLoader
 import os
 import ChebConv_rgcnn as conv
@@ -17,8 +17,23 @@ from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter()
 import numpy as np
 from torch.optim import lr_scheduler
+from torchmetrics import JaccardIndex
 
 import numpy as np
+
+
+
+seg_classes = {'Earphone': [16, 17, 18], 'Motorbike': [30, 31, 32, 33, 34, 35], 'Rocket': [41, 42, 43],
+                    'Car': [8, 9, 10, 11], 'Laptop': [28, 29], 'Cap': [6, 7], 'Skateboard': [44, 45, 46],
+                    'Mug': [36, 37], 'Guitar': [19, 20, 21], 'Bag': [4, 5], 'Lamp': [24, 25, 26, 27],
+                    'Table': [47, 48, 49], 'Airplane': [0, 1, 2, 3], 'Pistol': [38, 39, 40],
+                    'Chair': [12, 13, 14, 15], 'Knife': [22, 23]}
+label_to_cat = {}
+for key in seg_classes.keys():
+    for label in seg_classes[key]:
+        label_to_cat[label] = key
+
+
 
 def create_batched_dataset(class_num, dataset, batch_size):
     data = []
@@ -216,7 +231,7 @@ def test(model, loader):
     predictions = np.empty((size, num_points))
     labels = np.empty((size, num_points))
     total_correct = 0
-
+    
     for i, data in enumerate(loader):
         cat = one_hot(data.category, num_classes=16)
         cat = torch.tile(cat, [1, num_points, 1]) 
@@ -227,15 +242,44 @@ def test(model, loader):
         pred = logits.argmax(dim=2)
         # print(pred)
         # print(f"TEST: {int((pred == data.y.to(device)).sum())}")
+
         total_correct += int((pred == y).sum())
         start = i * batch_size
         stop  = start + batch_size
         predictions[start:stop] = pred
         lab = data.y
         labels[start:stop] = lab.reshape([-1, num_points])
+    tot_iou = []
+    cat_iou = defaultdict(list)
+    for i in range(predictions.shape[0]):
+        segp = predictions[i, :]
+        segl = labels[i, :]
+        cat = label_to_cat[segl[0]]
+        part_ious = [0.0 for _ in range(len(seg_classes[cat]))]
+
+        for l in seg_classes[cat]:
+            if (np.sum(segl == l) == 0) and (np.sum(segp == l) == 0):  # part is not present, no prediction as well
+                part_ious[l - seg_classes[cat][0]] = 1.0
+            else:
+                part_ious[l - seg_classes[cat][0]] = np.sum((segl == l) & (segp == l)) / float(
+                    np.sum((segl == l) | (segp == l)))
+        cat_iou[cat].append(np.mean(part_ious))
+        tot_iou.append(np.mean(part_ious))
+
+
+    print("~~~" * 50)
+    for key, value in cat_iou.items():
+        print(key + ': {:.4f}, total: {:d}'.format(np.mean(value), len(value)))
+    # print(tot_iou)
+    # accuracy = 100 * sklearn.metrics.accuracy_score(labels, predictions)
+    # f1 = 100 * sklearn.metrics.f1_score(labels, predictions, average='weighted')
+        
+
     ncorrects = np.sum(predictions == labels)
     accuracy  = ncorrects * 100 / (len(dataset_test) * num_points)
-    print(f"Accuracy: {accuracy}, ncorrect: {ncorrects} / {len(dataset_test) * num_points}")
+    print("~~~" * 30)
+    print(f"\tAccuracy: {accuracy}, ncorrect: {ncorrects} / {len(dataset_test) * num_points}")
+    print(f"\tIoU: \t{np.mean(tot_iou)*100}")
     return accuracy
 
 def start_training(model, train_loader, test_loader, optimizer, epochs=50, learning_rate=1e-3, regularization=1e-9, decay_rate=0.95):
@@ -266,6 +310,23 @@ def start_training(model, train_loader, test_loader, optimizer, epochs=50, learn
 
     print(f"Training finished")
     print(model.parameters())
+
+def IoU_accuracy(pred, target, n_classes=16):
+    ious = []
+    pred = pred.view(-1)
+    target = target.view(-1)
+
+    # Ignore IoU for background class ("0")
+    for cls in range(1, n_classes):  # This goes from 1:n_classes-1 -> class "0" is ignored
+        pred_inds = pred == cls
+        target_inds = target == cls
+        intersection = (pred_inds[target_inds]).long().sum().data.cpu()[0]  # Cast to long to prevent overflows
+        union = pred_inds.long().sum().data.cpu()[0] + target_inds.long().sum().data.cpu()[0] - intersection
+        if union == 0:
+            ious.append(float('nan'))  # If there is no ground truth, do not include in evaluation
+        else:
+            ious.append(float(intersection) / float(max(union, 1)))
+    return np.array(ious)
 
 
 if __name__ == '__main__':
