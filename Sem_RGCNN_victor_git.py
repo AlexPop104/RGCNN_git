@@ -291,8 +291,8 @@ if __name__ == '__main__':
     dataset_test = ShapeNet(root=root, split="test", transform=FixedPoints(num_points))
    
 
-    batch_size = 8
-    num_epochs = 100
+    batch_size = 16
+    num_epochs = 200
     learning_rate = 1e-3
     decay_rate = 0.95
     decay_steps = len(dataset_train) / batch_size
