@@ -30,6 +30,13 @@ from datetime import datetime
 from torch.nn import MSELoss
 from torch.optim import lr_scheduler
 
+import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix
+import seaborn as sn
+import pandas as pd
+import numpy as np
+
+
 
 class cls_model(nn.Module):
     def __init__(self, vertice ,F, K, M, class_num, regularization=0, one_layer=True, dropout=0, reg_prior:bool=True):
@@ -173,6 +180,36 @@ def test(model, loader):
 
     return total_correct / len(loader.dataset)
 
+def createConfusionMatrix(model,loader):
+    y_pred = [] # save predction
+    y_true = [] # save ground truth
+
+    # iterate over data
+    for  data in loader:
+        x = torch.cat([data.pos, data.normal], dim=1)
+        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+        logits, _ = model(x.to(device))
+        pred = logits.argmax(dim=-1)
+        
+        output = pred.cpu().numpy()
+        y_pred.extend(output)  # save prediction
+
+        labels = data.y.cpu().numpy()
+        y_true.extend(labels)  # save ground truth
+
+    # constant for classes
+    # classes = ('T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
+    #            'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle Boot')
+
+    # Build confusion matrix
+    cf_matrix = confusion_matrix(y_true, y_pred,normalize='true')
+    df_cm = pd.DataFrame(cf_matrix, index=[i for i in range(40)],
+                         columns=[i for i in range(40)])
+    plt.figure(figsize=(50, 50))    
+    return sn.heatmap(df_cm, annot=True).get_figure()
+
+
+
 if __name__ == '__main__':
     now = datetime.now()
     directory = now.strftime("%d_%m_%y_%H:%M:%S")
@@ -216,6 +253,12 @@ if __name__ == '__main__':
     model.load_state_dict(torch.load(path_saved_model))
     model = model.to(device)
 
+    test_start_time = time.time()
+    test_acc = test(model, test_loader)
+    test_stop_time = time.time()
+    print(f'Test Accuracy: {test_acc:.4f}')
+
+    writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader), 1)
 
     
     print(model.parameters)
@@ -224,26 +267,34 @@ if __name__ == '__main__':
     my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
 
     regularization = 1e-9
-    for epoch in range(1, 51):
-        train_start_time = time.time()
-        loss = train(model, optimizer, train_loader, regularization=regularization)
-        train_stop_time = time.time()
+    # for epoch in range(1, 51):
+    #     train_start_time = time.time()
+    #     loss = train(model, optimizer, train_loader, regularization=regularization)
+    #     train_stop_time = time.time()
 
-        writer.add_scalar("Loss/train", loss, epoch)
+    #     writer.add_scalar("Loss/train", loss, epoch)
         
-        test_start_time = time.time()
-        test_acc = test(model, test_loader)
-        test_stop_time = time.time()
+    #     test_start_time = time.time()
+    #     test_acc = test(model, test_loader)
+    #     test_stop_time = time.time()
 
-        writer.add_scalar("Acc/test", test_acc, epoch)
-        print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
-        print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
-        Test Time: \t{test_stop_time - test_start_time }')
 
-        if(epoch%5==0):
-            torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
 
-        my_lr_scheduler.step()
+    #     writer.add_scalar("Acc/test", test_acc, epoch)
+    #     print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
+    #     print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
+    #     Test Time: \t{test_stop_time - test_start_time }')
+
+    #     writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader), epoch)
+
+    #     if(epoch%5==0):
+    #         torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+
+    #     my_lr_scheduler.step()
 
     
-    torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+    #torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+
+    
+
+    
