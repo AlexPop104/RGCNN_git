@@ -22,7 +22,7 @@ import torch_geometric as tg
 from torch_geometric.utils import get_laplacian as get_laplacian_pyg
 from torch_geometric.transforms import Compose
 
-import ChebConv_rgcnn as conv
+import ChebConv_rgcnn_functions as conv
 import os
 from torch_geometric.transforms import NormalizeScale
 from torch_geometric.loader import DataLoader
@@ -235,7 +235,7 @@ if __name__ == '__main__':
         
     transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
-    root = "data/ModelNet"+str(modelnet_num)
+    root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
     print(root)
     dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
     dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms)

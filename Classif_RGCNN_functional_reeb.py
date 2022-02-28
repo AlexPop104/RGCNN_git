@@ -150,13 +150,24 @@ class cls_model(nn.Module):
 
 criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 
-def train(model, optimizer, loader,k,num_points, regularization):
+def train(model, optimizer, loader,all_sccs,all_Reeb_laplacian,k,num_points, regularization):
     model.train()
     total_loss = 0
     for i, data in enumerate(loader):
         optimizer.zero_grad()
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+
+
+        sccs_batch=all_sccs[i*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1]:(i+1)*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1],0:all_sccs.shape[1]]
+        reeb_laplace_batch=all_Reeb_laplacian[i*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1]:(i+1)*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
+
+        sccs_batch=sccs_batch.astype(int)
+
+        sccs_batch=np.reshape(sccs_batch,(data.batch.unique().shape[0],all_Reeb_laplacian.shape[1],all_sccs.shape[1]))
+        reeb_laplace_batch=np.reshape(reeb_laplace_batch,(data.batch.unique().shape[0],all_Reeb_laplacian.shape[1],all_Reeb_laplacian.shape[1]))
+
+
         logits, regularizers  = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points)
         loss    = criterion(logits, data.y.to(device))
         s = t.sum(t.as_tensor(regularizers))
@@ -170,13 +181,21 @@ def train(model, optimizer, loader,k,num_points, regularization):
     return total_loss / len(loader.dataset)
 
 @torch.no_grad()
-def test(model, loader,k,num_points):
+def test(model, loader,all_sccs,all_Reeb_laplacian,k,num_points):
     model.eval()
 
     total_correct = 0
     for data in loader:
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+
+        sccs_batch=all_sccs[i*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1]:(i+1)*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1],0:all_sccs.shape[1]]
+        reeb_laplace_batch=all_Reeb_laplacian[i*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1]:(i+1)*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
+
+        
+        sccs_batch=np.reshape(sccs_batch,(data.batch.unique().shape[0],all_Reeb_laplacian.shape[1],all_sccs.shape[1]))
+        reeb_laplace_batch=np.reshape(reeb_laplace_batch,(data.batch.unique().shape[0],all_Reeb_laplacian.shape[1],all_Reeb_laplacian.shape[1]))
+
         logits, _ = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points)
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == data.y.to(device)).sum())

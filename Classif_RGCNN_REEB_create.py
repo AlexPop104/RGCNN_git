@@ -198,15 +198,17 @@ def extract_reeb_graph(point_cloud, knn, ns, reeb_nodes_num, reeb_sim_margin,poi
     # calculate f
     #r = point_cloud[:, 2]
 
-    mean_x=np.mean(point_cloud[:,0])
-    mean_y=np.mean(point_cloud[:,1])
-    mean_z=np.mean(point_cloud[:,2])
+    # mean_x=np.mean(point_cloud[:,0])
+    # mean_y=np.mean(point_cloud[:,1])
+    # mean_z=np.mean(point_cloud[:,2])
 
-    r=np.sqrt( (point_cloud[:, 0]-mean_x)*(point_cloud[:, 0]-mean_x) + (point_cloud[:, 1]-mean_y)*(point_cloud[:, 1]-mean_y) +(point_cloud[:, 2]-mean_z)*(point_cloud[:, 2]-mean_z) )
+    # r=np.sqrt( (point_cloud[:, 0]-mean_x)*(point_cloud[:, 0]-mean_x) + (point_cloud[:, 1]-mean_y)*(point_cloud[:, 1]-mean_y) +(point_cloud[:, 2]-mean_z)*(point_cloud[:, 2]-mean_z) )
+
+    r = np.linalg.norm(point_cloud, axis=-1)
 
     r_min=np.amin(r)
     r_max=np.amax(r)
-    #r = np.linalg.norm(point_cloud, axis=-1)
+    
     sccs = []
     scc2idx = dict()
     vertices = []
