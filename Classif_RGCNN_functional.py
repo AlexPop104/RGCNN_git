@@ -94,7 +94,7 @@ class cls_model(nn.Module):
         out = self.relu1(out)
 
         if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), x))**2)
+            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
         
         if self.one_layer == False:
             with torch.no_grad():
@@ -104,7 +104,7 @@ class cls_model(nn.Module):
             out = self.conv2(out, L)
             out = self.relu2(out)
             if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), x))**2)
+                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
     
             with torch.no_grad():
                 L = conv.pairwise_distance(out) # W - weight matrix
@@ -114,7 +114,7 @@ class cls_model(nn.Module):
             out = self.relu3(out)
             
             if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), x))**2)
+                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
     
             out, _ = t.max(out, 1)
 

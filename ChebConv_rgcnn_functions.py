@@ -346,13 +346,13 @@ def extract_reeb_graph(point_cloud, knn, ns, reeb_nodes_num, reeb_sim_margin,poi
     #return vertices, list(sccs)
 
 
-def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,time_execution):
-    knn = 20
-    ns = 20
-    tau = 2
-    reeb_nodes_num=20
-    reeb_sim_margin=20
-    pointNumber=200
+def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,time_execution,knn,ns,tau,reeb_nodes_num,reeb_sim_margin,pointNumber):
+    # knn = 20
+    # ns = 20
+    # tau = 2
+    # reeb_nodes_num=20
+    # reeb_sim_margin=20
+    # pointNumber=200
     
     all_sccs=np.eye(3)
     all_reeb_laplacians = np.zeros((3,reeb_nodes_num))
@@ -376,11 +376,11 @@ def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,time_e
         
 
         for k in range(batch_size):
-            Reeb_Graph_start_time = time.time()
-            vertices, laplacian_Reeb, sccs ,edges= conv.extract_reeb_graph(point_cloud[k], knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
-            Reeb_Graph_end_time = time.time()
-            print(Reeb_Graph_end_time-Reeb_Graph_start_time)
-            time_execution +=Reeb_Graph_end_time-Reeb_Graph_start_time
+            
+            vertices, laplacian_Reeb, sccs ,edges= extract_reeb_graph(point_cloud[k], knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
+            
+            
+            
             np_sccs_batch=np.asarray(sccs)
             np_reeb_laplacian=np.asarray(laplacian_Reeb)
             nr_columns_batch= np_sccs_batch.shape[1]
@@ -412,9 +412,7 @@ def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,time_e
         print(all_sccs.shape)
         print(all_reeb_laplacians.shape)
 
-        if((i+1)%5==0):
-            np.save(sccs_path, all_sccs)
-            np.save(reeb_laplacian_path, all_reeb_laplacians)
+        
 
     np.save(sccs_path, all_sccs)
     np.save(reeb_laplacian_path, all_reeb_laplacians)
