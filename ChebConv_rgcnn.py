@@ -51,12 +51,12 @@ def get_one_matrix_knn(matrix, k,batch_size,nr_points):
 
     values,indices = torch.topk(matrix, k,sorted=False)
     
-    batch_correction=torch.range(0,batch_size-1,device='cuda')*nr_points
+    batch_correction=torch.arange(0,batch_size,device='cuda')*nr_points
     batch_correction=torch.reshape(batch_correction,[batch_size,1])
     batch_correction=torch.tile(batch_correction,(1,nr_points*k))
     batch_correction=torch.reshape(batch_correction,(batch_size,1024,k))
        
-    my_range=torch.unsqueeze(torch.range(0,indices.shape[1]-1,device='cuda'),1)
+    my_range=torch.unsqueeze(torch.arange(0,indices.shape[1],device='cuda'),1)
     my_range_repeated=torch.tile(my_range,[1,k])
     my_range_repeated=torch.unsqueeze(my_range_repeated,0)
     my_range_repeated_2=torch.tile(my_range_repeated,[batch_size,1,1])
@@ -73,7 +73,7 @@ def get_one_matrix_knn(matrix, k,batch_size,nr_points):
 
     edge_weights=torch.reshape(values,[-1])
 
-    batch_indexes=torch.range(0,batch_size-1,device='cuda')
+    batch_indexes=torch.arange(0,batch_size,device='cuda')
     batch_indexes=torch.reshape(batch_indexes,[batch_size,1])
     batch_indexes=torch.tile(batch_indexes,(1,nr_points))
     batch_indexes=torch.reshape(batch_indexes,[batch_size*1024])
