@@ -179,6 +179,10 @@ def train(model, optimizer, loader, regularization):
 
         cluster_new=cluster-batch_correction
 
+        Matrix_near=tg.utils.to_dense_adj(cluster,batch_correction)
+
+        b=torch.sum(Matrix_near,1)
+
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
@@ -257,7 +261,7 @@ if __name__ == '__main__':
     os.mkdir(path)
 
     num_points = 1024
-    batch_size = 32
+    batch_size = 2
     num_epochs = 100
     learning_rate = 1e-3
     modelnet_num = 40
