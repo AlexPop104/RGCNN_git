@@ -264,7 +264,7 @@ if __name__ == '__main__':
 
     num_points = 1024
     batch_size = 32
-    num_epochs = 50
+    num_epochs = 260
     learning_rate = 1e-3
     modelnet_num = 40
     k_KNN=30

@@ -66,9 +66,9 @@ class cls_model(nn.Module):
 
         self.conv1 = conv.DenseChebConv(6, 128, 6)
         self.conv2 = conv.DenseChebConv(128, 512, 5)
-        self.conv3 = conv.DenseChebConv(512, 1024, 3)
+        #self.conv3 = conv.DenseChebConv(512, 1024, 3)
         
-        self.fc1 = nn.Linear(1024, 512, bias=True)
+        #self.fc1 = nn.Linear(1024, 512, bias=True)
         self.fc2 = nn.Linear(512, 128, bias=True)
         self.fc3 = nn.Linear(128, class_num, bias=True)
         
@@ -110,23 +110,23 @@ class cls_model(nn.Module):
                 L = conv.pairwise_distance(out) # W - weight matrix
                 L = conv.get_laplacian(L)
             
-            out = self.conv3(out, L)
-            out = self.relu3(out)
+            # out = self.conv3(out, L)
+            # out = self.relu3(out)
             
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+            # if self.reg_prior:
+            #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
     
             out, _ = t.max(out, 1)
 
             # ~~~~ Fully Connected ~~~~
             
-            out = self.fc1(out)
+            # out = self.fc1(out)
 
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
+            # if self.reg_prior:
+            #     self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
+            #     self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
 
-            out = self.relu4(out)
+            # out = self.relu4(out)
             #out = self.dropout(out)
 
             out = self.fc2(out)
@@ -218,9 +218,9 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 1024
+    num_points = 512
     batch_size = 32
-    num_epochs = 50
+    num_epochs = 100
     learning_rate = 1e-3
     modelnet_num = 40
 
@@ -261,7 +261,7 @@ if __name__ == '__main__':
     my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
 
     regularization = 1e-9
-    for epoch in range(1, 51):
+    for epoch in range(1, num_epochs+1):
         train_start_time = time.time()
         loss = train(model, optimizer, train_loader, regularization=regularization)
         train_stop_time = time.time()
