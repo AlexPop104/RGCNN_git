@@ -161,13 +161,23 @@ def train(model, optimizer, loader, regularization):
         
         x=data.pos
 
-        edge_index = radius_graph(x, r=2.5, batch=data.batch, loop=False)
-        index = fps(x, data.batch, ratio=float(55*data.batch.unique().shape[0]/data.pos.shape[0]) , random_start=True)
+        nr_points_fps=55
+        nr_points_batch=int(data.batch.shape[0]/data.batch.unique().shape[0])
+        
+        index = fps(x, data.batch, ratio=float(nr_points_fps*data.batch.unique().shape[0]/data.pos.shape[0]) , random_start=True)
 
         fps_x=x[index]
         fps_batch=data.batch[index]
 
         cluster = nearest(x, fps_x, data.batch, fps_batch)
+
+
+        batch_correction=torch.arange(0,data.batch.unique().shape[0],device='cpu')*nr_points_fps
+        batch_correction=torch.reshape(batch_correction,[data.batch.unique().shape[0],1])
+        batch_correction=torch.tile(batch_correction,(1,nr_points_batch))
+        batch_correction=torch.reshape(batch_correction,[data.batch.unique().shape[0]*nr_points_batch])
+
+        cluster_new=cluster-batch_correction
 
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
