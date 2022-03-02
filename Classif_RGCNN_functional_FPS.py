@@ -173,29 +173,29 @@ def train(model, optimizer, loader, regularization):
         cluster = nearest(x, fps_x, data.batch, fps_batch)
 
 
-        batch_correction=torch.arange(0,data.batch.unique().shape[0],device='cpu')*nr_points_fps
+        batch_correction=torch.arange(0,data.batch.unique().shape[0],device='cpu')
         batch_correction=torch.reshape(batch_correction,[data.batch.unique().shape[0],1])
         batch_correction=torch.tile(batch_correction,(1,nr_points_batch))
         batch_correction=torch.reshape(batch_correction,[data.batch.unique().shape[0]*nr_points_batch])
 
-        cluster_new=cluster-batch_correction
+        Batch_indexes=batch_correction
 
-        Matrix_near=tg.utils.to_dense_adj(cluster,batch_correction)
+        batch_correction=batch_correction*nr_points_fps
 
-        b=torch.sum(Matrix_near,1)
+        cluster_new=torch.subtract(cluster,batch_correction)
+
+        Matrix_near=tg.utils.to_dense_adj(cluster_new,Batch_indexes)
+
+        Matrix_near=Matrix_near[:,:,0:55]
+
+        Matrix_near= Matrix_near.permute(0, 2, 1)
+
+        Matrix_near,_= torch.sort(Matrix_near,dim=2,descending=False)
 
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
-        
-
     
-
-        
-
- 
-        
-
 
 
         logits, regularizers  = model(x.to(device))

@@ -190,22 +190,26 @@ def test(model, loader):
         logits, _ = model(x.to(device))
         pred = logits.argmax(dim=-1)
 
-        # maximum_value, pred= logits.max(dim=1)
-        # minimum_value,_=logits.min(dim=1)
-        # value_interval=torch.subtract(maximum_value,minimum_value)
+        maximum_value, pred= logits.max(dim=1)
+        minimum_value,_=logits.min(dim=1)
+        
+        #value_interval=torch.subtract(maximum_value,minimum_value)
+        value_interval=torch.abs(minimum_value)
 
-        # pred_values_sum=torch.sum(logits,1)
-        # pred_values_sum=torch.add(pred_values_sum,value_interval)
 
-        # maximum_value_final=torch.add(maximum_value,value_interval)
+        pred_values_sum=torch.sum(logits,1)
+        pred_values_sum=torch.add(pred_values_sum,logits.shape[1]*value_interval)
 
-        # confidence=torch.div(maximum_value_final,pred_values_sum)
-        # total_confidence += confidence.sum()
+        maximum_value_final=torch.add(maximum_value,value_interval)
+
+        confidence=torch.div(maximum_value_final,pred_values_sum)
+        total_confidence += confidence.sum()
 
 
         total_correct += int((pred == data.y.to(device)).sum())
 
-    return total_correct / len(loader.dataset) 
+    #return total_correct / len(loader.dataset) 
+    return total_correct / len(loader.dataset) , total_confidence / len(loader.dataset)
 
 def createConfusionMatrix(model,loader):
     y_pred = [] # save predction
@@ -349,9 +353,10 @@ if __name__ == '__main__':
     model = model.to(device)
 
     test_start_time = time.time()
-    test_acc = test(model, test_loader)
+    test_acc,confidence = test(model, test_loader)
     test_stop_time = time.time()
     print(f'Test Accuracy: {test_acc:.4f}')
+    print(f'Test Average_confidence: {confidence:.4f}')
    
 
     
