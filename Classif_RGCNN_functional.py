@@ -179,6 +179,7 @@ def test(model, loader):
     model.eval()
 
     total_correct = 0
+    total_confidence=0
     for data in loader:
         # x = torch.cat([data.pos, data.normal], dim=1)
         # x = x.reshape(data.batch.unique().shape[0], num_points, 6)
@@ -188,9 +189,23 @@ def test(model, loader):
 
         logits, _ = model(x.to(device))
         pred = logits.argmax(dim=-1)
+
+        # maximum_value, pred= logits.max(dim=1)
+        # minimum_value,_=logits.min(dim=1)
+        # value_interval=torch.subtract(maximum_value,minimum_value)
+
+        # pred_values_sum=torch.sum(logits,1)
+        # pred_values_sum=torch.add(pred_values_sum,value_interval)
+
+        # maximum_value_final=torch.add(maximum_value,value_interval)
+
+        # confidence=torch.div(maximum_value_final,pred_values_sum)
+        # total_confidence += confidence.sum()
+
+
         total_correct += int((pred == data.y.to(device)).sum())
 
-    return total_correct / len(loader.dataset)
+    return total_correct / len(loader.dataset) 
 
 def createConfusionMatrix(model,loader):
     y_pred = [] # save predction
@@ -317,7 +332,7 @@ if __name__ == '__main__':
 ])
 
     test_transform = Compose([
-    random_rotate,
+    #random_rotate,
     SamplePoints(num_points, include_normals=True),
     NormalizeScale()
 ])
@@ -329,7 +344,7 @@ if __name__ == '__main__':
     
     
     model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False, reg_prior=True)
-    path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/02_03_22_11:43:08/model100.pt"
+    path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/02_03_22_11:43:08_2_Layers_Points/model100.pt"
     model.load_state_dict(torch.load(path_saved_model))
     model = model.to(device)
 
@@ -337,5 +352,6 @@ if __name__ == '__main__':
     test_acc = test(model, test_loader)
     test_stop_time = time.time()
     print(f'Test Accuracy: {test_acc:.4f}')
+   
 
     
