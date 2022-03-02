@@ -180,17 +180,35 @@ def train(model, optimizer, loader, regularization):
 
         Batch_indexes=batch_correction
 
+        batch_correction_num_points=batch_correction*nr_points_batch
         batch_correction=batch_correction*nr_points_fps
+        
+
+        
+
 
         cluster_new=torch.subtract(cluster,batch_correction)
+        #cluster_new=torch.add(cluster_new,batch_correction_num_points)
 
-        Matrix_near=tg.utils.to_dense_adj(cluster_new,Batch_indexes)
+        edge_index_1=torch.arange(0,data.batch.unique().shape[0]*nr_points_batch,device='cpu')
+        edge_index_2=cluster_new
+
+        edge_index_final=torch.cat((torch.unsqueeze(edge_index_1,1),torch.unsqueeze(edge_index_2,1)),axis=1)
+        edge_index_final=torch.transpose(edge_index_final,0,1)
+        
+        edge_weight=torch.ones([data.batch.unique().shape[0]*nr_points_batch])
+
+
+        Matrix_near=tg.utils.to_dense_adj(edge_index_final,Batch_indexes,edge_weight)
+
 
         Matrix_near=Matrix_near[:,:,0:55]
 
         Matrix_near= Matrix_near.permute(0, 2, 1)
 
-        Matrix_near,_= torch.sort(Matrix_near,dim=2,descending=False)
+        Matrix_near_2,Matrix_near_indices= torch.sort(Matrix_near,dim=2,descending=True)
+
+        Matrix_near_3=torch.multiply(Matrix_near_2,Matrix_near_indices)
 
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
