@@ -10,6 +10,7 @@ from torch.nn import Parameter
 
 from torch_geometric.datasets import ModelNet
 from torch_geometric.transforms import SamplePoints
+from torch_geometric.transforms import RandomRotate
 
 
 from torch_geometric.nn.inits import zeros
@@ -248,60 +249,93 @@ if __name__ == '__main__':
         
     transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
+ 
+
     root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
     print(root)
+
+
+
+
+
+    # dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
+    # dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms)
+
+
+    # # Verification...
+    # print(f"Train dataset shape: {dataset_train}")
+    # print(f"Test dataset shape:  {dataset_test}")
+
+
+    # train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
+    # test_loader  = DataLoader(dataset_test, batch_size=batch_size)
+    
+    # model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False, reg_prior=True)
+    # model = model.to(device)
+
+    # print(model.parameters)
+
+    # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    # my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
+
+    # regularization = 1e-9
+    # for epoch in range(1, num_epochs+1):
+    #     train_start_time = time.time()
+    #     loss = train(model, optimizer, train_loader, regularization=regularization)
+    #     train_stop_time = time.time()
+
+    #     writer.add_scalar("Loss/train", loss, epoch)
+        
+    #     test_start_time = time.time()
+    #     test_acc = test(model, test_loader)
+    #     test_stop_time = time.time()
+
+
+
+    #     writer.add_scalar("Acc/test", test_acc, epoch)
+    #     print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
+    #     print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
+    #     Test Time: \t{test_stop_time - test_start_time }')
+
+    #     # writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader), epoch)
+
+    #     if(epoch%5==0):
+    #         torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+
+    #     my_lr_scheduler.step()
+
+    
+    # torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+
+    ###################################################################################################3
+    #Testing the model
+
+    random_rotate = Compose([
+    RandomRotate(degrees=180, axis=0),
+    RandomRotate(degrees=180, axis=1),
+    RandomRotate(degrees=180, axis=2),
+])
+
+    test_transform = Compose([
+    random_rotate,
+    SamplePoints(num_points, include_normals=True),
+    NormalizeScale()
+])
     dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
-    dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms)
-
-
-    # Verification...
-    print(f"Train dataset shape: {dataset_train}")
-    print(f"Test dataset shape:  {dataset_test}")
-
+    dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform)
 
     train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
     test_loader  = DataLoader(dataset_test, batch_size=batch_size)
     
+    
     model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False, reg_prior=True)
-    # path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/28_02_22_10:10:19/model50.pt"
-    # model.load_state_dict(torch.load(path_saved_model))
+    path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/02_03_22_11:43:08/model100.pt"
+    model.load_state_dict(torch.load(path_saved_model))
     model = model.to(device)
 
-    
-    print(model.parameters)
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
-
-    regularization = 1e-9
-    for epoch in range(1, num_epochs+1):
-        train_start_time = time.time()
-        loss = train(model, optimizer, train_loader, regularization=regularization)
-        train_stop_time = time.time()
-
-        writer.add_scalar("Loss/train", loss, epoch)
-        
-        test_start_time = time.time()
-        test_acc = test(model, test_loader)
-        test_stop_time = time.time()
-
-
-
-        writer.add_scalar("Acc/test", test_acc, epoch)
-        print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
-        print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
-        Test Time: \t{test_stop_time - test_start_time }')
-
-        writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader), epoch)
-
-        if(epoch%5==0):
-            torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
-
-        my_lr_scheduler.step()
-
-    
-    torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
-
-    
+    test_start_time = time.time()
+    test_acc = test(model, test_loader)
+    test_stop_time = time.time()
+    print(f'Test Accuracy: {test_acc:.4f}')
 
     

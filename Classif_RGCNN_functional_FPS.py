@@ -14,6 +14,7 @@ from torch_geometric.nn import fps,radius_graph,nearest
 
 from torch_geometric.datasets import ModelNet
 from torch_geometric.transforms import SamplePoints
+from torch_geometric.transforms import RandomRotate
 
 
 from torch_geometric.nn.inits import zeros
