@@ -64,7 +64,9 @@ class cls_model(nn.Module):
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
-        self.conv1 = conv.DenseChebConv(6, 128, 6)
+        self.conv1 = conv.DenseChebConv(3, 128, 6)
+
+        #self.conv1 = conv.DenseChebConv(6, 128, 6)
         self.conv2 = conv.DenseChebConv(128, 512, 5)
         #self.conv3 = conv.DenseChebConv(512, 1024, 3)
         
@@ -153,8 +155,12 @@ def train(model, optimizer, loader, regularization):
     total_loss = 0
     for i, data in enumerate(loader):
         optimizer.zero_grad()
-        x = torch.cat([data.pos, data.normal], dim=1)
-        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+        # x = torch.cat([data.pos, data.normal], dim=1)
+        # x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+
+        x=data.pos
+        x=x.reshape(data.batch.unique().shape[0], num_points, 3)
+
         logits, regularizers  = model(x.to(device))
         loss    = criterion(logits, data.y.to(device))
         s = t.sum(t.as_tensor(regularizers))
@@ -173,8 +179,12 @@ def test(model, loader):
 
     total_correct = 0
     for data in loader:
-        x = torch.cat([data.pos, data.normal], dim=1)
-        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+        # x = torch.cat([data.pos, data.normal], dim=1)
+        # x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+
+        x=data.pos
+        x=x.reshape(data.batch.unique().shape[0], num_points, 3)
+
         logits, _ = model(x.to(device))
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == data.y.to(device)).sum())
@@ -187,8 +197,11 @@ def createConfusionMatrix(model,loader):
 
     # iterate over data
     for  data in loader:
-        x = torch.cat([data.pos, data.normal], dim=1)
-        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+        # x = torch.cat([data.pos, data.normal], dim=1)
+        # x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+
+        x=data.pos
+        x=x.reshape(data.batch.unique().shape[0], num_points, 3)
         logits, _ = model(x.to(device))
         pred = logits.argmax(dim=-1)
         
@@ -218,7 +231,7 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 512
+    num_points = 1024
     batch_size = 32
     num_epochs = 100
     learning_rate = 1e-3
