@@ -63,7 +63,7 @@ def get_one_matrix_knn(matrix, k,batch_size,nr_points):
     batch_correction=torch.arange(0,batch_size,device='cuda')*nr_points
     batch_correction=torch.reshape(batch_correction,[batch_size,1])
     batch_correction=torch.tile(batch_correction,(1,nr_points*k))
-    batch_correction=torch.reshape(batch_correction,(batch_size,1024,k))
+    batch_correction=torch.reshape(batch_correction,(batch_size,nr_points,k))
        
     my_range=torch.unsqueeze(torch.arange(0,indices.shape[1],device='cuda'),1)
     my_range_repeated=torch.tile(my_range,[1,k])
@@ -114,8 +114,7 @@ def get_fps_matrix(point_cloud,data,nr_points_fps):
     batch_correction=batch_correction*nr_points_fps
     
     cluster_new=torch.subtract(cluster,batch_correction)
-    #cluster_new=torch.add(cluster_new,batch_correction_num_points)
-
+   
     edge_index_1=torch.arange(0,data.batch.unique().shape[0]*nr_points_batch,device='cpu')
     edge_index_2=cluster_new
 

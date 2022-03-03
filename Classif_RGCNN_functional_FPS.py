@@ -170,33 +170,24 @@ class cls_model(nn.Module):
 
 criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 
-def train(model, optimizer, loader,all_sccs,k,num_points, regularization):
+def train(model, optimizer, loader,k,num_points, regularization):
     model.train()
     total_loss = 0
     for i, data in enumerate(loader):
         optimizer.zero_grad()
 
-
         x=data.pos
-
         nr_points_fps=55
-
-
-        Matrix_numpy=conv.get_fps_matrix(x,data,55)
-
-
-
+        nr_points_batch=int(data.batch.shape[0]/data.batch.unique().shape[0])
+        Matrix_numpy=conv.get_fps_matrix(x,data,nr_points_fps)
 
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
-
         sccs_batch=Matrix_numpy
-        
-
         sccs_batch=sccs_batch.astype(int)
 
-        sccs_batch=np.reshape(sccs_batch,(data.batch.unique().shape[0],nr_points_fps,all_sccs.shape[1]))
+        sccs_batch=np.reshape(sccs_batch,(data.batch.unique().shape[0],nr_points_fps,nr_points_batch))
 
 
         logits, regularizers  = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points,sccs=sccs_batch)
@@ -212,44 +203,57 @@ def train(model, optimizer, loader,all_sccs,k,num_points, regularization):
     return total_loss / len(loader.dataset)
 
 @torch.no_grad()
-def test(model, loader,all_sccs,all_Reeb_laplacian,k,num_points):
+def test(model, loader,k,num_points):
     model.eval()
 
     total_correct = 0
     for i,data in enumerate(loader):
+        
+        x=data.pos
+        nr_points_fps=55
+        Matrix_numpy=conv.get_fps_matrix(x,data,nr_points_fps)
+
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
-        sccs_batch=all_sccs[i*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1]:(i+1)*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1],0:all_sccs.shape[1]]
-        reeb_laplace_batch=all_Reeb_laplacian[i*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1]:(i+1)*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
+        sccs_batch=Matrix_numpy
+        sccs_batch=sccs_batch.astype(int)
 
+        sccs_batch=np.reshape(sccs_batch,(data.batch.unique().shape[0],nr_points_fps,nr_points_fps))
+
+        x = torch.cat([data.pos, data.normal], dim=1)
+        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+
+        logits,  _  = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points,sccs=sccs_batch)
         
-        sccs_batch=np.reshape(sccs_batch,(data.batch.unique().shape[0],all_Reeb_laplacian.shape[1],all_sccs.shape[1]))
-        reeb_laplace_batch=np.reshape(reeb_laplace_batch,(data.batch.unique().shape[0],all_Reeb_laplacian.shape[1],all_Reeb_laplacian.shape[1]))
-
-        logits, _ = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == data.y.to(device)).sum())
 
     return total_correct / len(loader.dataset)
 
-def createConfusionMatrix(model,loader,all_sccs,all_Reeb_laplacian,k,num_points):
+def createConfusionMatrix(model,loader,k,num_points):
     y_pred = [] # save predction
     y_true = [] # save ground truth
 
     # iterate over data
     for  i,data in enumerate(loader):
+        x=data.pos
+        nr_points_fps=55
+        Matrix_numpy=conv.get_fps_matrix(x,data,nr_points_fps)
+
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
-        sccs_batch=all_sccs[i*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1]:(i+1)*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1],0:all_sccs.shape[1]]
-        reeb_laplace_batch=all_Reeb_laplacian[i*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1]:(i+1)*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
+        sccs_batch=Matrix_numpy
+        sccs_batch=sccs_batch.astype(int)
 
-        
-        sccs_batch=np.reshape(sccs_batch,(data.batch.unique().shape[0],all_Reeb_laplacian.shape[1],all_sccs.shape[1]))
-        reeb_laplace_batch=np.reshape(reeb_laplace_batch,(data.batch.unique().shape[0],all_Reeb_laplacian.shape[1],all_Reeb_laplacian.shape[1]))
+        sccs_batch=np.reshape(sccs_batch,(data.batch.unique().shape[0],nr_points_fps,nr_points_fps))
 
-        logits, _ = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
+        x = torch.cat([data.pos, data.normal], dim=1)
+        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+
+        logits,  _  = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points,sccs=sccs_batch)
+
         pred = logits.argmax(dim=-1)
         
         output = pred.cpu().numpy()
@@ -323,10 +327,6 @@ if __name__ == '__main__':
 
 
     
-
-    
-
-    
     ###############################
 
 
@@ -337,14 +337,14 @@ if __name__ == '__main__':
     regularization = 1e-9
     for epoch in range(1, num_epochs+1):
         train_start_time = time.time()
-        loss = train(model, optimizer,loader=train_loader,all_sccs=all_sccs_train,all_Reeb_laplacian=all_reeb_laplacian_train,k=k_KNN,num_points=num_points,regularization=regularization)
+        loss = train(model, optimizer,loader=train_loader,k=k_KNN,num_points=num_points,regularization=regularization)
         
         train_stop_time = time.time()
 
         writer.add_scalar("Loss/train", loss, epoch)
         
         test_start_time = time.time()
-        test_acc = test(model, loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,k=k_KNN,num_points=num_points)
+        test_acc = test(model, loader=test_loader,k=k_KNN,num_points=num_points)
         test_stop_time = time.time()
 
 
@@ -354,7 +354,7 @@ if __name__ == '__main__':
         print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
         Test Time: \t{test_stop_time - test_start_time }')
 
-        writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,k=k_KNN,num_points=num_points), epoch)
+        writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader,k=k_KNN,num_points=num_points), epoch)
 
         if(epoch%5==0):
             torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
