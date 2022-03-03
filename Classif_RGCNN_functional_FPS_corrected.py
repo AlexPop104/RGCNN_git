@@ -86,7 +86,7 @@ class cls_model(nn.Module):
         self.regularization = []
 
 
-    def forward(self, x,k,batch_size,num_points,sccs):
+    def forward(self, x,k,batch_size,num_points):
         self.regularizers = []
         with torch.no_grad():
             L = conv.pairwise_distance(x) # W - weight matrix
@@ -104,6 +104,20 @@ class cls_model(nn.Module):
 
             with torch.no_grad():
 
+                
+                nr_points_fps=55
+        
+                nr_points_batch=int(num_points)
+
+                out=torch.reshape(out,(batch_size*num_points,out.shape[2]))
+      
+                sccs_batch=conv.get_fps_matrix_2(point_cloud=out,batch_size=batch_size,nr_points=num_points,nr_points_fps=nr_points_fps)
+
+        
+                sccs_batch=sccs_batch.long()
+
+                sccs_batch=torch.reshape(sccs_batch,(batch_size,nr_points_fps,nr_points_batch))
+
                 Vertices_final_FPS=torch.zeros([batch_size,sccs.shape[1], out.shape[2]], dtype=torch.float32,device='cuda')
 
                 for batch_iter in range(batch_size):   
@@ -113,6 +127,8 @@ class cls_model(nn.Module):
                         Vertices_pool_FPS=out[batch_iter,sccs[batch_iter,i]]
 
                         Vertices_final_FPS[batch_iter,i],_ =t.max(Vertices_pool_FPS, 0)
+
+                out=torch.reshape(out,(batch_size,num_points,out.shape[1]))
 
 
                 L = conv.pairwise_distance(out) # W - weight matrix
@@ -178,22 +194,11 @@ def train(model, optimizer, loader,k,num_points, regularization):
     for i, data in enumerate(loader):
         optimizer.zero_grad()
 
-        x=data.pos
-        nr_points_fps=55
-        
-        nr_points_batch=int(data.batch.shape[0]/data.batch.unique().shape[0])
-      
-        sccs_batch=conv.get_fps_matrix(x.to(device),data.to(device),nr_points_fps)
-
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
-
         
-        sccs_batch=sccs_batch.long()
 
-        sccs_batch=torch.reshape(sccs_batch,(data.batch.unique().shape[0],nr_points_fps,nr_points_batch))
-
-        logits, regularizers  = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points,sccs=sccs_batch)
+        logits, regularizers  = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points)
         loss    = criterion(logits, data.y.to(device))
         s = t.sum(t.as_tensor(regularizers))
         loss = loss + regularization * s
@@ -213,25 +218,11 @@ def test(model, loader,k,num_points):
     total_correct = 0
     for i,data in enumerate(loader):
         
-        x=data.pos
-        nr_points_fps=55
-        
-        nr_points_batch=int(data.batch.shape[0]/data.batch.unique().shape[0])
-      
-        sccs_batch=conv.get_fps_matrix(x.to(device),data.to(device),nr_points_fps)
-
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
-
         
-        sccs_batch=sccs_batch.long()
 
-        sccs_batch=torch.reshape(sccs_batch,(data.batch.unique().shape[0],nr_points_fps,nr_points_batch))
-
-        x = torch.cat([data.pos, data.normal], dim=1)
-        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
-
-        logits,  _  = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points,sccs=sccs_batch)
+        logits, regularizers  = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points)
         
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == data.y.to(device)).sum())
@@ -244,25 +235,11 @@ def createConfusionMatrix(model,loader,k,num_points):
 
     # iterate over data
     for  i,data in enumerate(loader):
-        x=data.pos
-        nr_points_fps=55
-        
-        nr_points_batch=int(data.batch.shape[0]/data.batch.unique().shape[0])
-      
-        sccs_batch=conv.get_fps_matrix(x.to(device),data.to(device),nr_points_fps)
-
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
-
         
-        sccs_batch=sccs_batch.long()
 
-        sccs_batch=torch.reshape(sccs_batch,(data.batch.unique().shape[0],nr_points_fps,nr_points_batch))
-
-        x = torch.cat([data.pos, data.normal], dim=1)
-        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
-
-        logits,  _  = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points,sccs=sccs_batch)
+        logits, regularizers  = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points)
 
         pred = logits.argmax(dim=-1)
         

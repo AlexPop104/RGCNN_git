@@ -136,6 +136,55 @@ def get_fps_matrix(point_cloud,data,nr_points_fps):
         Matrix_near_4[i]=torch.where(Matrix_near_4[i] > 0, Matrix_near_4[i], Matrix_near_4[i,0])
     return Matrix_near_4
 
+
+def get_fps_matrix_2(point_cloud,batch_size,nr_points,nr_points_fps):
+    nr_points_batch=nr_points
+
+    Batch_indexes=torch.arange(0,batch_size,device='cuda')
+    Batch_indexes=torch.reshape(Batch_indexes,[batch_size,1])
+    Batch_indexes=torch.tile(Batch_indexes,(1,nr_points_batch))
+    Batch_indexes=torch.reshape(Batch_indexes,[batch_size*nr_points_batch])
+
+
+        
+    index = fps(point_cloud, Batch_indexes, ratio=float(nr_points_fps/nr_points) , random_start=True)
+
+    fps_point_cloud=point_cloud[index]
+    fps_batch=Batch_indexes[index]
+
+    cluster = nearest(point_cloud, fps_point_cloud, Batch_indexes, fps_batch)
+
+
+    
+
+    batch_correction=Batch_indexes
+
+    batch_correction_num_points=batch_correction*nr_points_batch
+    batch_correction=batch_correction*nr_points_fps
+    
+    cluster_new=torch.subtract(cluster,batch_correction)
+   
+    edge_index_1=torch.arange(0,batch_size*nr_points_batch,device='cuda')
+    edge_index_2=cluster_new
+
+    edge_index_final=torch.cat((torch.unsqueeze(edge_index_1,1),torch.unsqueeze(edge_index_2,1)),axis=1)
+    edge_index_final=torch.transpose(edge_index_final,0,1)
+    
+    edge_weight=torch.ones([batch_size*nr_points_batch],device='cuda')
+
+    Matrix_near=tg.utils.to_dense_adj(edge_index_final,Batch_indexes,edge_weight)
+    Matrix_near=Matrix_near[:,:,0:nr_points_fps]
+    Matrix_near= Matrix_near.permute(0, 2, 1)
+    Matrix_near_2,Matrix_near_indices= torch.sort(Matrix_near,dim=2,descending=True)
+
+    Matrix_near_3=torch.multiply(Matrix_near_2,Matrix_near_indices)
+    Matrix_near_3,_=torch.sort(Matrix_near_3,dim=2,descending=True)
+    Matrix_near_4=torch.reshape(Matrix_near_3,(batch_size*nr_points_fps,nr_points_batch))
+
+    for i in range(nr_points_fps*batch_size):
+        Matrix_near_4[i]=torch.where(Matrix_near_4[i] > 0, Matrix_near_4[i], Matrix_near_4[i,0])
+    return Matrix_near_4
+
     
 
 def filter_out(vertices, edges, sccs):
