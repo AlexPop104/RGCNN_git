@@ -90,7 +90,7 @@ class cls_model(nn.Module):
         self.regularizers = []
         with torch.no_grad():
             L = conv.pairwise_distance(x) # W - weight matrix
-            L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+            #L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
             L = conv.get_laplacian(L)
 
         out = self.conv1(x, L)
@@ -116,7 +116,7 @@ class cls_model(nn.Module):
 
 
                 L = conv.pairwise_distance(out) # W - weight matrix
-                L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+                #L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
                 L = conv.get_laplacian(L)
 
            
@@ -128,7 +128,7 @@ class cls_model(nn.Module):
 
             with torch.no_grad():
                 L = conv.pairwise_distance(Vertices_final_FPS) # W - weight matrix
-                L = conv.get_one_matrix_knn(L, 40,batch_size,L.shape[2])
+                #L = conv.get_one_matrix_knn(L, 40,batch_size,L.shape[2])
                 L = conv.get_laplacian(L)
 
             out_FPS=self.conv_Reeb(Vertices_final_FPS,L)
@@ -215,15 +215,18 @@ def test(model, loader,k,num_points):
         
         x=data.pos
         nr_points_fps=55
-        Matrix_numpy=conv.get_fps_matrix(x,data,nr_points_fps)
+        
+        nr_points_batch=int(data.batch.shape[0]/data.batch.unique().shape[0])
+      
+        sccs_batch=conv.get_fps_matrix(x.to(device),data.to(device),nr_points_fps)
 
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
-        sccs_batch=Matrix_numpy
-        sccs_batch=sccs_batch.astype(int)
+        
+        sccs_batch=sccs_batch.long()
 
-        sccs_batch=np.reshape(sccs_batch,(data.batch.unique().shape[0],nr_points_fps,nr_points_fps))
+        sccs_batch=torch.reshape(sccs_batch,(data.batch.unique().shape[0],nr_points_fps,nr_points_batch))
 
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
@@ -243,15 +246,18 @@ def createConfusionMatrix(model,loader,k,num_points):
     for  i,data in enumerate(loader):
         x=data.pos
         nr_points_fps=55
-        Matrix_numpy=conv.get_fps_matrix(x,data,nr_points_fps)
+        
+        nr_points_batch=int(data.batch.shape[0]/data.batch.unique().shape[0])
+      
+        sccs_batch=conv.get_fps_matrix(x.to(device),data.to(device),nr_points_fps)
 
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
-        sccs_batch=Matrix_numpy
-        sccs_batch=sccs_batch.astype(int)
+        
+        sccs_batch=sccs_batch.long()
 
-        sccs_batch=np.reshape(sccs_batch,(data.batch.unique().shape[0],nr_points_fps,nr_points_fps))
+        sccs_batch=torch.reshape(sccs_batch,(data.batch.unique().shape[0],nr_points_fps,nr_points_batch))
 
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
