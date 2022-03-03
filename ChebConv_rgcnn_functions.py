@@ -103,7 +103,7 @@ def get_fps_matrix(point_cloud,data,nr_points_fps):
     cluster = nearest(point_cloud, fps_point_cloud, data.batch, fps_batch)
 
 
-    batch_correction=torch.arange(0,data.batch.unique().shape[0],device='cpu')
+    batch_correction=torch.arange(0,data.batch.unique().shape[0],device='cuda')
     batch_correction=torch.reshape(batch_correction,[data.batch.unique().shape[0],1])
     batch_correction=torch.tile(batch_correction,(1,nr_points_batch))
     batch_correction=torch.reshape(batch_correction,[data.batch.unique().shape[0]*nr_points_batch])
@@ -115,13 +115,13 @@ def get_fps_matrix(point_cloud,data,nr_points_fps):
     
     cluster_new=torch.subtract(cluster,batch_correction)
    
-    edge_index_1=torch.arange(0,data.batch.unique().shape[0]*nr_points_batch,device='cpu')
+    edge_index_1=torch.arange(0,data.batch.unique().shape[0]*nr_points_batch,device='cuda')
     edge_index_2=cluster_new
 
     edge_index_final=torch.cat((torch.unsqueeze(edge_index_1,1),torch.unsqueeze(edge_index_2,1)),axis=1)
     edge_index_final=torch.transpose(edge_index_final,0,1)
     
-    edge_weight=torch.ones([data.batch.unique().shape[0]*nr_points_batch])
+    edge_weight=torch.ones([data.batch.unique().shape[0]*nr_points_batch],device='cuda')
 
     Matrix_near=tg.utils.to_dense_adj(edge_index_final,Batch_indexes,edge_weight)
     Matrix_near=Matrix_near[:,:,0:nr_points_fps]
@@ -132,12 +132,9 @@ def get_fps_matrix(point_cloud,data,nr_points_fps):
     Matrix_near_3,_=torch.sort(Matrix_near_3,dim=2,descending=True)
     Matrix_near_4=torch.reshape(Matrix_near_3,(data.batch.unique().shape[0]*nr_points_fps,nr_points_batch))
 
-    Matrix_numpy=Matrix_near_4.cpu().detach().numpy()
-
     for i in range(nr_points_fps*data.batch.unique().shape[0]):
-        Matrix_numpy[i]=np.where(Matrix_numpy[i]==0,Matrix_numpy[i][0],Matrix_numpy[i])
-
-    return Matrix_numpy
+        Matrix_near_4[i]=torch.where(Matrix_near_4[i] > 0, Matrix_near_4[i], Matrix_near_4[i,0])
+    return Matrix_near_4
 
     
 

@@ -103,6 +103,7 @@ class cls_model(nn.Module):
 
 
             with torch.no_grad():
+
                 Vertices_final_FPS=torch.zeros([batch_size,sccs.shape[1], out.shape[2]], dtype=torch.float32,device='cuda')
 
                 for batch_iter in range(batch_size):   
@@ -118,6 +119,7 @@ class cls_model(nn.Module):
                 L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
                 L = conv.get_laplacian(L)
 
+           
 
             out = self.conv2(out, L)
             out = self.relu2(out)
@@ -126,19 +128,19 @@ class cls_model(nn.Module):
 
             with torch.no_grad():
                 L = conv.pairwise_distance(Vertices_final_FPS) # W - weight matrix
-                L = conv.get_one_matrix_knn(L, 40,batch_size,num_points)
+                L = conv.get_one_matrix_knn(L, 40,batch_size,L.shape[2])
                 L = conv.get_laplacian(L)
 
-            out_Reeb=self.conv_Reeb(Vertices_final_FPS,L)
-            out_Reeb=self.relu_Reeb(out_Reeb)
+            out_FPS=self.conv_Reeb(Vertices_final_FPS,L)
+            out_FPS=self.relu_Reeb(out_FPS)
     
             if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out_Reeb, (0, 2, 1)), laplacian_Reeb_final), out_Reeb))**2)
+                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out_FPS, (0, 2, 1)), L), out_FPS))**2)
     
             out, _ = t.max(out, 1)
-            out_Reeb, _ = t.max(out_Reeb, 1)
+            out_FPS, _ = t.max(out_FPS, 1)
 
-            out=torch.cat((out_Reeb,out),1)
+            out=torch.cat((out_FPS,out),1)
 
             # ~~~~ Fully Connected ~~~~
             
@@ -178,17 +180,18 @@ def train(model, optimizer, loader,k,num_points, regularization):
 
         x=data.pos
         nr_points_fps=55
+        
         nr_points_batch=int(data.batch.shape[0]/data.batch.unique().shape[0])
-        Matrix_numpy=conv.get_fps_matrix(x,data,nr_points_fps)
+      
+        sccs_batch=conv.get_fps_matrix(x.to(device),data.to(device),nr_points_fps)
 
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
-        sccs_batch=Matrix_numpy
-        sccs_batch=sccs_batch.astype(int)
+        
+        sccs_batch=sccs_batch.long()
 
-        sccs_batch=np.reshape(sccs_batch,(data.batch.unique().shape[0],nr_points_fps,nr_points_batch))
-
+        sccs_batch=torch.reshape(sccs_batch,(data.batch.unique().shape[0],nr_points_fps,nr_points_batch))
 
         logits, regularizers  = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points,sccs=sccs_batch)
         loss    = criterion(logits, data.y.to(device))
@@ -196,6 +199,7 @@ def train(model, optimizer, loader,k,num_points, regularization):
         loss = loss + regularization * s
         loss.backward()
         optimizer.step()
+        
         total_loss += loss.item() * data.num_graphs
         #if i%100 == 0:
             #print(f"{i}: curr loss: {loss}")
