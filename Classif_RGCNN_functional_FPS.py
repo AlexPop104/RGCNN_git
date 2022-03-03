@@ -164,6 +164,7 @@ def train(model, optimizer, loader, regularization):
 
         nr_points_fps=55
         nr_points_batch=int(data.batch.shape[0]/data.batch.unique().shape[0])
+
         
         index = fps(x, data.batch, ratio=float(nr_points_fps*data.batch.unique().shape[0]/data.pos.shape[0]) , random_start=True)
 
@@ -202,13 +203,27 @@ def train(model, optimizer, loader, regularization):
         Matrix_near=tg.utils.to_dense_adj(edge_index_final,Batch_indexes,edge_weight)
 
 
-        Matrix_near=Matrix_near[:,:,0:55]
+        Matrix_near=Matrix_near[:,:,0:nr_points_fps]
 
         Matrix_near= Matrix_near.permute(0, 2, 1)
 
         Matrix_near_2,Matrix_near_indices= torch.sort(Matrix_near,dim=2,descending=True)
 
         Matrix_near_3=torch.multiply(Matrix_near_2,Matrix_near_indices)
+        Matrix_near_3,_=torch.sort(Matrix_near_3,dim=2,descending=True)
+        Matrix_near_4=torch.reshape(Matrix_near_3,(data.batch.unique().shape[0]*nr_points_fps,nr_points_batch))
+
+        Matrix_numpy=Matrix_near_4.cpu().detach().numpy()
+
+       
+
+        for i in range(nr_points_fps*data.batch.unique().shape[0]):
+            Matrix_numpy[i]=np.where(Matrix_numpy[i]==0,Matrix_numpy[i][0],Matrix_numpy[i])
+
+        
+        Matrix_numpy_2=conv.get_fps_matrix(x,data,55)
+
+        
 
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)

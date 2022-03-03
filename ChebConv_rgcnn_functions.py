@@ -5,6 +5,7 @@ import torch
 import torch as t
 import torch_geometric as tg
 from torch import Tensor, nn
+from torch_geometric.nn import fps,radius_graph,nearest
 from torch.nn import Parameter
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.nn.dense.linear import Linear
@@ -90,6 +91,56 @@ def get_one_matrix_knn(matrix, k,batch_size,nr_points):
     knn_weight_matrix=tg.utils.to_dense_adj(edge_indices,batch_indexes,edge_weights)
 
     return knn_weight_matrix
+
+def get_fps_matrix(point_cloud,data,nr_points_fps):
+    nr_points_batch=int(data.batch.shape[0]/data.batch.unique().shape[0])
+        
+    index = fps(point_cloud, data.batch, ratio=float(nr_points_fps*data.batch.unique().shape[0]/data.pos.shape[0]) , random_start=True)
+
+    fps_point_cloud=point_cloud[index]
+    fps_batch=data.batch[index]
+
+    cluster = nearest(point_cloud, fps_point_cloud, data.batch, fps_batch)
+
+
+    batch_correction=torch.arange(0,data.batch.unique().shape[0],device='cpu')
+    batch_correction=torch.reshape(batch_correction,[data.batch.unique().shape[0],1])
+    batch_correction=torch.tile(batch_correction,(1,nr_points_batch))
+    batch_correction=torch.reshape(batch_correction,[data.batch.unique().shape[0]*nr_points_batch])
+
+    Batch_indexes=batch_correction
+
+    batch_correction_num_points=batch_correction*nr_points_batch
+    batch_correction=batch_correction*nr_points_fps
+    
+    cluster_new=torch.subtract(cluster,batch_correction)
+    #cluster_new=torch.add(cluster_new,batch_correction_num_points)
+
+    edge_index_1=torch.arange(0,data.batch.unique().shape[0]*nr_points_batch,device='cpu')
+    edge_index_2=cluster_new
+
+    edge_index_final=torch.cat((torch.unsqueeze(edge_index_1,1),torch.unsqueeze(edge_index_2,1)),axis=1)
+    edge_index_final=torch.transpose(edge_index_final,0,1)
+    
+    edge_weight=torch.ones([data.batch.unique().shape[0]*nr_points_batch])
+
+    Matrix_near=tg.utils.to_dense_adj(edge_index_final,Batch_indexes,edge_weight)
+    Matrix_near=Matrix_near[:,:,0:nr_points_fps]
+    Matrix_near= Matrix_near.permute(0, 2, 1)
+    Matrix_near_2,Matrix_near_indices= torch.sort(Matrix_near,dim=2,descending=True)
+
+    Matrix_near_3=torch.multiply(Matrix_near_2,Matrix_near_indices)
+    Matrix_near_3,_=torch.sort(Matrix_near_3,dim=2,descending=True)
+    Matrix_near_4=torch.reshape(Matrix_near_3,(data.batch.unique().shape[0]*nr_points_fps,nr_points_batch))
+
+    Matrix_numpy=Matrix_near_4.cpu().detach().numpy()
+
+    for i in range(nr_points_fps*data.batch.unique().shape[0]):
+        Matrix_numpy[i]=np.where(Matrix_numpy[i]==0,Matrix_numpy[i][0],Matrix_numpy[i])
+
+    return Matrix_numpy
+
+    
 
 def filter_out(vertices, edges, sccs):
     dist = np.zeros([vertices.shape[0], vertices.shape[0]])
