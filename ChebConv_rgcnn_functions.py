@@ -204,6 +204,25 @@ def get_fps_matrix_topk(point_cloud,batch_size,nr_points,nr_points_fps):
     ##Work in progress
     
     return fps_batch
+
+def get_centroid(point_cloud,num_points):
+
+    nr_coordinates=point_cloud.shape[2]
+    batch_size=point_cloud.shape[0]
+    
+    centroid=torch.sum(point_cloud,1)
+    centroid=centroid/num_points
+
+    centroid=torch.tile(centroid,(1,num_points))
+    centroid=torch.reshape(centroid,(batch_size,num_points,nr_coordinates))
+
+    point_cloud_2=torch.subtract(point_cloud,centroid)
+
+    Distances=torch.linalg.norm(point_cloud_2,dim=2)
+
+    Distances=torch.unsqueeze(Distances,2)
+
+    return Distances
     
 
 def filter_out(vertices, edges, sccs):

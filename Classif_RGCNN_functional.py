@@ -64,8 +64,9 @@ class cls_model(nn.Module):
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
         #self.conv1 = conv.DenseChebConv(3, 128, 6)
+        #self.conv1 = conv.DenseChebConv(6, 128, 6)
 
-        self.conv1 = conv.DenseChebConv(6, 128, 6)
+        self.conv1 = conv.DenseChebConv(1, 128, 6)
         self.conv2 = conv.DenseChebConv(128, 512, 5)
         self.conv3 = conv.DenseChebConv(512, 1024, 3)
         
@@ -145,13 +146,16 @@ def train(model, optimizer, loader, regularization):
     total_loss = 0
     for i, data in enumerate(loader):
         optimizer.zero_grad()
-        x = torch.cat([data.pos, data.normal], dim=1)
-        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
-        # x=data.pos
-        # x=x.reshape(data.batch.unique().shape[0], num_points, 3)
+        x=data.pos
+        x=x.reshape(data.batch.unique().shape[0], num_points, 3)
+        x2=conv.get_centroid(point_cloud=x,num_points=num_points)
+        logits, regularizers  = model(x2.to(device))
 
-        logits, regularizers  = model(x.to(device))
+        # x = torch.cat([data.pos, data.normal], dim=1)   
+        # x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+        # logits, regularizers  = model(x.to(device))
+
         loss    = criterion(logits, data.y.to(device))
         s = t.sum(t.as_tensor(regularizers))
         loss = loss + regularization * s
@@ -170,13 +174,19 @@ def test(model, loader):
     total_correct = 0
     total_confidence=0
     for data in loader:
-        x = torch.cat([data.pos, data.normal], dim=1)
-        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+        x=data.pos
+        x=x.reshape(data.batch.unique().shape[0], num_points, 3)
+        x2=conv.get_centroid(point_cloud=x,num_points=num_points)
+        logits, regularizers  = model(x2.to(device))
+
+
+        # x = torch.cat([data.pos, data.normal], dim=1)
+        # x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
         # x=data.pos
         # x=x.reshape(data.batch.unique().shape[0], num_points, 3)
 
-        logits, _ = model(x.to(device))
+        # logits, _ = model(x.to(device))
         pred = logits.argmax(dim=-1)
 
 
@@ -252,6 +262,18 @@ if __name__ == '__main__':
 
         
     transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
+    
+    random_rotate = Compose([
+    RandomRotate(degrees=180, axis=0),
+    RandomRotate(degrees=180, axis=1),
+    RandomRotate(degrees=180, axis=2),
+])
+
+    test_transform = Compose([
+    random_rotate,
+    SamplePoints(num_points, include_normals=True),
+    NormalizeScale()
+])
 
  
 
@@ -263,7 +285,7 @@ if __name__ == '__main__':
 
 
     dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
-    dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms)
+    dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform)
 
 
     # Verification...
