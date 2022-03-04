@@ -145,17 +145,12 @@ def get_fps_matrix_2(point_cloud,batch_size,nr_points,nr_points_fps):
     Batch_indexes=torch.tile(Batch_indexes,(1,nr_points_batch))
     Batch_indexes=torch.reshape(Batch_indexes,[batch_size*nr_points_batch])
 
-
-        
     index = fps(point_cloud, Batch_indexes, ratio=float(nr_points_fps/nr_points) , random_start=True)
 
     fps_point_cloud=point_cloud[index]
     fps_batch=Batch_indexes[index]
 
     cluster = nearest(point_cloud, fps_point_cloud, Batch_indexes, fps_batch)
-
-
-    
 
     batch_correction=Batch_indexes
 
@@ -185,6 +180,30 @@ def get_fps_matrix_2(point_cloud,batch_size,nr_points,nr_points_fps):
         Matrix_near_4[i]=torch.where(Matrix_near_4[i] > 0, Matrix_near_4[i], Matrix_near_4[i,0])
     return Matrix_near_4
 
+def get_fps_matrix_topk(point_cloud,batch_size,nr_points,nr_points_fps):
+    nr_points_batch=nr_points
+
+    Batch_indexes=torch.arange(0,batch_size,device='cuda')
+    Batch_indexes=torch.reshape(Batch_indexes,[batch_size,1])
+    Batch_indexes=torch.tile(Batch_indexes,(1,nr_points_batch))
+    Batch_indexes=torch.reshape(Batch_indexes,[batch_size*nr_points_batch])
+
+    index = fps(point_cloud, Batch_indexes, ratio=float(nr_points_fps/nr_points) , random_start=True)
+
+    fps_point_cloud=point_cloud[index]
+    fps_batch=Batch_indexes[index]
+
+    fps_point_cloud_2=torch.tile(fps_point_cloud,(1,nr_points))
+
+    point_cloud_2=torch.reshape(point_cloud,(batch_size,nr_points,point_cloud.shape[1]))
+
+    point_cloud_3=torch.reshape(point_cloud_2,(batch_size,nr_points*point_cloud.shape[1]))
+
+    point_cloud_4=torch.tile(point_cloud_3,(1,nr_points_batch))
+
+    ##Work in progress
+    
+    return fps_batch
     
 
 def filter_out(vertices, edges, sccs):
