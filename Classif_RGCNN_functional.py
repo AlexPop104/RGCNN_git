@@ -1,7 +1,7 @@
 import time
 
-from torch.utils.tensorboard import SummaryWriter
-writer = SummaryWriter()
+# from torch.utils.tensorboard import SummaryWriter
+# writer = SummaryWriter()
 
 from torch import nn
 import torch
@@ -40,7 +40,7 @@ import numpy as np
 
 
 class cls_model(nn.Module):
-    def __init__(self, vertice ,F, K, M, class_num, regularization=0, one_layer=True, dropout=0, reg_prior:bool=True):
+    def __init__(self, vertice ,F, K, M, class_num, regularization=0,  dropout=0, reg_prior:bool=True):
         assert len(F) == len(K)
         super(cls_model, self).__init__()
 
@@ -48,15 +48,13 @@ class cls_model(nn.Module):
         self.K = K
         self.M = M
 
-        self.one_layer = one_layer
-
+        
         self.reg_prior = reg_prior
         self.vertice = vertice
         self.regularization = regularization    # gamma from the paper: 10^-9
         self.dropout = dropout
         self.regularizers = []
 
-        # self.get_laplacian = GetLaplacian(normalize=True)
         self.relu1 = nn.ReLU()
         self.relu2 = nn.ReLU()
         self.relu3 = nn.ReLU()
@@ -71,16 +69,11 @@ class cls_model(nn.Module):
         self.conv2 = conv.DenseChebConv(128, 512, 5)
         self.conv3 = conv.DenseChebConv(512, 1024, 3)
         
-        #self.fc1 = nn.Linear(1024, 512, bias=True)
+        self.fc1 = nn.Linear(1024, 512, bias=True)
         self.fc2 = nn.Linear(512, 128, bias=True)
         self.fc3 = nn.Linear(128, class_num, bias=True)
         
-        self.fc_t = nn.Linear(128, class_num)
-
         self.max_pool = nn.MaxPool1d(self.vertice)
-
-        if one_layer == True:
-            self.fc = nn.Linear(128, class_num)
 
         self.regularizer = 0
         self.regularization = []
@@ -90,7 +83,6 @@ class cls_model(nn.Module):
         self.regularizers = []
         with torch.no_grad():
             L = conv.pairwise_distance(x) # W - weight matrix
-            
             L = conv.get_laplacian(L)
 
         out = self.conv1(x, L)
@@ -99,54 +91,51 @@ class cls_model(nn.Module):
         if self.reg_prior:
             self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
         
-        if self.one_layer == False:
-            with torch.no_grad():
-                L = conv.pairwise_distance(out) # W - weight matrix
-                L = conv.get_laplacian(L)
-            
-            out = self.conv2(out, L)
-            out = self.relu2(out)
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
-    
-            with torch.no_grad():
-                L = conv.pairwise_distance(out) # W - weight matrix
-                L = conv.get_laplacian(L)
-            
-            # out = self.conv3(out, L)
-            # out = self.relu3(out)
-            
-            # if self.reg_prior:
-            #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
-    
-            out, _ = t.max(out, 1)
+       
+        with torch.no_grad():
+            L = conv.pairwise_distance(out) # W - weight matrix
+            L = conv.get_laplacian(L)
+        
+        out = self.conv2(out, L)
+        out = self.relu2(out)
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
-            # ~~~~ Fully Connected ~~~~
-            
-            out = self.fc1(out)
+        with torch.no_grad():
+            L = conv.pairwise_distance(out) # W - weight matrix
+            L = conv.get_laplacian(L)
+        
+        out = self.conv3(out, L)
+        out = self.relu3(out)
+        
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
+        out, _ = t.max(out, 1)
 
-            out = self.relu4(out)
-            #out = self.dropout(out)
+        # ~~~~ Fully Connected ~~~~
+        
+        out = self.fc1(out)
 
-            out = self.fc2(out)
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
-            out = self.relu5(out)
-            #out = self.dropout(out)
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
+            self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
 
-            out = self.fc3(out)
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc3.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc3.bias.data[0]) ** 2)
-        else:
-            out, _ = t.max(out, 1)
-            out = self.fc(out)
+        out = self.relu4(out)
+        #out = self.dropout(out)
 
+        out = self.fc2(out)
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
+            self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
+        out = self.relu5(out)
+        #out = self.dropout(out)
+
+        out = self.fc3(out)
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(self.fc3.weight.data[0]) ** 2)
+            self.regularizers.append(t.linalg.norm(self.fc3.bias.data[0]) ** 2)
+        
         return out, self.regularizers
 
 criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
@@ -190,26 +179,22 @@ def test(model, loader):
         logits, _ = model(x.to(device))
         pred = logits.argmax(dim=-1)
 
-        maximum_value, pred= logits.max(dim=1)
-        minimum_value,_=logits.min(dim=1)
+
+        # maximum_value, pred= logits.max(dim=1)
+        # minimum_value,_=logits.min(dim=1)
         
-        #value_interval=torch.subtract(maximum_value,minimum_value)
-        value_interval=torch.abs(minimum_value)
-
-
-        pred_values_sum=torch.sum(logits,1)
-        pred_values_sum=torch.add(pred_values_sum,logits.shape[1]*value_interval)
-
-        maximum_value_final=torch.add(maximum_value,value_interval)
-
-        confidence=torch.div(maximum_value_final,pred_values_sum)
-        total_confidence += confidence.sum()
+        # #value_interval=torch.subtract(maximum_value,minimum_value)
+        # value_interval=torch.abs(minimum_value)
+        # pred_values_sum=torch.sum(logits,1)
+        # pred_values_sum=torch.add(pred_values_sum,logits.shape[1]*value_interval)
+        # maximum_value_final=torch.add(maximum_value,value_interval)
+        # confidence=torch.div(maximum_value_final,pred_values_sum)
+        # total_confidence += confidence.sum()
 
 
         total_correct += int((pred == data.y.to(device)).sum())
 
-    #return total_correct / len(loader.dataset) 
-    return total_correct / len(loader.dataset) , total_confidence / len(loader.dataset)
+    return total_correct / len(loader.dataset) 
 
 def createConfusionMatrix(model,loader):
     y_pred = [] # save predction
@@ -289,7 +274,7 @@ if __name__ == '__main__':
     train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
     test_loader  = DataLoader(dataset_test, batch_size=batch_size)
     
-    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False, reg_prior=True)
+    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, reg_prior=True)
     model = model.to(device)
 
     print(model.parameters)
@@ -303,7 +288,7 @@ if __name__ == '__main__':
         loss = train(model, optimizer, train_loader, regularization=regularization)
         train_stop_time = time.time()
 
-        writer.add_scalar("Loss/train", loss, epoch)
+        # writer.add_scalar("Loss/train", loss, epoch)
         
         test_start_time = time.time()
         test_acc = test(model, test_loader)
@@ -311,7 +296,7 @@ if __name__ == '__main__':
 
 
 
-        writer.add_scalar("Acc/test", test_acc, epoch)
+        # writer.add_scalar("Acc/test", test_acc, epoch)
         print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
         print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
         Test Time: \t{test_stop_time - test_start_time }')
@@ -347,7 +332,7 @@ if __name__ == '__main__':
 #     test_loader  = DataLoader(dataset_test, batch_size=batch_size)
     
     
-#     model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False, reg_prior=True)
+#     model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, reg_prior=True)
 #     path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/02_03_22_11:43:08_2_Layers_Points/model100.pt"
 #     model.load_state_dict(torch.load(path_saved_model))
 #     model = model.to(device)
