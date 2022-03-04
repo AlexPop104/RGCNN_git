@@ -1,7 +1,7 @@
 import time
 
-# from torch.utils.tensorboard import SummaryWriter
-# writer = SummaryWriter()
+from torch.utils.tensorboard import SummaryWriter
+writer = SummaryWriter()
 
 from torch import nn
 import torch
@@ -66,7 +66,7 @@ class cls_model(nn.Module):
         #self.conv1 = conv.DenseChebConv(3, 128, 6)
         #self.conv1 = conv.DenseChebConv(6, 128, 6)
 
-        self.conv1 = conv.DenseChebConv(1, 128, 6)
+        self.conv1 = conv.DenseChebConv(3, 128, 6)
         self.conv2 = conv.DenseChebConv(128, 512, 5)
         self.conv3 = conv.DenseChebConv(512, 1024, 3)
         
@@ -80,13 +80,13 @@ class cls_model(nn.Module):
         self.regularization = []
 
 
-    def forward(self, x):
+    def forward(self, x,x2):
         self.regularizers = []
         with torch.no_grad():
-            L = conv.pairwise_distance(x) # W - weight matrix
+            L = conv.pairwise_distance(x2) # W - weight matrix
             L = conv.get_laplacian(L)
 
-        out = self.conv1(x, L)
+        out = self.conv1(x2, L)
         out = self.relu1(out)
 
         if self.reg_prior:
@@ -150,12 +150,14 @@ def train(model, optimizer, loader, regularization):
         x=data.pos
         x=x.reshape(data.batch.unique().shape[0], num_points, 3)
         x2=conv.get_centroid(point_cloud=x,num_points=num_points)
-        logits, regularizers  = model(x2.to(device))
 
-        # x = torch.cat([data.pos, data.normal], dim=1)   
-        # x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+        
+
+        x = torch.cat([data.pos, data.normal], dim=1)   
+        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
         # logits, regularizers  = model(x.to(device))
 
+        logits, regularizers  = model(x=x.to(device),x2=x2.to(device))
         loss    = criterion(logits, data.y.to(device))
         s = t.sum(t.as_tensor(regularizers))
         loss = loss + regularization * s
@@ -177,7 +179,14 @@ def test(model, loader):
         x=data.pos
         x=x.reshape(data.batch.unique().shape[0], num_points, 3)
         x2=conv.get_centroid(point_cloud=x,num_points=num_points)
-        logits, regularizers  = model(x2.to(device))
+
+        
+
+        x = torch.cat([data.pos, data.normal], dim=1)   
+        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+        
+
+        logits, regularizers  = model(x=x.to(device),x2=x2.to(device))
 
 
         # x = torch.cat([data.pos, data.normal], dim=1)
@@ -264,9 +273,9 @@ if __name__ == '__main__':
     transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
     
     random_rotate = Compose([
-    RandomRotate(degrees=180, axis=0),
-    RandomRotate(degrees=180, axis=1),
-    RandomRotate(degrees=180, axis=2),
+    RandomRotate(degrees=90, axis=0),
+    RandomRotate(degrees=90, axis=1),
+    RandomRotate(degrees=90, axis=2),
 ])
 
     test_transform = Compose([
@@ -310,7 +319,7 @@ if __name__ == '__main__':
         loss = train(model, optimizer, train_loader, regularization=regularization)
         train_stop_time = time.time()
 
-        # writer.add_scalar("Loss/train", loss, epoch)
+        writer.add_scalar("Loss/train", loss, epoch)
         
         test_start_time = time.time()
         test_acc = test(model, test_loader)
@@ -318,7 +327,7 @@ if __name__ == '__main__':
 
 
 
-        # writer.add_scalar("Acc/test", test_acc, epoch)
+        writer.add_scalar("Acc/test", test_acc, epoch)
         print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
         print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
         Test Time: \t{test_stop_time - test_start_time }')
