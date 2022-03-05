@@ -66,7 +66,7 @@ class cls_model(nn.Module):
         #self.conv1 = conv.DenseChebConv(3, 128, 6)
         #self.conv1 = conv.DenseChebConv(6, 128, 6)
 
-        self.conv1 = conv.DenseChebConv(3, 128, 6)
+        self.conv1 = conv.DenseChebConv(1, 128, 6)
         self.conv2 = conv.DenseChebConv(128, 512, 5)
         self.conv3 = conv.DenseChebConv(512, 1024, 3)
         
@@ -83,7 +83,7 @@ class cls_model(nn.Module):
     def forward(self, x,x2):
         self.regularizers = []
         with torch.no_grad():
-            L = conv.pairwise_distance(x2) # W - weight matrix
+            L = conv.pairwise_distance(x) # W - weight matrix
             L = conv.get_laplacian(L)
 
         out = self.conv1(x2, L)
@@ -151,10 +151,17 @@ def train(model, optimizer, loader, regularization):
         x=x.reshape(data.batch.unique().shape[0], num_points, 3)
         x2=conv.get_centroid(point_cloud=x,num_points=num_points)
 
+        # x2=x2.reshape((data.batch.unique().shape[0]*num_points,1))
+        # x2=torch.cat([x2,data.normal],dim=1)
+        # x2 = x2.reshape(data.batch.unique().shape[0], num_points, 4)
+
+
         
 
         x = torch.cat([data.pos, data.normal], dim=1)   
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+
+        x=torch.cat([x,x2],dim=2)
         # logits, regularizers  = model(x.to(device))
 
         logits, regularizers  = model(x=x.to(device),x2=x2.to(device))
@@ -180,10 +187,16 @@ def test(model, loader):
         x=x.reshape(data.batch.unique().shape[0], num_points, 3)
         x2=conv.get_centroid(point_cloud=x,num_points=num_points)
 
+        # x2=x2.reshape((data.batch.unique().shape[0]*num_points,1))
+        # x2=torch.cat([x2,data.normal],dim=1)
+        # x2 = x2.reshape(data.batch.unique().shape[0], num_points, 4)
+
         
 
         x = torch.cat([data.pos, data.normal], dim=1)   
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+
+        x=torch.cat([x,x2],dim=2)
         
 
         logits, regularizers  = model(x=x.to(device),x2=x2.to(device))
@@ -257,7 +270,7 @@ if __name__ == '__main__':
 
     num_points = 1024
     batch_size = 32
-    num_epochs = 100
+    num_epochs = 200
     learning_rate = 1e-3
     modelnet_num = 40
 
@@ -273,9 +286,9 @@ if __name__ == '__main__':
     transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
     
     random_rotate = Compose([
-    RandomRotate(degrees=90, axis=0),
-    RandomRotate(degrees=90, axis=1),
-    RandomRotate(degrees=90, axis=2),
+    RandomRotate(degrees=45, axis=0),
+    RandomRotate(degrees=45, axis=1),
+    RandomRotate(degrees=45, axis=2),
 ])
 
     test_transform = Compose([
@@ -293,7 +306,7 @@ if __name__ == '__main__':
 
 
 
-    dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
+    dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform)
     dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform)
 
 

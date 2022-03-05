@@ -218,12 +218,12 @@ def get_centroid(point_cloud,num_points):
 
     point_cloud_2=torch.subtract(point_cloud,centroid)
 
-    # Distances=torch.linalg.norm(point_cloud_2,dim=2)
+    Distances=torch.linalg.norm(point_cloud_2,dim=2)
 
-    # Distances=torch.unsqueeze(Distances,2)
+    Distances=torch.unsqueeze(Distances,2)
 
-    #return Distances
-    return point_cloud_2
+    return Distances
+    
     
 
 def filter_out(vertices, edges, sccs):
