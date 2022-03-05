@@ -66,7 +66,7 @@ class cls_model(nn.Module):
         #self.conv1 = conv.DenseChebConv(3, 128, 6)
         #self.conv1 = conv.DenseChebConv(6, 128, 6)
 
-        self.conv1 = conv.DenseChebConv(1, 128, 6)
+        self.conv1 = conv.DenseChebConv(7, 128, 6)
         self.conv2 = conv.DenseChebConv(128, 512, 5)
         self.conv3 = conv.DenseChebConv(512, 1024, 3)
         
@@ -86,7 +86,7 @@ class cls_model(nn.Module):
             L = conv.pairwise_distance(x) # W - weight matrix
             L = conv.get_laplacian(L)
 
-        out = self.conv1(x2, L)
+        out = self.conv1(x, L)
         out = self.relu1(out)
 
         if self.reg_prior:
@@ -286,9 +286,9 @@ if __name__ == '__main__':
     transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
     
     random_rotate = Compose([
-    RandomRotate(degrees=45, axis=0),
-    RandomRotate(degrees=45, axis=1),
-    RandomRotate(degrees=45, axis=2),
+    RandomRotate(degrees=20, axis=0),
+    RandomRotate(degrees=20, axis=1),
+    RandomRotate(degrees=20, axis=2),
 ])
 
     test_transform = Compose([
