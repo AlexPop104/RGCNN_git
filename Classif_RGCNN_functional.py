@@ -286,9 +286,9 @@ if __name__ == '__main__':
     transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
     
     random_rotate = Compose([
-    RandomRotate(degrees=20, axis=0),
-    RandomRotate(degrees=20, axis=1),
-    RandomRotate(degrees=20, axis=2),
+    RandomRotate(degrees=60, axis=0),
+    RandomRotate(degrees=60, axis=1),
+    RandomRotate(degrees=60, axis=2),
 ])
 
     test_transform = Compose([
