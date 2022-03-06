@@ -66,7 +66,7 @@ class cls_model(nn.Module):
         #self.conv1 = conv.DenseChebConv(3, 128, 6)
         #self.conv1 = conv.DenseChebConv(6, 128, 6)
 
-        self.conv1 = conv.DenseChebConv(7, 128, 6)
+        self.conv1 = conv.DenseChebConv(1, 128, 6)
         self.conv2 = conv.DenseChebConv(128, 512, 5)
         self.conv3 = conv.DenseChebConv(512, 1024, 3)
         
@@ -86,7 +86,7 @@ class cls_model(nn.Module):
             L = conv.pairwise_distance(x) # W - weight matrix
             L = conv.get_laplacian(L)
 
-        out = self.conv1(x, L)
+        out = self.conv1(x2, L)
         out = self.relu1(out)
 
         if self.reg_prior:
@@ -285,14 +285,26 @@ if __name__ == '__main__':
         
     transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
     
-    random_rotate = Compose([
-    RandomRotate(degrees=180, axis=0),
-    RandomRotate(degrees=180, axis=1),
-    RandomRotate(degrees=180, axis=2),
+    random_rotate_train = Compose([
+    RandomRotate(degrees=(0,45), axis=0),
+    RandomRotate(degrees=(0,45), axis=1),
+    RandomRotate(degrees=(0,45), axis=2),
+])
+
+    random_rotate_test = Compose([
+    RandomRotate(degrees=(89,90), axis=0),
+    RandomRotate(degrees=(89,90), axis=1),
+    RandomRotate(degrees=(89,90), axis=2),
+])
+
+    train_transform = Compose([
+    random_rotate_train,
+    SamplePoints(num_points, include_normals=True),
+    NormalizeScale()
 ])
 
     test_transform = Compose([
-    random_rotate,
+    random_rotate_test,
     SamplePoints(num_points, include_normals=True),
     NormalizeScale()
 ])
@@ -306,7 +318,7 @@ if __name__ == '__main__':
 
 
 
-    dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform)
+    dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=train_transform)
     dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform)
 
 
