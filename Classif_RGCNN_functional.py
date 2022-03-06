@@ -269,7 +269,7 @@ if __name__ == '__main__':
     os.mkdir(path)
 
     num_points = 1024
-    batch_size = 32
+    batch_size = 64
     num_epochs = 200
     learning_rate = 1e-3
     modelnet_num = 40
@@ -286,9 +286,9 @@ if __name__ == '__main__':
     transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
     
     random_rotate = Compose([
-    RandomRotate(degrees=60, axis=0),
-    RandomRotate(degrees=60, axis=1),
-    RandomRotate(degrees=60, axis=2),
+    RandomRotate(degrees=180, axis=0),
+    RandomRotate(degrees=180, axis=1),
+    RandomRotate(degrees=180, axis=2),
 ])
 
     test_transform = Compose([
