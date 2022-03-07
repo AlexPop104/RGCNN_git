@@ -1,32 +1,35 @@
+import torch
+from torch import nn
+
+import torch as t
+import torch_geometric as tg
+
 import time
 
 from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter()
 
-from torch import nn
-import torch
 from torch.nn import Parameter
 
-
 from torch_geometric.datasets import ModelNet
+from torch_geometric.transforms import Compose
 from torch_geometric.transforms import SamplePoints
 from torch_geometric.transforms import RandomRotate
-
+from torch_geometric.transforms import NormalizeScale
+from torch_geometric.loader import DataLoader
 
 from torch_geometric.nn.inits import zeros
 from torch_geometric.typing import OptTensor
 from torch_geometric.utils import (add_self_loops, get_laplacian,
                                    remove_self_loops)
-import torch as t
-import torch_geometric as tg
 
 from torch_geometric.utils import get_laplacian as get_laplacian_pyg
-from torch_geometric.transforms import Compose
+
 
 import ChebConv_rgcnn_functions as conv
 import os
-from torch_geometric.transforms import NormalizeScale
-from torch_geometric.loader import DataLoader
+
+
 from datetime import datetime
 from torch.nn import MSELoss
 from torch.optim import lr_scheduler
