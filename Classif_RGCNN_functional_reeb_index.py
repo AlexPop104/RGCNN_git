@@ -180,8 +180,27 @@ def train(model, optimizer, loader,all_sccs,all_Reeb_laplacian,k,num_points, reg
 
         x = torch.cat([pos[1], normal[1]], dim=2)
         
-        sccs_batch=all_sccs[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_sccs.shape[1]]
-        reeb_laplace_batch=all_Reeb_laplacian[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
+        
+
+        ceva=torch.tile(idx.unsqueeze(1).to(device),(1,all_Reeb_laplacian.shape[1]*all_Reeb_laplacian.shape[1]))
+
+        ceva=torch.reshape(ceva,(1,idx.shape[0]*all_Reeb_laplacian.shape[1]*all_Reeb_laplacian.shape[1]))
+        ceva=torch.reshape(ceva,(idx.shape[0]*all_Reeb_laplacian.shape[1],all_Reeb_laplacian.shape[1]))
+
+        ceva2=torch.arange(0,all_Reeb_laplacian.shape[1],device='cuda')
+        ceva3=torch.tile(ceva2,[1,all_Reeb_laplacian.shape[1]*idx.shape[0]])
+        ceva3=torch.reshape(ceva3,(idx.shape[0]*all_Reeb_laplacian.shape[1],all_Reeb_laplacian.shape[1]))
+
+        ceva4=torch.add(ceva,ceva3)
+        ceva4=torch.reshape(ceva4,[idx.shape[0]*all_Reeb_laplacian.shape[1]*all_Reeb_laplacian.shape[1]])
+
+        ceva4=ceva4.to('cpu')
+
+        sccs_batch=all_sccs[ceva4]
+        reeb_laplace_batch=all_Reeb_laplacian[ceva4]
+        
+        # sccs_batch=all_sccs[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_sccs.shape[1]]
+        # reeb_laplace_batch=all_Reeb_laplacian[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
 
         sccs_batch=sccs_batch.astype(int)
 
