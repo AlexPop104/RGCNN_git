@@ -331,18 +331,35 @@ def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,time_e
             point_cloud_pcd=point_cloud[k]
             
             
-            Matrice=torch_geometric.utils.to_dense_adj(edge_index=edge_indices_iteration_2,batch=batch_values_iteration,edge_attr=edge_values_iteration)
+            #Matrice=torch_geometric.utils.to_dense_adj(edge_index=edge_indices_iteration_2,batch=batch_values_iteration,edge_attr=edge_values_iteration)
+            Matrice=torch_geometric.utils.to_dense_adj(edge_index=edge_indices_iteration_2,batch=None,edge_attr=None,max_num_nodes=20)
+
+
+            x_condition=torch.ones(Matrice.shape[0],Matrice.shape[1]).to('cuda')
+            y_condition=torch.zeros(Matrice.shape[0],Matrice.shape[1]).to('cuda')
             
-            New_indices=torch_geometric.utils.dense_to_sparse(Matrice)
+            
+            Matrice=torch.where(Matrice > 0, x_condition, y_condition)
+            New_edge_indices, New_edge_values=torch_geometric.utils.dense_to_sparse(Matrice)
+
+            New_edge_indices_cpu=New_edge_indices.to('cpu')
 
             
+            # fig = matplotlib.pyplot.figure()
+            # ax = fig.add_subplot(111, projection='3d')
+            # ax.set_axis_off()
+            # for e in edges:
+            #     ax.plot([vertices[e[0]][0], vertices[e[1]][0]], [vertices[e[0]][1], vertices[e[1]][1]], [vertices[e[0]][2], vertices[e[1]][2]], color='b')
+            # ax.scatter(point_cloud_pcd[:, 0], point_cloud_pcd[:, 1], point_cloud_pcd[:, 2], s=1, color='r')   
+            # matplotlib.pyplot.show()
+
             fig = matplotlib.pyplot.figure()
             ax = fig.add_subplot(111, projection='3d')
             ax.set_axis_off()
-            for e in edges:
-                ax.plot([vertices[e[0]][0], vertices[e[1]][0]], [vertices[e[0]][1], vertices[e[1]][1]], [vertices[e[0]][2], vertices[e[1]][2]], color='b')
+            for test_iter in range(New_edge_indices_cpu.shape[1]):
+                ax.plot([vertices[New_edge_indices_cpu[0][test_iter]][0], vertices[New_edge_indices_cpu[1][test_iter]][0]], [vertices[New_edge_indices_cpu[0][test_iter]][1], vertices[New_edge_indices_cpu[1][test_iter]][1]], [vertices[New_edge_indices_cpu[0][test_iter]][2], vertices[New_edge_indices_cpu[1][test_iter]][2]], color='b')
             ax.scatter(point_cloud_pcd[:, 0], point_cloud_pcd[:, 1], point_cloud_pcd[:, 2], s=1, color='r')   
-            #matplotlib.pyplot.show()
+            matplotlib.pyplot.show()
 
         
         
