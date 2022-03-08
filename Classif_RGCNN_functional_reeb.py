@@ -1,7 +1,7 @@
 import time
 
-from torch.utils.tensorboard import SummaryWriter
-writer = SummaryWriter()
+# from torch.utils.tensorboard import SummaryWriter
+# writer = SummaryWriter()
 
 from torch import nn
 import torch
@@ -307,27 +307,27 @@ if __name__ == '__main__':
     my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
 
 
-    # path_logs="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/"
+    path_logs="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/"
 
-    # sccs_path_train=path_logs+directory+"sccs_train.npy"
-    # reeb_laplacian_path_train=path_logs+directory+"reeb_laplacian_train.npy"
+    sccs_path_train=path_logs+directory+"sccs_train.npy"
+    reeb_laplacian_path_train=path_logs+directory+"reeb_laplacian_train.npy"
 
-    # sccs_path_test=path_logs+directory+"sccs_test.npy"
-    # reeb_laplacian_path_test=path_logs+directory+"reeb_laplacian_test.npy"
+    sccs_path_test=path_logs+directory+"sccs_test.npy"
+    reeb_laplacian_path_test=path_logs+directory+"reeb_laplacian_test.npy"
 
-    # timp_train=0
-    # timp_test=0
+    timp_train=0
+    timp_test=0
 
 
-    # knn_REEB = 20
-    # ns = 20
-    # tau = 2
-    # reeb_nodes_num=20
-    # reeb_sim_margin=20
-    # pointNumber=200
+    knn_REEB = 20
+    ns = 20
+    tau = 2
+    reeb_nodes_num=20
+    reeb_sim_margin=20
+    pointNumber=200
 
-    # all_sccs_test, all_reeb_laplacian_test= conv.Create_Reeb_from_Dataset_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
-    # all_sccs_train, all_reeb_laplacian_train=conv.Create_Reeb_from_Dataset_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,time_execution=timp_train,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+    all_sccs_test, all_reeb_laplacian_test= conv.Create_Reeb_from_Dataset_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+    all_sccs_train, all_reeb_laplacian_train=conv.Create_Reeb_from_Dataset_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,time_execution=timp_train,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
 
 
 
@@ -373,7 +373,7 @@ if __name__ == '__main__':
         
         train_stop_time = time.time()
 
-        writer.add_scalar("Loss/train", loss, epoch)
+        # writer.add_scalar("Loss/train", loss, epoch)
         
         test_start_time = time.time()
         test_acc = test(model, loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,k=k_KNN,num_points=num_points)
@@ -381,7 +381,7 @@ if __name__ == '__main__':
 
 
 
-        writer.add_scalar("Acc/test", test_acc, epoch)
+        # writer.add_scalar("Acc/test", test_acc, epoch)
         print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
         print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
         Test Time: \t{test_stop_time - test_start_time }')

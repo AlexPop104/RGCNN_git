@@ -20,6 +20,9 @@ import matplotlib.pyplot
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.spatial import distance_matrix
 from sklearn.metrics import pairwise_distances_argmin
+
+
+
 def get_laplacian(adj_matrix, normalize=True):
     if normalize:
         D = t.sum(adj_matrix, dim=1)
@@ -491,9 +494,6 @@ def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,time_e
     
     all_sccs=np.eye(3)
     all_reeb_laplacians = np.zeros((3,reeb_nodes_num))
-
-    
-
     
     for i, data in enumerate(loader):
 
@@ -514,15 +514,28 @@ def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,time_e
             
             vertices, laplacian_Reeb, sccs ,edges= extract_reeb_graph(point_cloud[k], knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
             
-            
-            
             np_sccs_batch=np.asarray(sccs)
             np_reeb_laplacian=np.asarray(laplacian_Reeb)
+            np_reeb_edges=np.asarray(edges)
+
             nr_columns_batch= np_sccs_batch.shape[1]
             nr_columns_all=all_sccs.shape[1]
 
             nr_lines_batch=np_sccs_batch.shape[0]
             nr_lines_all=all_sccs.shape[0]
+
+            point_cloud_pcd=point_cloud[k]
+
+
+
+            
+            # fig = matplotlib.pyplot.figure()
+            # ax = fig.add_subplot(111, projection='3d')
+            # ax.set_axis_off()
+            # for e in edges:
+            #     ax.plot([vertices[e[0]][0], vertices[e[1]][0]], [vertices[e[0]][1], vertices[e[1]][1]], [vertices[e[0]][2], vertices[e[1]][2]], color='b')
+            # ax.scatter(point_cloud_pcd[:, 0], point_cloud_pcd[:, 1], point_cloud_pcd[:, 2], s=1, color='r')   
+            # matplotlib.pyplot.show()
 
         
         
@@ -541,11 +554,14 @@ def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,time_e
 
             all_sccs=np.concatenate((all_sccs,np_sccs_batch),0)
             all_reeb_laplacians=np.concatenate((all_reeb_laplacians,np_reeb_laplacian),0)
+            all_reeb_vertices = np.concatenate((all_reeb_vertices,np_reeb_vertices),0)
+
         
 
         
         print(all_sccs.shape)
         print(all_reeb_laplacians.shape)
+       
 
         
 

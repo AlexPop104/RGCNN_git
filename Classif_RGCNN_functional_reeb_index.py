@@ -255,6 +255,12 @@ def test(model, loader,all_sccs,all_Reeb_laplacian,k,num_points):
         reeb_laplace_batch_original=all_Reeb_laplacian[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
 
         for iter_pcd in range(batch_size):
+
+            points_original=pos[1][iter_pcd]
+            sccs_pcd=sccs_batch_original[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1]]
+            reeb_laplace_pcd=reeb_laplace_batch_original[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
+
+            # edges=torch_where(reeb_laplace_pcd>0)
             # fig = matplotlib.pyplot.figure()
             # ax = fig.add_subplot(111, projection='3d')
             # ax.set_axis_off()
