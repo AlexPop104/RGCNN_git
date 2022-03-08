@@ -37,6 +37,9 @@ import seaborn as sn
 import pandas as pd
 import numpy as np
 
+import matplotlib.pyplot
+from mpl_toolkits.mplot3d import Axes3D
+
 from ChebConv_loader_indices import Modelnet_with_indices
 
 
@@ -248,10 +251,19 @@ def test(model, loader,all_sccs,all_Reeb_laplacian,k,num_points):
         sccs_batch=all_sccs[ceva4]
         reeb_laplace_batch=all_Reeb_laplacian[ceva4]
         
-        # sccs_batch=all_sccs[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_sccs.shape[1]]
-        # reeb_laplace_batch=all_Reeb_laplacian[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
+        sccs_batch_original=all_sccs[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_sccs.shape[1]]
+        reeb_laplace_batch_original=all_Reeb_laplacian[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
 
-        
+        for iter_pcd in range(batch_size):
+            # fig = matplotlib.pyplot.figure()
+            # ax = fig.add_subplot(111, projection='3d')
+            # ax.set_axis_off()
+            # for e in edges:
+            # ax.plot([vertices[e[0]][0], vertices[e[1]][0]], [vertices[e[0]][1], vertices[e[1]][1]], [vertices[e[0]][2], vertices[e[1]][2]], color='b')
+            # ax.scatter(point_cloud[:, 0], point_cloud[:, 1], point_cloud[:, 2], s=1, color='r')
+            # matplotlib.pyplot.show()
+
+
         sccs_batch=np.reshape(sccs_batch,(batch_size,all_Reeb_laplacian.shape[1],all_sccs.shape[1]))
         reeb_laplace_batch=np.reshape(reeb_laplace_batch,(batch_size,all_Reeb_laplacian.shape[1],all_Reeb_laplacian.shape[1]))
 
@@ -310,7 +322,7 @@ if __name__ == '__main__':
     batch_size = 32
     num_epochs = 260
     learning_rate = 1e-3
-    modelnet_num = 40
+    modelnet_num = 10
     k_KNN=30
 
     F = [128, 512, 1024]  # Outputs size of convolutional filter.
@@ -380,11 +392,17 @@ if __name__ == '__main__':
     #############################################################
     #Load Reeb_graphs from file
 
-    path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04reeb_laplacian_train.npy"
-    path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04reeb_laplacian_test.npy"
+    # path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04reeb_laplacian_train.npy"
+    # path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04reeb_laplacian_test.npy"
 
-    path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04sccs_train.npy"
-    path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04sccs_test.npy"
+    # path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04sccs_train.npy"
+    # path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04sccs_test.npy"
+
+    path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50reeb_laplacian_train.npy"
+    path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50reeb_laplacian_test.npy"
+
+    path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50sccs_train.npy"
+    path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50sccs_test.npy"
 
 
     all_sccs_train=np.load(path_sccs_train)

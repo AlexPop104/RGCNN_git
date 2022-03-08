@@ -267,7 +267,7 @@ if __name__ == '__main__':
     batch_size = 32
     num_epochs = 260
     learning_rate = 1e-3
-    modelnet_num = 40
+    modelnet_num = 10
     k_KNN=30
 
     F = [128, 512, 1024]  # Outputs size of convolutional filter.
@@ -292,19 +292,19 @@ if __name__ == '__main__':
     print(f"Test dataset shape:  {dataset_test}")
 
 
-    # train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
-    # test_loader  = DataLoader(dataset_test, batch_size=batch_size)
+    train_loader = DataLoader(dataset_train, batch_size=batch_size,shuffle=True, pin_memory=True)
+    test_loader  = DataLoader(dataset_test, batch_size=batch_size)
     
-    # model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False, reg_prior=True)
-    # # path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/28_02_22_10:10:19/model50.pt"
-    # # model.load_state_dict(torch.load(path_saved_model))
-    # model = model.to(device)
+    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False, reg_prior=True)
+    # path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/28_02_22_10:10:19/model50.pt"
+    # model.load_state_dict(torch.load(path_saved_model))
+    model = model.to(device)
 
     
-    # print(model.parameters)
+    print(model.parameters)
 
-    # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    # my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
 
 
     # path_logs="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/"
@@ -326,9 +326,13 @@ if __name__ == '__main__':
     # reeb_sim_margin=20
     # pointNumber=200
 
+    # all_sccs_test, all_reeb_laplacian_test= conv.Create_Reeb_from_Dataset_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+    # all_sccs_train, all_reeb_laplacian_train=conv.Create_Reeb_from_Dataset_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,time_execution=timp_train,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+
+
 
     #############################################################
-    # #Load Reeb_graphs from file
+    #Load Reeb_graphs from file
 
     # path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04reeb_laplacian_train.npy"
     # path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04reeb_laplacian_test.npy"
@@ -336,106 +340,112 @@ if __name__ == '__main__':
     # path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04sccs_train.npy"
     # path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04sccs_test.npy"
 
+    path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50reeb_laplacian_train.npy"
+    path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50reeb_laplacian_test.npy"
 
-    # all_sccs_train=np.load(path_sccs_train)
-    # all_sccs_test=np.load(path_sccs_test)
+    path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50sccs_train.npy"
+    path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50sccs_test.npy"
 
-    # all_reeb_laplacian_train=np.load(path_Reeb_laplacian_train)
-    # all_reeb_laplacian_test=np.load(path_Reeb_laplacian_test)
+    all_sccs_train=np.load(path_sccs_train)
+    all_sccs_test=np.load(path_sccs_test)
 
-    # all_sccs_train=np.delete(all_sccs_train,[0,1,2],0)
-    # all_sccs_test=np.delete(all_sccs_test,[0,1,2],0)
+    all_reeb_laplacian_train=np.load(path_Reeb_laplacian_train)
+    all_reeb_laplacian_test=np.load(path_Reeb_laplacian_test)
 
-    # all_reeb_laplacian_train=np.delete(all_reeb_laplacian_train,[0,1,2],0)
-    # all_reeb_laplacian_test=np.delete(all_reeb_laplacian_test,[0,1,2],0)
+    all_sccs_train=np.delete(all_sccs_train,[0,1,2],0)
+    all_sccs_test=np.delete(all_sccs_test,[0,1,2],0)
+
+    all_reeb_laplacian_train=np.delete(all_reeb_laplacian_train,[0,1,2],0)
+    all_reeb_laplacian_test=np.delete(all_reeb_laplacian_test,[0,1,2],0)
+
+
+    
 
     ################################
 
 
-    ## all_sccs_test, all_reeb_laplacian_test= conv.Create_Reeb_from_Dataset_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
-    ## all_sccs_train, all_reeb_laplacian_train=conv.Create_Reeb_from_Dataset_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,time_execution=timp_train,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+    
 
-
-    # regularization = 1e-9
-    # for epoch in range(1, num_epochs+1):
-    #     train_start_time = time.time()
-    #     loss = train(model, optimizer,loader=train_loader,all_sccs=all_sccs_train,all_Reeb_laplacian=all_reeb_laplacian_train,k=k_KNN,num_points=num_points,regularization=regularization)
+    regularization = 1e-9
+    for epoch in range(1, num_epochs+1):
+        train_start_time = time.time()
+        loss = train(model, optimizer,loader=train_loader,all_sccs=all_sccs_train,all_Reeb_laplacian=all_reeb_laplacian_train,k=k_KNN,num_points=num_points,regularization=regularization)
         
-    #     train_stop_time = time.time()
+        train_stop_time = time.time()
 
-    #     writer.add_scalar("Loss/train", loss, epoch)
+        writer.add_scalar("Loss/train", loss, epoch)
         
-    #     test_start_time = time.time()
-    #     test_acc = test(model, loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,k=k_KNN,num_points=num_points)
-    #     test_stop_time = time.time()
+        test_start_time = time.time()
+        test_acc = test(model, loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,k=k_KNN,num_points=num_points)
+        test_stop_time = time.time()
 
 
 
-    #     writer.add_scalar("Acc/test", test_acc, epoch)
-    #     print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
-    #     print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
-    #     Test Time: \t{test_stop_time - test_start_time }')
+        writer.add_scalar("Acc/test", test_acc, epoch)
+        print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
+        print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
+        Test Time: \t{test_stop_time - test_start_time }')
 
-    #     writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,k=k_KNN,num_points=num_points), epoch)
+        # writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,k=k_KNN,num_points=num_points), epoch)
 
-    #     if(epoch%5==0):
-    #         torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+        if(epoch%5==0):
+            torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
 
-    #     my_lr_scheduler.step()
+        my_lr_scheduler.step()
 
     
-    # torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+    torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
 
 
        ###################################################################################################3
     #Testing the model
 
-    timp_train=0
-    timp_test=0
+#     timp_train=0
+#     timp_test=0
 
 
-    knn_REEB = 20
-    ns = 20
-    tau = 2
-    reeb_nodes_num=20
-    reeb_sim_margin=20
-    pointNumber=200
+#     knn_REEB = 20
+#     ns = 20
+#     tau = 2
+#     reeb_nodes_num=20
+#     reeb_sim_margin=20
+#     pointNumber=200
 
-    path_logs="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/"
-    sccs_path_test=path_logs+directory+"sccs_test.npy"
-    reeb_laplacian_path_test=path_logs+directory+"reeb_laplacian_test.npy"
+#     path_logs="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/"
+#     sccs_path_test=path_logs+directory+"sccs_test.npy"
+#     reeb_laplacian_path_test=path_logs+directory+"reeb_laplacian_test.npy"
 
-    random_rotate = Compose([
-    RandomRotate(degrees=180, axis=0),
-    RandomRotate(degrees=180, axis=1),
-    RandomRotate(degrees=180, axis=2),
-])
+#     random_rotate = Compose([
+#     RandomRotate(degrees=180, axis=0),
+#     RandomRotate(degrees=180, axis=1),
+#     RandomRotate(degrees=180, axis=2),
+# ])
 
-    test_transform = Compose([
-    random_rotate,
-    SamplePoints(num_points, include_normals=True),
-    NormalizeScale()
-])
-    dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
-    dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform)
+#     test_transform = Compose([
+#     random_rotate,
+#     SamplePoints(num_points, include_normals=True),
+#     NormalizeScale()
+# ])
+#     dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
+#     dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform)
 
-    train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
-    test_loader  = DataLoader(dataset_test, batch_size=batch_size)
+#     train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
+#     test_loader  = DataLoader(dataset_test, batch_size=batch_size)
 
     
 
-    all_sccs_test, all_reeb_laplacian_test= conv.Create_Reeb_from_Dataset_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+#     all_sccs_test, all_reeb_laplacian_test= conv.Create_Reeb_from_Dataset_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
     
     
-    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False, reg_prior=True)
-    path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/28_02_22_21:52:37/model260.pt"
-    model.load_state_dict(torch.load(path_saved_model))
-    model = model.to(device)
+#     model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False, reg_prior=True)
+#     path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/28_02_22_21:52:37/model260.pt"
+#     model.load_state_dict(torch.load(path_saved_model))
+#     model = model.to(device)
 
-    test_start_time = time.time()
-    test_acc = test(model, loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,k=k_KNN,num_points=num_points)
-    test_stop_time = time.time()
-    print(f'Test Accuracy: {test_acc:.4f}')
+#     test_start_time = time.time()
+#     test_acc = test(model, loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,k=k_KNN,num_points=num_points)
+#     test_stop_time = time.time()
+#     print(f'Test Accuracy: {test_acc:.4f}')
 
 
     
