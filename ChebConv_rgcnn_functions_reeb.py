@@ -11,6 +11,7 @@ from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.nn.dense.linear import Linear
 from torch_geometric.nn.inits import zeros
 from torch_geometric.utils import get_laplacian
+import torch_geometric.utils 
 import h5py
 from sklearn.neighbors import NearestNeighbors
 import numpy as np
@@ -20,6 +21,7 @@ import matplotlib.pyplot
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.spatial import distance_matrix
 from sklearn.metrics import pairwise_distances_argmin
+from zmq import device
 
 
 def filter_out(vertices, edges, sccs):
@@ -284,6 +286,9 @@ def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,time_e
     
     all_sccs=np.eye(3)
     all_reeb_laplacians = np.zeros((3,reeb_nodes_num))
+
+    
+    
     
     for i, data in enumerate(loader):
 
@@ -292,12 +297,12 @@ def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,time_e
         batch_size=int(data.batch.unique().shape[0])
         nr_points=int (data.pos.shape[0]/batch_size)
 
+        batch_edge_indices = torch.tensor([[1., 2.], [4., 5.]])
+        batch_batch_indices_reeb = torch.tensor([1.,2. ])
+
 
         point_cloud=np.asarray(data.pos)
-
         point_cloud=np.reshape(point_cloud,(batch_size,nr_points,data.pos.shape[1]))
-        
-
         
 
         for k in range(batch_size):
@@ -314,18 +319,30 @@ def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,time_e
             nr_lines_batch=np_sccs_batch.shape[0]
             nr_lines_all=all_sccs.shape[0]
 
+            edge_indices_iteration = torch.tensor(edges,device='cuda')
+            edge_indices_iteration_2=torch.transpose(edge_indices_iteration,0,1)
+
+            batch_values_iteration=(torch.zeros(edge_indices_iteration_2.shape[1])).to('cuda')
+            batch_values_iteration=batch_values_iteration.long()
+
+            edge_values_iteration=torch.ones(edge_indices_iteration_2.shape[1]).to('cuda')
+            edge_values_iteration=edge_values_iteration.long()
+
             point_cloud_pcd=point_cloud[k]
-
-
+            
+            
+            Matrice=torch_geometric.utils.to_dense_adj(edge_index=edge_indices_iteration_2,batch=batch_values_iteration,edge_attr=edge_values_iteration)
+            
+            New_indices=torch_geometric.utils.dense_to_sparse(Matrice)
 
             
-            # fig = matplotlib.pyplot.figure()
-            # ax = fig.add_subplot(111, projection='3d')
-            # ax.set_axis_off()
-            # for e in edges:
-            #     ax.plot([vertices[e[0]][0], vertices[e[1]][0]], [vertices[e[0]][1], vertices[e[1]][1]], [vertices[e[0]][2], vertices[e[1]][2]], color='b')
-            # ax.scatter(point_cloud_pcd[:, 0], point_cloud_pcd[:, 1], point_cloud_pcd[:, 2], s=1, color='r')   
-            # matplotlib.pyplot.show()
+            fig = matplotlib.pyplot.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            ax.set_axis_off()
+            for e in edges:
+                ax.plot([vertices[e[0]][0], vertices[e[1]][0]], [vertices[e[0]][1], vertices[e[1]][1]], [vertices[e[0]][2], vertices[e[1]][2]], color='b')
+            ax.scatter(point_cloud_pcd[:, 0], point_cloud_pcd[:, 1], point_cloud_pcd[:, 2], s=1, color='r')   
+            #matplotlib.pyplot.show()
 
         
         
@@ -344,8 +361,14 @@ def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,time_e
 
             all_sccs=np.concatenate((all_sccs,np_sccs_batch),0)
             all_reeb_laplacians=np.concatenate((all_reeb_laplacians,np_reeb_laplacian),0)
-            
+
         
+        print(batch_edge_indices.shape)
+        print(batch_batch_indices_reeb.shape)
+
+        batch_edge_values=torch.ones(batch_batch_indices_reeb.shape[0])
+            
+        # Matrice=to_dense_adj(edge_index=batch_edge_indices,batch=batch_batch_indices_reeb,edge_attr=batch_edge_values)
 
         
         print(all_sccs.shape)
