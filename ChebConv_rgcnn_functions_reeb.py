@@ -276,7 +276,7 @@ def extract_reeb_graph(point_cloud, knn, ns, reeb_nodes_num, reeb_sim_margin,poi
     #return vertices, list(sccs)
 
 
-def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,time_execution,knn,ns,tau,reeb_nodes_num,reeb_sim_margin,pointNumber):
+def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,edge_matrix_path,time_execution,knn,ns,tau,reeb_nodes_num,reeb_sim_margin,pointNumber):
     # knn = 20
     # ns = 20
     # tau = 2
@@ -286,6 +286,7 @@ def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,time_e
     
     all_sccs=np.eye(3)
     all_reeb_laplacians = np.zeros((3,reeb_nodes_num))
+    all_reeb_edge_matrix = np.zeros((3,reeb_nodes_num))
 
     
     
@@ -330,20 +331,17 @@ def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,time_e
 
             point_cloud_pcd=point_cloud[k]
             
-            
-            #Matrice=torch_geometric.utils.to_dense_adj(edge_index=edge_indices_iteration_2,batch=batch_values_iteration,edge_attr=edge_values_iteration)
-            Matrice=torch_geometric.utils.to_dense_adj(edge_index=edge_indices_iteration_2,batch=None,edge_attr=None,max_num_nodes=20)
+            Matrix_edges=torch_geometric.utils.to_dense_adj(edge_index=edge_indices_iteration_2,batch=None,edge_attr=None,max_num_nodes=reeb_nodes_num)
 
-
-            x_condition=torch.ones(Matrice.shape[0],Matrice.shape[1]).to('cuda')
-            y_condition=torch.zeros(Matrice.shape[0],Matrice.shape[1]).to('cuda')
+            x_condition=torch.ones(Matrix_edges.shape[0],Matrix_edges.shape[1]).to('cuda')
+            y_condition=torch.zeros(Matrix_edges.shape[0],Matrix_edges.shape[1]).to('cuda')
             
-            
-            Matrice=torch.where(Matrice > 0, x_condition, y_condition)
-            New_edge_indices, New_edge_values=torch_geometric.utils.dense_to_sparse(Matrice)
+            Matrix_edges=torch.where(Matrix_edges > 0, x_condition, y_condition)
+            New_edge_indices, New_edge_values=torch_geometric.utils.dense_to_sparse(Matrix_edges)
 
             New_edge_indices_cpu=New_edge_indices.to('cpu')
 
+            np_Matrix_edges=np.asarray(Matrix_edges)
             
             # fig = matplotlib.pyplot.figure()
             # ax = fig.add_subplot(111, projection='3d')
@@ -362,7 +360,6 @@ def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,time_e
             matplotlib.pyplot.show()
 
         
-        
             if (nr_columns_batch>nr_columns_all):
                 ceva=all_sccs[:,nr_columns_all-1]
                 ceva=ceva.reshape((nr_lines_all,1))
@@ -378,27 +375,22 @@ def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,time_e
 
             all_sccs=np.concatenate((all_sccs,np_sccs_batch),0)
             all_reeb_laplacians=np.concatenate((all_reeb_laplacians,np_reeb_laplacian),0)
-
-        
-        print(batch_edge_indices.shape)
-        print(batch_batch_indices_reeb.shape)
-
-        batch_edge_values=torch.ones(batch_batch_indices_reeb.shape[0])
-            
-        # Matrice=to_dense_adj(edge_index=batch_edge_indices,batch=batch_batch_indices_reeb,edge_attr=batch_edge_values)
+            all_reeb_edge_matrix=np.concatenate((all_reeb_edge_matrix,np_Matrix_edges),0)
 
         
         print(all_sccs.shape)
         print(all_reeb_laplacians.shape)
+        print(all_reeb_edge_matrix.shape)
        
-
-        
+    all_scc=np.delete(all_sccs,[0,1,2],0)
+    all_reeb_laplacians=np.delete(all_reeb_laplacians,[0,1,2],0)
+    all_reeb_edge_matrix=np.delete(all_reeb_edge_matrix,[0,1,2],0) 
 
     np.save(sccs_path, all_sccs)
     np.save(reeb_laplacian_path, all_reeb_laplacians)
+    np.save(edge_matrix_path, all_reeb_edge_matrix)
 
-    all_scc=np.delete(all_sccs,[0,1,2],0)
-    all_reeb_laplacians=np.delete(all_reeb_laplacians,[0,1,2],0)
+    
 
     return all_sccs,all_reeb_laplacians
 
@@ -419,8 +411,6 @@ def Create_Reeb_from_Dataset(loader,sccs_path,reeb_laplacian_path,time_execution
 
         print(i+1)
         
-
-
         point_cloud=np.asarray(data.pos)
         Reeb_Graph_start_time = time.time()
         vertices, laplacian_Reeb, sccs ,edges= extract_reeb_graph(point_cloud, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
@@ -429,11 +419,8 @@ def Create_Reeb_from_Dataset(loader,sccs_path,reeb_laplacian_path,time_execution
         print(Reeb_Graph_end_time-Reeb_Graph_start_time)
         time_execution +=Reeb_Graph_end_time-Reeb_Graph_start_time
 
-
         np_sccs_batch=np.asarray(sccs)
         np_reeb_laplacian=np.asarray(laplacian_Reeb)
-
-        
 
         nr_columns_batch= np_sccs_batch.shape[1]
         nr_columns_all=all_sccs.shape[1]
@@ -441,14 +428,11 @@ def Create_Reeb_from_Dataset(loader,sccs_path,reeb_laplacian_path,time_execution
         nr_lines_batch=np_sccs_batch.shape[0]
         nr_lines_all=all_sccs.shape[0]
 
-       
-    
         if (nr_columns_batch>nr_columns_all):
             ceva=all_sccs[:,nr_columns_all-1]
             ceva=ceva.reshape((nr_lines_all,1))
             ceva=np.tile(ceva,(nr_columns_batch-nr_columns_all))
             all_sccs=np.concatenate((all_sccs,ceva),1)
-
 
         else:
             ceva=np_sccs_batch[:,nr_columns_batch-1]
@@ -459,7 +443,6 @@ def Create_Reeb_from_Dataset(loader,sccs_path,reeb_laplacian_path,time_execution
         all_sccs=np.concatenate((all_sccs,np_sccs_batch),0)
         all_reeb_laplacians=np.concatenate((all_reeb_laplacians,np_reeb_laplacian),0)
 
-        
         print(all_sccs.shape)
         print(all_reeb_laplacians.shape)
 

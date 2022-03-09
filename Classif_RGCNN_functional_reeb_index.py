@@ -373,11 +373,13 @@ if __name__ == '__main__':
 
     # path_logs="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/"
 
-    # sccs_path_train=path_logs+directory+"sccs_train.npy"
-    # reeb_laplacian_path_train=path_logs+directory+"reeb_laplacian_train.npy"
+    # sccs_path_train=path_logs+directory+"train_sccs.npy"
+    # reeb_laplacian_path_train=path_logs+directory+"train_reeb_laplacian.npy"
+    # edge_matrix_path_train=path_logs+directory+"train_edge_matrix.npy"
 
-    # sccs_path_test=path_logs+directory+"sccs_test.npy"
-    # reeb_laplacian_path_test=path_logs+directory+"reeb_laplacian_test.npy"
+    # sccs_path_test=path_logs+directory+"test_sccs.npy"
+    # reeb_laplacian_path_test=path_logs+directory+"test_reeb_laplacian.npy"
+    # edge_matrix_path_train=path_logs+directory+"test_edge_matrix.npy"
 
     # timp_train=0
     # timp_test=0

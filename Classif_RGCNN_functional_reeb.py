@@ -307,18 +307,18 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
 
-
     path_logs="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/"
 
-    sccs_path_train=path_logs+directory+"sccs_train.npy"
-    reeb_laplacian_path_train=path_logs+directory+"reeb_laplacian_train.npy"
+    sccs_path_train=path_logs+directory+"train_sccs.npy"
+    reeb_laplacian_path_train=path_logs+directory+"train_reeb_laplacian.npy"
+    edge_matrix_path_train=path_logs+directory+"train_edge_matrix.npy"
 
-    sccs_path_test=path_logs+directory+"sccs_test.npy"
-    reeb_laplacian_path_test=path_logs+directory+"reeb_laplacian_test.npy"
+    sccs_path_test=path_logs+directory+"test_sccs.npy"
+    reeb_laplacian_path_test=path_logs+directory+"test_reeb_laplacian.npy"
+    edge_matrix_path_test=path_logs+directory+"test_edge_matrix.npy"
 
     timp_train=0
     timp_test=0
-
 
     knn_REEB = 20
     ns = 20
@@ -327,8 +327,8 @@ if __name__ == '__main__':
     reeb_sim_margin=20
     pointNumber=200
 
-    all_sccs_test, all_reeb_laplacian_test= conv_reeb.Create_Reeb_from_Dataset_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
-    all_sccs_train, all_reeb_laplacian_train=conv_reeb.Create_Reeb_from_Dataset_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,time_execution=timp_train,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+    all_sccs_test, all_reeb_laplacian_test= conv_reeb.Create_Reeb_from_Dataset_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,edge_matrix_path=edge_matrix_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+    all_sccs_train, all_reeb_laplacian_train=conv_reeb.Create_Reeb_from_Dataset_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,edge_matrix_path=edge_matrix_path_train,time_execution=timp_train,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
 
 
 
@@ -341,23 +341,23 @@ if __name__ == '__main__':
     # path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04sccs_train.npy"
     # path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04sccs_test.npy"
 
-    path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50reeb_laplacian_train.npy"
-    path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50reeb_laplacian_test.npy"
+    # path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50reeb_laplacian_train.npy"
+    # path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50reeb_laplacian_test.npy"
 
-    path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50sccs_train.npy"
-    path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50sccs_test.npy"
+    # path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50sccs_train.npy"
+    # path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50sccs_test.npy"
 
-    all_sccs_train=np.load(path_sccs_train)
-    all_sccs_test=np.load(path_sccs_test)
+    # all_sccs_train=np.load(path_sccs_train)
+    # all_sccs_test=np.load(path_sccs_test)
 
-    all_reeb_laplacian_train=np.load(path_Reeb_laplacian_train)
-    all_reeb_laplacian_test=np.load(path_Reeb_laplacian_test)
+    # all_reeb_laplacian_train=np.load(path_Reeb_laplacian_train)
+    # all_reeb_laplacian_test=np.load(path_Reeb_laplacian_test)
 
-    all_sccs_train=np.delete(all_sccs_train,[0,1,2],0)
-    all_sccs_test=np.delete(all_sccs_test,[0,1,2],0)
+    # all_sccs_train=np.delete(all_sccs_train,[0,1,2],0)
+    # all_sccs_test=np.delete(all_sccs_test,[0,1,2],0)
 
-    all_reeb_laplacian_train=np.delete(all_reeb_laplacian_train,[0,1,2],0)
-    all_reeb_laplacian_test=np.delete(all_reeb_laplacian_test,[0,1,2],0)
+    # all_reeb_laplacian_train=np.delete(all_reeb_laplacian_train,[0,1,2],0)
+    # all_reeb_laplacian_test=np.delete(all_reeb_laplacian_test,[0,1,2],0)
 
 
     
