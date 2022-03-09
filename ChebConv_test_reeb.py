@@ -203,7 +203,7 @@ if __name__ == '__main__':
     dataset_test = index_dataset.Geometric_with_indices(root=root,train_bool=False,transforms=transforms)
 
 
-    train_loader = DataLoader(dataset_train,batch_size=batch_size, pin_memory=True)
+    train_loader = DataLoader(dataset_train,batch_size=batch_size,shuffle=True, pin_memory=True)
     test_loader= DataLoader(dataset_test,batch_size=batch_size)
 
 
