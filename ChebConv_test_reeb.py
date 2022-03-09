@@ -47,105 +47,165 @@ import torch_geometric.utils
 #from ChebConv_loader_indices import Modelnet_with_indices
 
 
-
-
-
 def Test_reeb(loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
     for i, (pos, y, normal, idx) in enumerate(loader):
 
-        batch_size=pos[1].shape[0]
-        ground_truth_labels=y[1].squeeze(1)
+        Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points)
 
-        x = torch.cat([pos[1], normal[1]], dim=2)
+        # batch_size=pos[1].shape[0]
+        # ground_truth_labels=y[1].squeeze(1)
+        # num_vertices_reeb=all_Reeb_laplacian.shape[1]
+        # edge_dim=edges.shape[1]
+
         
-        ceva=torch.tile(idx.unsqueeze(1).to(device)*all_Reeb_laplacian.shape[1],(1,all_Reeb_laplacian.shape[1]))
+        # ceva=torch.tile(idx.unsqueeze(1).to(device)*num_vertices_reeb,(1,num_vertices_reeb))
+        # ceva=torch.reshape(ceva,[idx.shape[0]*num_vertices_reeb])
+        # ceva=torch.reshape(ceva,(idx.shape[0],num_vertices_reeb))
 
-        ceva=torch.reshape(ceva,[idx.shape[0]*all_Reeb_laplacian.shape[1]])
-        ceva=torch.reshape(ceva,(idx.shape[0],all_Reeb_laplacian.shape[1]))
+        # ceva2=torch.arange(0,num_vertices_reeb,device='cuda')
+        # ceva3=torch.tile(ceva2,[1,idx.shape[0]])
+        # ceva3=torch.reshape(ceva3,(idx.shape[0],num_vertices_reeb))
 
-        ceva2=torch.arange(0,all_Reeb_laplacian.shape[1],device='cuda')
-        ceva3=torch.tile(ceva2,[1,idx.shape[0]])
-        ceva3=torch.reshape(ceva3,(idx.shape[0],all_Reeb_laplacian.shape[1]))
+        # ceva4_batch=torch.add(ceva,ceva3)
+        # ceva4=torch.reshape(ceva4_batch,[idx.shape[0]*num_vertices_reeb])
 
-        ceva4_batch=torch.add(ceva,ceva3)
-        ceva4=torch.reshape(ceva4_batch,[idx.shape[0]*all_Reeb_laplacian.shape[1]])
+        # ceva4=ceva4.to('cpu')
 
-        ceva4=ceva4.to('cpu')
-
-        sccs_batch=all_sccs[ceva4]
-        reeb_laplace_batch=all_Reeb_laplacian[ceva4]
-        vertices_batch=vertices[ceva4]
-        edges_batch=edges[ceva4]
-        
-        
-        # sccs_batch_original=all_sccs[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_sccs.shape[1]]
-        # reeb_laplace_batch_original=all_Reeb_laplacian[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
-        # vertices_batch_original=vertices[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
-        # edges_batch_original=edges[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
+        # sccs_batch=all_sccs[ceva4]
+        # reeb_laplace_batch=all_Reeb_laplacian[ceva4]
+        # vertices_batch=vertices[ceva4]
+        # edges_batch=edges[ceva4]
         
         
 
-        for iter_pcd in range(batch_size):
+        # for iter_pcd in range(batch_size):
 
-            points_pcd=pos[1][iter_pcd]
+        #     points_pcd=pos[1][iter_pcd]
 
             
 
-            # sccs_pcd=sccs_batch[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1]]
-            # reeb_laplace_pcd=reeb_laplace_batch[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
-            # vertices_batch_pcd=vertices_batch[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1]]
-            # matrix_edges_batch_pcd=edges_batch[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*edges_batch.shape[1]]
+        #     sccs_pcd=sccs_batch[iter_pcd*num_vertices_reeb:(iter_pcd+1)*num_vertices_reeb]
+        #     reeb_laplace_pcd=reeb_laplace_batch[iter_pcd*num_vertices_reeb:(iter_pcd+1)*num_vertices_reeb,0:num_vertices_reeb]
+        #     vertices_batch_pcd=vertices_batch[iter_pcd*num_vertices_reeb:(iter_pcd+1)*num_vertices_reeb]
+        #     matrix_edges_batch_pcd=edges_batch[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*edge_dim]
 
-
-            sccs_pcd=all_sccs[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1]]
-            reeb_laplace_pcd=all_Reeb_laplacian[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
-            vertices_batch_pcd=vertices[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1]]
-            matrix_edges_batch_pcd=edges[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*edges_batch.shape[1]]
-
-
-
-
-            t_matrix_edges_batch=torch.tensor(matrix_edges_batch_pcd)
-
-            t_matrix_edges_2=t_matrix_edges_batch.unsqueeze(0)
-            
-            New_edge_indices, New_edge_values=torch_geometric.utils.dense_to_sparse(t_matrix_edges_2)
-
-            New_edge_indices_cpu=New_edge_indices.to('cpu')
+        #     t_matrix_edges_batch=torch.tensor(matrix_edges_batch_pcd)
+        #     t_matrix_edges_2=t_matrix_edges_batch.unsqueeze(0)
+        #     New_edge_indices, New_edge_values=torch_geometric.utils.dense_to_sparse(t_matrix_edges_2)
+        #     New_edge_indices_cpu=New_edge_indices.to('cpu')
 
            
-           ##############################
-           ###############Computing Reeb graph on the spot 
+        #    ##############################
+        #    ###############Computing Reeb graph on the spot 
            
-            point_pcd_np=np.asarray(points_pcd)
-            knn = 20
-            ns = 20
-            tau = 2
-            reeb_nodes_num=20
-            reeb_sim_margin=20
-            pointNumber=200
-            vertices_aux, laplacian_Reeb_aux, sccs_aux ,edges_aux= conv_reeb.extract_reeb_graph(point_pcd_np, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
+        #     point_pcd_np=np.asarray(points_pcd)
+        #     knn = 20
+        #     ns = 20
+        #     tau = 2
+        #     reeb_nodes_num=20
+        #     reeb_sim_margin=20
+        #     pointNumber=200
+        #     vertices_aux, laplacian_Reeb_aux, sccs_aux ,edges_aux= conv_reeb.extract_reeb_graph(point_pcd_np, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
 
-            # fig = matplotlib.pyplot.figure()
-            # ax = fig.add_subplot(111, projection='3d')
-            # ax.set_axis_off()
-            # for e in edges_aux:
-            #     ax.plot([vertices_aux[e[0]][0], vertices_aux[e[1]][0]], [vertices_aux[e[0]][1], vertices_aux[e[1]][1]], [vertices_aux[e[0]][2], vertices_aux[e[1]][2]], color='b')
-            # ax.scatter(point_pcd_np[:, 0], point_pcd_np[:, 1], point_pcd_np[:, 2], s=1, color='r')   
-            # matplotlib.pyplot.show()
+        #     # fig = matplotlib.pyplot.figure()
+        #     # ax = fig.add_subplot(111, projection='3d')
+        #     # ax.set_axis_off()
+        #     # for e in edges_aux:
+        #     #     ax.plot([vertices_aux[e[0]][0], vertices_aux[e[1]][0]], [vertices_aux[e[0]][1], vertices_aux[e[1]][1]], [vertices_aux[e[0]][2], vertices_aux[e[1]][2]], color='b')
+        #     # ax.scatter(point_pcd_np[:, 0], point_pcd_np[:, 1], point_pcd_np[:, 2], s=1, color='r')   
+        #     # matplotlib.pyplot.show()
             
-            ######################################333
-            #Visualizing Reeb graph
+        #     ########################################
+        #     #Visualizing both Reeb graphs 
 
-            fig = matplotlib.pyplot.figure()
-            ax = fig.add_subplot(111, projection='3d')
-            ax.set_axis_off()
-            for e in edges_aux:
-                ax.plot([vertices_aux[e[0]][0], vertices_aux[e[1]][0]], [vertices_aux[e[0]][1], vertices_aux[e[1]][1]], [vertices_aux[e[0]][2], vertices_aux[e[1]][2]], color='g')
-            for test_iter in range(New_edge_indices_cpu.shape[1]):
-                ax.plot([vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][0], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][0]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][1], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][1]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][2], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][2]], color='b')
-            ax.scatter(points_pcd[:, 0], points_pcd[:, 1], points_pcd[:, 2], s=1, color='r')   
-            matplotlib.pyplot.show()
+        #     fig = matplotlib.pyplot.figure()
+        #     ax = fig.add_subplot(111, projection='3d')
+        #     ax.set_axis_off()
+        #     for e in edges_aux:
+        #         ax.plot([vertices_aux[e[0]][0], vertices_aux[e[1]][0]], [vertices_aux[e[0]][1], vertices_aux[e[1]][1]], [vertices_aux[e[0]][2], vertices_aux[e[1]][2]], color='g')
+        #     for test_iter in range(New_edge_indices_cpu.shape[1]):
+        #         ax.plot([vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][0], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][0]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][1], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][1]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][2], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][2]], color='b')
+        #     ax.scatter(points_pcd[:, 0], points_pcd[:, 1], points_pcd[:, 2], s=1, color='r')   
+        #     matplotlib.pyplot.show()
+
+def Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
+    
+
+    batch_size=pos[1].shape[0]
+    ground_truth_labels=y[1].squeeze(1)
+    num_vertices_reeb=all_Reeb_laplacian.shape[1]
+    edge_dim=edges.shape[1]
+
+    
+    ceva=torch.tile(idx.unsqueeze(1).to(device)*num_vertices_reeb,(1,num_vertices_reeb))
+    ceva=torch.reshape(ceva,[idx.shape[0]*num_vertices_reeb])
+    ceva=torch.reshape(ceva,(idx.shape[0],num_vertices_reeb))
+
+    ceva2=torch.arange(0,num_vertices_reeb,device='cuda')
+    ceva3=torch.tile(ceva2,[1,idx.shape[0]])
+    ceva3=torch.reshape(ceva3,(idx.shape[0],num_vertices_reeb))
+
+    ceva4_batch=torch.add(ceva,ceva3)
+    ceva4=torch.reshape(ceva4_batch,[idx.shape[0]*num_vertices_reeb])
+
+    ceva4=ceva4.to('cpu')
+
+    sccs_batch=all_sccs[ceva4]
+    reeb_laplace_batch=all_Reeb_laplacian[ceva4]
+    vertices_batch=vertices[ceva4]
+    edges_batch=edges[ceva4]
+    
+    
+
+    for iter_pcd in range(batch_size):
+
+        points_pcd=pos[1][iter_pcd]
+
+        
+
+        sccs_pcd=sccs_batch[iter_pcd*num_vertices_reeb:(iter_pcd+1)*num_vertices_reeb]
+        reeb_laplace_pcd=reeb_laplace_batch[iter_pcd*num_vertices_reeb:(iter_pcd+1)*num_vertices_reeb,0:num_vertices_reeb]
+        vertices_batch_pcd=vertices_batch[iter_pcd*num_vertices_reeb:(iter_pcd+1)*num_vertices_reeb]
+        matrix_edges_batch_pcd=edges_batch[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*edge_dim]
+
+        t_matrix_edges_batch=torch.tensor(matrix_edges_batch_pcd)
+        t_matrix_edges_2=t_matrix_edges_batch.unsqueeze(0)
+        New_edge_indices, New_edge_values=torch_geometric.utils.dense_to_sparse(t_matrix_edges_2)
+        New_edge_indices_cpu=New_edge_indices.to('cpu')
+
+        
+        ##############################
+        ###############Computing Reeb graph on the spot 
+        
+        point_pcd_np=np.asarray(points_pcd)
+        knn = 20
+        ns = 20
+        tau = 2
+        reeb_nodes_num=20
+        reeb_sim_margin=20
+        pointNumber=200
+        vertices_aux, laplacian_Reeb_aux, sccs_aux ,edges_aux= conv_reeb.extract_reeb_graph(point_pcd_np, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
+
+        # fig = matplotlib.pyplot.figure()
+        # ax = fig.add_subplot(111, projection='3d')
+        # ax.set_axis_off()
+        # for e in edges_aux:
+        #     ax.plot([vertices_aux[e[0]][0], vertices_aux[e[1]][0]], [vertices_aux[e[0]][1], vertices_aux[e[1]][1]], [vertices_aux[e[0]][2], vertices_aux[e[1]][2]], color='b')
+        # ax.scatter(point_pcd_np[:, 0], point_pcd_np[:, 1], point_pcd_np[:, 2], s=1, color='r')   
+        # matplotlib.pyplot.show()
+        
+        ########################################
+        #Visualizing both Reeb graphs 
+
+        fig = matplotlib.pyplot.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.set_axis_off()
+        for e in edges_aux:
+            ax.plot([vertices_aux[e[0]][0], vertices_aux[e[1]][0]], [vertices_aux[e[0]][1], vertices_aux[e[1]][1]], [vertices_aux[e[0]][2], vertices_aux[e[1]][2]], color='g')
+        for test_iter in range(New_edge_indices_cpu.shape[1]):
+            ax.plot([vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][0], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][0]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][1], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][1]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][2], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][2]], color='b')
+        ax.scatter(points_pcd[:, 0], points_pcd[:, 1], points_pcd[:, 2], s=1, color='r')   
+        matplotlib.pyplot.show()
 
         
 
