@@ -38,54 +38,54 @@ class Geometric_with_indices(Dataset):
 
 
 
-num_points = 1024
-batch_size = 64
-num_epochs = 200
-learning_rate = 1e-3
-modelnet_num = 40
+# num_points = 1024
+# batch_size = 64
+# num_epochs = 200
+# learning_rate = 1e-3
+# modelnet_num = 40
 
-##################################
+# ##################################
 
-root="/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+# root="/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
 
-transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
+# transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
-dataset_train = Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=True,transforms=transforms)
-dataset_test = Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=False,transforms=transforms)
-
-
-train_loader = DataLoader(dataset_train,batch_size=batch_size, shuffle=True, pin_memory=True)
-test_loader= DataLoader(dataset_test,batch_size=batch_size)
-
-# for batch_idx, (pos, y, normal, idx) in enumerate(test_loader):
-#     # print('Batch idx {}, dataset index {}'.format(
-#     #     batch_idx, idx))
-#     print(pos[1].shape[0])
-
-print(len(test_loader))
-
-#####################################################
-#Geometric Shapes
-
-root="/media/rambo/ssd2/Alex_data/RGCNN/GeometricShapes"
-
-transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
-
-dataset_train = Geometric_with_indices(root=root,train_bool=True,transforms=transforms)
-dataset_test = Geometric_with_indices(root=root,train_bool=False,transforms=transforms)
+# dataset_train = Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=True,transforms=transforms)
+# dataset_test = Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=False,transforms=transforms)
 
 
-train_loader = DataLoader(dataset_train,batch_size=batch_size, shuffle=True, pin_memory=True)
-test_loader= DataLoader(dataset_test,batch_size=batch_size)
+# train_loader = DataLoader(dataset_train,batch_size=batch_size, shuffle=True, pin_memory=True)
+# test_loader= DataLoader(dataset_test,batch_size=batch_size)
 
-# for batch_idx, (pos, y, normal, idx) in enumerate(train_loader):
-#     print('Batch idx {}, dataset index {}'.format(
-#         batch_idx, idx))
-#     print(pos[1].shape[0])
+# # for batch_idx, (pos, y, normal, idx) in enumerate(test_loader):
+# #     # print('Batch idx {}, dataset index {}'.format(
+# #     #     batch_idx, idx))
+# #     print(pos[1].shape[0])
 
-print(len(test_loader))
+# print(len(test_loader))
 
-#########################################################3
+# #####################################################
+# #Geometric Shapes
+
+# root="/media/rambo/ssd2/Alex_data/RGCNN/GeometricShapes"
+
+# transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
+
+# dataset_train = Geometric_with_indices(root=root,train_bool=True,transforms=transforms)
+# dataset_test = Geometric_with_indices(root=root,train_bool=False,transforms=transforms)
+
+
+# train_loader = DataLoader(dataset_train,batch_size=batch_size, shuffle=True, pin_memory=True)
+# test_loader= DataLoader(dataset_test,batch_size=batch_size)
+
+# # for batch_idx, (pos, y, normal, idx) in enumerate(train_loader):
+# #     print('Batch idx {}, dataset index {}'.format(
+# #         batch_idx, idx))
+# #     print(pos[1].shape[0])
+
+# print(len(test_loader))
+
+# #########################################################3
 
 
 

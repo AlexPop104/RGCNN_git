@@ -205,6 +205,9 @@ def train(model, optimizer, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,
         vertices_batch=vertices[ceva4]
         edges_batch=edges[ceva4]
         
+
+        
+        
         # sccs_batch_original=all_sccs[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_sccs.shape[1]]
         # reeb_laplace_batch_original=all_Reeb_laplacian[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
         # vertices_batch_original=vertices[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
@@ -215,7 +218,7 @@ def train(model, optimizer, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,
 
         for iter_pcd in range(batch_size):
 
-            points_original=pos[1][iter_pcd]
+            points_pcd=pos[1][iter_pcd]
             sccs_pcd=sccs_batch[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1]]
             reeb_laplace_pcd=reeb_laplace_batch[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
             vertices_batch_pcd=vertices_batch[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1]]
@@ -231,7 +234,7 @@ def train(model, optimizer, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,
             ax.set_axis_off()
             for test_iter in range(New_edge_indices_cpu.shape[1]):
                 ax.plot([vertices[New_edge_indices_cpu[0][test_iter]][0], vertices[New_edge_indices_cpu[1][test_iter]][0]], [vertices[New_edge_indices_cpu[0][test_iter]][1], vertices[New_edge_indices_cpu[1][test_iter]][1]], [vertices[New_edge_indices_cpu[0][test_iter]][2], vertices[New_edge_indices_cpu[1][test_iter]][2]], color='b')
-            ax.scatter(points_original[:, 0], points_original[:, 1], points_original[:, 2], s=1, color='r')   
+            ax.scatter(points_pcd[:, 0], points_pcd[:, 1], points_pcd[:, 2], s=1, color='r')   
             matplotlib.pyplot.show()
 
         sccs_batch=sccs_batch.astype(int)
@@ -413,7 +416,7 @@ if __name__ == '__main__':
     dataset_test = index_dataset.Geometric_with_indices(root=root,train_bool=False,transforms=transforms)
 
 
-    train_loader = DataLoader(dataset_train,batch_size=batch_size, shuffle=True, pin_memory=True)
+    train_loader = DataLoader(dataset_train,batch_size=batch_size, shuffle=False, pin_memory=True)
     test_loader= DataLoader(dataset_test,batch_size=batch_size)
 
     
