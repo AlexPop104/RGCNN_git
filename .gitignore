@@ -86,3 +86,4 @@ test_pytorch_alex_points.npy
 test_pytorch_alex.npy
 test_alex_seg_model_pytorch.py
 other_tests.py
+seg_model_pytorch.py

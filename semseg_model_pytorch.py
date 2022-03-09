@@ -7,6 +7,7 @@ import ChebConv_rgcnn as conv
 import torch as t
 from torch_geometric.transforms import FixedPoints
 from torch_geometric.datasets import ShapeNet
+from torch_geometric.datasets import S3DIS
 import torch
 from torch import nn
 import time
@@ -202,9 +203,7 @@ def train(model, optimizer, loader, regularization):
 
     for i, data in enumerate(loader):
         optimizer.zero_grad()
-        cat = one_hot(data.category, num_classes=16)
-        cat = torch.tile(cat, [1, num_points, 1]) 
-        x = torch.cat([data.pos, data.x, cat], dim=2)  ### Pass this to the model
+        x = torch.cat([data.pos, data.x], dim=2)  ### Pass this to the model
         y = data.y.type(torch.LongTensor)
 
         logits, regularizers = model(x.to(device))
@@ -232,9 +231,7 @@ def test(model, loader):
     total_correct = 0
     
     for i, data in enumerate(loader):
-        cat = one_hot(data.category, num_classes=16)
-        cat = torch.tile(cat, [1, num_points, 1]) 
-        x = torch.cat([data.pos, data.x, cat], dim=2)  ### Pass this to the model
+        x = torch.cat([data.pos, data.x], dim=2)  ### Pass this to the model
         y = data.y
         logits, _ = model(x.to(device))
         logits = logits.to('cpu')
@@ -248,6 +245,8 @@ def test(model, loader):
         predictions[start:stop] = pred
         lab = data.y
         labels[start:stop] = lab.reshape([-1, num_points])
+
+    '''  
     tot_iou = []
     cat_iou = defaultdict(list)
     for i in range(predictions.shape[0]):
@@ -265,20 +264,18 @@ def test(model, loader):
         cat_iou[cat].append(np.mean(part_ious))
         tot_iou.append(np.mean(part_ious))
 
-
     print("~~~" * 50)
     for key, value in cat_iou.items():
         print(key + ': {:.4f}, total: {:d}'.format(np.mean(value), len(value)))
     # print(tot_iou)
     # accuracy = 100 * sklearn.metrics.accuracy_score(labels, predictions)
     # f1 = 100 * sklearn.metrics.f1_score(labels, predictions, average='weighted')
-        
-
+    '''    
     ncorrects = np.sum(predictions == labels)
     accuracy  = ncorrects * 100 / (len(dataset_test) * num_points)
     print("~~~" * 30)
     print(f"\tAccuracy: {accuracy}, ncorrect: {ncorrects} / {len(dataset_test) * num_points}")
-    print(f"\tIoU: \t{np.mean(tot_iou)*100}")
+    # print(f"\tIoU: \t{np.mean(tot_iou)*100}")
     return accuracy
 
 def start_training(model, train_loader, test_loader, optimizer, epochs=50, learning_rate=1e-3, regularization=1e-9, decay_rate=0.95):
@@ -335,7 +332,7 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 2048
+    num_points = 4092
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -343,13 +340,13 @@ if __name__ == '__main__':
 
     root = "/home/victor/workspace/thesis_ws/datasets/S3DIS"
     print(root)
-    dataset_train = ShapeNet(root=root, split="train", transform=FixedPoints(num_points))
-    dataset_test = ShapeNet(root=root, split="test", transform=FixedPoints(num_points))
+    dataset_train = S3DIS(root=root, test_area=6, train=True)
+    dataset_test = S3DIS(root=root, test_area=6, train=False)
    
 
     batch_size = 2
     num_epochs = 50
-    learning_rate = 1e-4
+    learning_rate = 1e-3
     decay_rate = 0.95
     decay_steps = len(dataset_train) / batch_size
 
@@ -365,7 +362,7 @@ if __name__ == '__main__':
     test_loader = DenseDataLoader(dataset_test, batch_size=batch_size, shuffle=False)
 
     model = seg_model(num_points, F, K, M,
-                      dropout=1, one_layer=False, reg_prior=True)
+                      dropout=1, one_layer=False, reg_prior=True, input_dim=9)
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     
