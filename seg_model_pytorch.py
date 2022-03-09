@@ -17,7 +17,6 @@ from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter()
 import numpy as np
 from torch.optim import lr_scheduler
-from torchmetrics import JaccardIndex
 
 import numpy as np
 
