@@ -288,9 +288,6 @@ def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,edge_m
     all_reeb_laplacians = np.zeros((3,reeb_nodes_num))
     all_reeb_edge_matrix = np.zeros((3,reeb_nodes_num))
 
-    
-    
-    
     for i, data in enumerate(loader):
 
         print(i+1)
@@ -341,7 +338,9 @@ def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,edge_m
 
             New_edge_indices_cpu=New_edge_indices.to('cpu')
 
-            np_Matrix_edges=np.asarray(Matrix_edges)
+            Matrix_edges=Matrix_edges.squeeze(0)
+
+            np_Matrix_edges=np.asarray(Matrix_edges.to('cpu'))
             
             # fig = matplotlib.pyplot.figure()
             # ax = fig.add_subplot(111, projection='3d')
@@ -351,13 +350,13 @@ def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,edge_m
             # ax.scatter(point_cloud_pcd[:, 0], point_cloud_pcd[:, 1], point_cloud_pcd[:, 2], s=1, color='r')   
             # matplotlib.pyplot.show()
 
-            fig = matplotlib.pyplot.figure()
-            ax = fig.add_subplot(111, projection='3d')
-            ax.set_axis_off()
-            for test_iter in range(New_edge_indices_cpu.shape[1]):
-                ax.plot([vertices[New_edge_indices_cpu[0][test_iter]][0], vertices[New_edge_indices_cpu[1][test_iter]][0]], [vertices[New_edge_indices_cpu[0][test_iter]][1], vertices[New_edge_indices_cpu[1][test_iter]][1]], [vertices[New_edge_indices_cpu[0][test_iter]][2], vertices[New_edge_indices_cpu[1][test_iter]][2]], color='b')
-            ax.scatter(point_cloud_pcd[:, 0], point_cloud_pcd[:, 1], point_cloud_pcd[:, 2], s=1, color='r')   
-            matplotlib.pyplot.show()
+            # fig = matplotlib.pyplot.figure()
+            # ax = fig.add_subplot(111, projection='3d')
+            # ax.set_axis_off()
+            # for test_iter in range(New_edge_indices_cpu.shape[1]):
+            #     ax.plot([vertices[New_edge_indices_cpu[0][test_iter]][0], vertices[New_edge_indices_cpu[1][test_iter]][0]], [vertices[New_edge_indices_cpu[0][test_iter]][1], vertices[New_edge_indices_cpu[1][test_iter]][1]], [vertices[New_edge_indices_cpu[0][test_iter]][2], vertices[New_edge_indices_cpu[1][test_iter]][2]], color='b')
+            # ax.scatter(point_cloud_pcd[:, 0], point_cloud_pcd[:, 1], point_cloud_pcd[:, 2], s=1, color='r')   
+            # matplotlib.pyplot.show()
 
         
             if (nr_columns_batch>nr_columns_all):
@@ -392,7 +391,126 @@ def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,edge_m
 
     
 
-    return all_sccs,all_reeb_laplacians
+    return all_sccs,all_reeb_laplacians,all_reeb_edge_matrix
+
+
+def Create_Reeb_custom_loader_batched(loader,sccs_path,reeb_laplacian_path,edge_matrix_path,time_execution,knn,ns,tau,reeb_nodes_num,reeb_sim_margin,pointNumber):
+    # knn = 20
+    # ns = 20
+    # tau = 2
+    # reeb_nodes_num=20
+    # reeb_sim_margin=20
+    # pointNumber=200
+    
+    all_sccs=np.eye(3)
+    all_reeb_laplacians = np.zeros((3,reeb_nodes_num))
+    all_reeb_edge_matrix = np.zeros((3,reeb_nodes_num))
+
+    for i, (pos, y, normal, idx) in enumerate(loader):
+
+        print(i+1)
+
+        batch_size=pos[1].shape[0]
+        nr_points=pos[1].shape[1]
+        feature_dim=pos[1].shape[2]
+
+        batch_edge_indices = torch.tensor([[1., 2.], [4., 5.]])
+        batch_batch_indices_reeb = torch.tensor([1.,2. ])
+
+
+        point_cloud=np.asarray(pos[1])
+        #point_cloud=np.reshape(point_cloud,(batch_size,nr_points,feature_dim)
+        
+
+        for k in range(batch_size):
+            
+            vertices, laplacian_Reeb, sccs ,edges= extract_reeb_graph(point_cloud[k], knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
+            
+            np_sccs_batch=np.asarray(sccs)
+            np_reeb_laplacian=np.asarray(laplacian_Reeb)
+            np_reeb_edges=np.asarray(edges)
+
+            nr_columns_batch= np_sccs_batch.shape[1]
+            nr_columns_all=all_sccs.shape[1]
+
+            nr_lines_batch=np_sccs_batch.shape[0]
+            nr_lines_all=all_sccs.shape[0]
+
+            edge_indices_iteration = torch.tensor(edges,device='cuda')
+            edge_indices_iteration_2=torch.transpose(edge_indices_iteration,0,1)
+
+            batch_values_iteration=(torch.zeros(edge_indices_iteration_2.shape[1])).to('cuda')
+            batch_values_iteration=batch_values_iteration.long()
+
+            edge_values_iteration=torch.ones(edge_indices_iteration_2.shape[1]).to('cuda')
+            edge_values_iteration=edge_values_iteration.long()
+
+            point_cloud_pcd=point_cloud[k]
+            
+            Matrix_edges=torch_geometric.utils.to_dense_adj(edge_index=edge_indices_iteration_2,batch=None,edge_attr=None,max_num_nodes=reeb_nodes_num)
+
+            x_condition=torch.ones(Matrix_edges.shape[0],Matrix_edges.shape[1]).to('cuda')
+            y_condition=torch.zeros(Matrix_edges.shape[0],Matrix_edges.shape[1]).to('cuda')
+            
+            Matrix_edges=torch.where(Matrix_edges > 0, x_condition, y_condition)
+            New_edge_indices, New_edge_values=torch_geometric.utils.dense_to_sparse(Matrix_edges)
+
+            New_edge_indices_cpu=New_edge_indices.to('cpu')
+
+            Matrix_edges=Matrix_edges.squeeze(0)
+
+            np_Matrix_edges=np.asarray(Matrix_edges.to('cpu'))
+            
+            # fig = matplotlib.pyplot.figure()
+            # ax = fig.add_subplot(111, projection='3d')
+            # ax.set_axis_off()
+            # for e in edges:
+            #     ax.plot([vertices[e[0]][0], vertices[e[1]][0]], [vertices[e[0]][1], vertices[e[1]][1]], [vertices[e[0]][2], vertices[e[1]][2]], color='b')
+            # ax.scatter(point_cloud_pcd[:, 0], point_cloud_pcd[:, 1], point_cloud_pcd[:, 2], s=1, color='r')   
+            # matplotlib.pyplot.show()
+
+            # fig = matplotlib.pyplot.figure()
+            # ax = fig.add_subplot(111, projection='3d')
+            # ax.set_axis_off()
+            # for test_iter in range(New_edge_indices_cpu.shape[1]):
+            #     ax.plot([vertices[New_edge_indices_cpu[0][test_iter]][0], vertices[New_edge_indices_cpu[1][test_iter]][0]], [vertices[New_edge_indices_cpu[0][test_iter]][1], vertices[New_edge_indices_cpu[1][test_iter]][1]], [vertices[New_edge_indices_cpu[0][test_iter]][2], vertices[New_edge_indices_cpu[1][test_iter]][2]], color='b')
+            # ax.scatter(point_cloud_pcd[:, 0], point_cloud_pcd[:, 1], point_cloud_pcd[:, 2], s=1, color='r')   
+            # matplotlib.pyplot.show()
+
+        
+            if (nr_columns_batch>nr_columns_all):
+                ceva=all_sccs[:,nr_columns_all-1]
+                ceva=ceva.reshape((nr_lines_all,1))
+                ceva=np.tile(ceva,(nr_columns_batch-nr_columns_all))
+                all_sccs=np.concatenate((all_sccs,ceva),1)
+
+
+            else:
+                ceva=np_sccs_batch[:,nr_columns_batch-1]
+                ceva=ceva.reshape((nr_lines_batch,1))
+                ceva=np.tile(ceva,(nr_columns_all-nr_columns_batch))
+                np_sccs_batch=np.concatenate((np_sccs_batch,ceva),1)
+
+            all_sccs=np.concatenate((all_sccs,np_sccs_batch),0)
+            all_reeb_laplacians=np.concatenate((all_reeb_laplacians,np_reeb_laplacian),0)
+            all_reeb_edge_matrix=np.concatenate((all_reeb_edge_matrix,np_Matrix_edges),0)
+
+        
+        print(all_sccs.shape)
+        print(all_reeb_laplacians.shape)
+        print(all_reeb_edge_matrix.shape)
+       
+    all_scc=np.delete(all_sccs,[0,1,2],0)
+    all_reeb_laplacians=np.delete(all_reeb_laplacians,[0,1,2],0)
+    all_reeb_edge_matrix=np.delete(all_reeb_edge_matrix,[0,1,2],0) 
+
+    np.save(sccs_path, all_sccs)
+    np.save(reeb_laplacian_path, all_reeb_laplacians)
+    np.save(edge_matrix_path, all_reeb_edge_matrix)
+
+    
+
+    return all_sccs,all_reeb_laplacians,all_reeb_edge_matrix
 
 def Create_Reeb_from_Dataset(loader,sccs_path,reeb_laplacian_path,time_execution):
     

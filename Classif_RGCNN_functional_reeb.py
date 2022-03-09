@@ -25,6 +25,7 @@ from torch_geometric.transforms import Compose
 
 import ChebConv_rgcnn_functions as conv
 import ChebConv_rgcnn_functions_reeb as conv_reeb
+import ChebConv_loader_indices as index_dataset
 import os
 from torch_geometric.transforms import NormalizeScale
 from torch_geometric.loader import DataLoader
@@ -280,12 +281,25 @@ if __name__ == '__main__':
     print(f"Training on {device}")
 
         
+    # transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
+
+    # root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+    # print(root)
+
+
+    # dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
+    # dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms)
+
+    root="/media/rambo/ssd2/Alex_data/RGCNN/GeometricShapes"
+
     transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
-    root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
-    print(root)
-    dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
-    dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms)
+    dataset_train = index_dataset.Geometric_with_indices(root=root,train_bool=True,transforms=transforms)
+    dataset_test = index_dataset.Geometric_with_indices(root=root,train_bool=False,transforms=transforms)
+
+
+    train_loader = DataLoader(dataset_train,batch_size=batch_size, shuffle=False, pin_memory=True)
+    test_loader= DataLoader(dataset_test,batch_size=batch_size)
 
 
     # Verification...
@@ -327,8 +341,11 @@ if __name__ == '__main__':
     reeb_sim_margin=20
     pointNumber=200
 
-    all_sccs_test, all_reeb_laplacian_test= conv_reeb.Create_Reeb_from_Dataset_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,edge_matrix_path=edge_matrix_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
-    all_sccs_train, all_reeb_laplacian_train=conv_reeb.Create_Reeb_from_Dataset_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,edge_matrix_path=edge_matrix_path_train,time_execution=timp_train,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+    # all_sccs_test, all_reeb_laplacian_test,all_reeb_edge_matrix_test= conv_reeb.Create_Reeb_from_Dataset_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,edge_matrix_path=edge_matrix_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+    # all_sccs_train, all_reeb_laplacian_train,all_reeb_edge_matrix_train=conv_reeb.Create_Reeb_from_Dataset_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,edge_matrix_path=edge_matrix_path_train,time_execution=timp_train,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+
+    all_sccs_test, all_reeb_laplacian_test,all_reeb_edge_matrix_test= conv_reeb.Create_Reeb_custom_loader_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,edge_matrix_path=edge_matrix_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+    all_sccs_train, all_reeb_laplacian_train,all_reeb_edge_matrix_train=conv_reeb.Create_Reeb_custom_loader_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,edge_matrix_path=edge_matrix_path_train,time_execution=timp_train,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
 
 
 
@@ -367,35 +384,35 @@ if __name__ == '__main__':
 
     
 
-    regularization = 1e-9
-    for epoch in range(1, num_epochs+1):
-        train_start_time = time.time()
-        loss = train(model, optimizer,loader=train_loader,all_sccs=all_sccs_train,all_Reeb_laplacian=all_reeb_laplacian_train,k=k_KNN,num_points=num_points,regularization=regularization)
+    # regularization = 1e-9
+    # for epoch in range(1, num_epochs+1):
+    #     train_start_time = time.time()
+    #     loss = train(model, optimizer,loader=train_loader,all_sccs=all_sccs_train,all_Reeb_laplacian=all_reeb_laplacian_train,k=k_KNN,num_points=num_points,regularization=regularization)
         
-        train_stop_time = time.time()
+    #     train_stop_time = time.time()
 
-        # writer.add_scalar("Loss/train", loss, epoch)
+    #     # writer.add_scalar("Loss/train", loss, epoch)
         
-        test_start_time = time.time()
-        test_acc = test(model, loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,k=k_KNN,num_points=num_points)
-        test_stop_time = time.time()
+    #     test_start_time = time.time()
+    #     test_acc = test(model, loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,k=k_KNN,num_points=num_points)
+    #     test_stop_time = time.time()
 
 
 
-        # writer.add_scalar("Acc/test", test_acc, epoch)
-        print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
-        print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
-        Test Time: \t{test_stop_time - test_start_time }')
+    #     # writer.add_scalar("Acc/test", test_acc, epoch)
+    #     print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
+    #     print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
+    #     Test Time: \t{test_stop_time - test_start_time }')
 
-        # writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,k=k_KNN,num_points=num_points), epoch)
+    #     # writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,k=k_KNN,num_points=num_points), epoch)
 
-        if(epoch%5==0):
-            torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+    #     if(epoch%5==0):
+    #         torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
 
-        my_lr_scheduler.step()
+    #     my_lr_scheduler.step()
 
     
-    torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+    # torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
 
 
        ###################################################################################################3

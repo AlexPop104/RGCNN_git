@@ -25,6 +25,7 @@ from torch_geometric.transforms import Compose
 
 import ChebConv_rgcnn_functions as conv
 import ChebConv_rgcnn_functions_reeb as conv_reeb
+import ChebConv_loader_indices as index_dataset
 import os
 from torch_geometric.transforms import NormalizeScale
 from torch_geometric.loader import DataLoader
@@ -41,7 +42,7 @@ import numpy as np
 import matplotlib.pyplot
 from mpl_toolkits.mplot3d import Axes3D
 
-from ChebConv_loader_indices import Modelnet_with_indices
+#from ChebConv_loader_indices import Modelnet_with_indices
 
 
 
@@ -347,8 +348,8 @@ if __name__ == '__main__':
     print(root)
 
 
-    dataset_train = Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=True,transforms=transforms)
-    dataset_test = Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=False,transforms=transforms)
+    dataset_train =index_dataset.Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=True,transforms=transforms)
+    dataset_test = index_dataset.Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=False,transforms=transforms)
 
 
     # Verification...
@@ -371,29 +372,29 @@ if __name__ == '__main__':
     my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
 
 
-    # path_logs="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/"
+    path_logs="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/"
 
-    # sccs_path_train=path_logs+directory+"train_sccs.npy"
-    # reeb_laplacian_path_train=path_logs+directory+"train_reeb_laplacian.npy"
-    # edge_matrix_path_train=path_logs+directory+"train_edge_matrix.npy"
+    sccs_path_train=path_logs+directory+"train_sccs.npy"
+    reeb_laplacian_path_train=path_logs+directory+"train_reeb_laplacian.npy"
+    edge_matrix_path_train=path_logs+directory+"train_edge_matrix.npy"
 
-    # sccs_path_test=path_logs+directory+"test_sccs.npy"
-    # reeb_laplacian_path_test=path_logs+directory+"test_reeb_laplacian.npy"
-    # edge_matrix_path_train=path_logs+directory+"test_edge_matrix.npy"
+    sccs_path_test=path_logs+directory+"test_sccs.npy"
+    reeb_laplacian_path_test=path_logs+directory+"test_reeb_laplacian.npy"
+    edge_matrix_path_test=path_logs+directory+"test_edge_matrix.npy"
 
-    # timp_train=0
-    # timp_test=0
+    timp_train=0
+    timp_test=0
 
 
-    # knn_REEB = 20
-    # ns = 20
-    # tau = 2
-    # reeb_nodes_num=20
-    # reeb_sim_margin=20
-    # pointNumber=200
+    knn_REEB = 20
+    ns = 20
+    tau = 2
+    reeb_nodes_num=20
+    reeb_sim_margin=20
+    pointNumber=200
 
-    ## all_sccs_test, all_reeb_laplacian_test= conv_reeb.Create_Reeb_from_Dataset_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
-    ## all_sccs_train, all_reeb_laplacian_train=conv_reeb.Create_Reeb_from_Dataset_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,time_execution=timp_train,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+    all_sccs_test, all_reeb_laplacian_test,all_reeb_edge_matrix_test= conv_reeb.Create_Reeb_custom_loader_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,edge_matrix_path=edge_matrix_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+    all_sccs_train, all_reeb_laplacian_train,all_reeb_edge_matrix_train=conv_reeb.Create_Reeb_custom_loader_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,edge_matrix_path=edge_matrix_path_train,time_execution=timp_train,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
 
 
 

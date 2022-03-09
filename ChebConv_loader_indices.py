@@ -57,10 +57,10 @@ dataset_test = Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_b
 train_loader = DataLoader(dataset_train,batch_size=batch_size, shuffle=True, pin_memory=True)
 test_loader= DataLoader(dataset_test,batch_size=batch_size)
 
-for batch_idx, (pos, y, normal, idx) in enumerate(test_loader):
-    # print('Batch idx {}, dataset index {}'.format(
-    #     batch_idx, idx))
-    print(pos[1].shape[0])
+# for batch_idx, (pos, y, normal, idx) in enumerate(test_loader):
+#     # print('Batch idx {}, dataset index {}'.format(
+#     #     batch_idx, idx))
+#     print(pos[1].shape[0])
 
 print(len(test_loader))
 
@@ -78,10 +78,10 @@ dataset_test = Geometric_with_indices(root=root,train_bool=False,transforms=tran
 train_loader = DataLoader(dataset_train,batch_size=batch_size, shuffle=True, pin_memory=True)
 test_loader= DataLoader(dataset_test,batch_size=batch_size)
 
-for batch_idx, (pos, y, normal, idx) in enumerate(train_loader):
-    print('Batch idx {}, dataset index {}'.format(
-        batch_idx, idx))
-    print(pos[1].shape[0])
+# for batch_idx, (pos, y, normal, idx) in enumerate(train_loader):
+#     print('Batch idx {}, dataset index {}'.format(
+#         batch_idx, idx))
+#     print(pos[1].shape[0])
 
 print(len(test_loader))
 
