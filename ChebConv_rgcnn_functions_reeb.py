@@ -377,13 +377,15 @@ def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,edge_m
             all_reeb_edge_matrix=np.concatenate((all_reeb_edge_matrix,np_Matrix_edges),0)
 
         
-        print(all_sccs.shape)
-        print(all_reeb_laplacians.shape)
-        print(all_reeb_edge_matrix.shape)
+        
        
     all_scc=np.delete(all_sccs,[0,1,2],0)
     all_reeb_laplacians=np.delete(all_reeb_laplacians,[0,1,2],0)
     all_reeb_edge_matrix=np.delete(all_reeb_edge_matrix,[0,1,2],0) 
+
+    print(all_sccs.shape)
+    print(all_reeb_laplacians.shape)
+    print(all_reeb_edge_matrix.shape)
 
     np.save(sccs_path, all_sccs)
     np.save(reeb_laplacian_path, all_reeb_laplacians)

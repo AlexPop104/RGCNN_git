@@ -137,7 +137,7 @@ def Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges
     edge_dim=edges.shape[1]
 
     
-    ceva=torch.tile(idx.unsqueeze(1).to(device)*num_vertices_reeb,(1,num_vertices_reeb))
+    ceva=torch.tile(idx.unsqueeze(1).to('cuda')*num_vertices_reeb,(1,num_vertices_reeb))
     ceva=torch.reshape(ceva,[idx.shape[0]*num_vertices_reeb])
     ceva=torch.reshape(ceva,(idx.shape[0],num_vertices_reeb))
 
@@ -211,134 +211,134 @@ def Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges
 
         
 
-if __name__ == '__main__':
-    now = datetime.now()
-    directory = now.strftime("%d_%m_%y_%H:%M:%S")
-    parent_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models"
-    path = os.path.join(parent_directory, directory)
-    os.mkdir(path)
+# if __name__ == '__main__':
+#     now = datetime.now()
+#     directory = now.strftime("%d_%m_%y_%H:%M:%S")
+#     parent_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models"
+#     path = os.path.join(parent_directory, directory)
+#     os.mkdir(path)
 
-    num_points = 1024
-    batch_size = 20
-    num_epochs = 260
-    learning_rate = 1e-3
-    modelnet_num = 40
-    k_KNN=30
+#     num_points = 1024
+#     batch_size = 20
+#     num_epochs = 260
+#     learning_rate = 1e-3
+#     modelnet_num = 40
+#     k_KNN=30
 
-    F = [128, 512, 1024]  # Outputs size of convolutional filter.
-    K = [6, 5, 3]         # Polynomial orders.
-    M = [512, 128, modelnet_num]
+#     F = [128, 512, 1024]  # Outputs size of convolutional filter.
+#     K = [6, 5, 3]         # Polynomial orders.
+#     M = [512, 128, modelnet_num]
 
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+#     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    print(f"Training on {device}")
+#     print(f"Training on {device}")
 
         
-    transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
+#     transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
-    # root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
-    # print(root)
-
-
-    # dataset_train =index_dataset.Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=True,transforms=transforms)
-    # dataset_test = index_dataset.Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=False,transforms=transforms)
+#     # root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+#     # print(root)
 
 
-    # # Verification...
-    # print(f"Train dataset shape: {dataset_train}")
-    # print(f"Test dataset shape:  {dataset_test}")
+#     # dataset_train =index_dataset.Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=True,transforms=transforms)
+#     # dataset_test = index_dataset.Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=False,transforms=transforms)
 
 
-    # train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
-    # test_loader  = DataLoader(dataset_test, batch_size=batch_size)
+#     # # Verification...
+#     # print(f"Train dataset shape: {dataset_train}")
+#     # print(f"Test dataset shape:  {dataset_test}")
 
 
-    ###################################################################
-
-    root="/media/rambo/ssd2/Alex_data/RGCNN/GeometricShapes"
-
-    transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
-
-    dataset_train = index_dataset.Geometric_with_indices(root=root,train_bool=True,transforms=transforms)
-    dataset_test = index_dataset.Geometric_with_indices(root=root,train_bool=False,transforms=transforms)
+#     # train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
+#     # test_loader  = DataLoader(dataset_test, batch_size=batch_size)
 
 
-    train_loader = DataLoader(dataset_train,batch_size=batch_size,shuffle=True, pin_memory=True)
-    test_loader= DataLoader(dataset_test,batch_size=batch_size)
+#     ###################################################################
+
+#     root="/media/rambo/ssd2/Alex_data/RGCNN/GeometricShapes"
+
+#     transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
+
+#     dataset_train = index_dataset.Geometric_with_indices(root=root,train_bool=True,transforms=transforms)
+#     dataset_test = index_dataset.Geometric_with_indices(root=root,train_bool=False,transforms=transforms)
 
 
-    path_logs="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/"
-
-    # sccs_path_train=path_logs+directory+"train_sccs.npy"
-    # reeb_laplacian_path_train=path_logs+directory+"train_reeb_laplacian.npy"
-    # edge_matrix_path_train=path_logs+directory+"train_edge_matrix.npy"
-    # vertices_path_train=path_logs+directory+"train_vertices.npy"
-
-    # sccs_path_test=path_logs+directory+"test_sccs.npy"
-    # reeb_laplacian_path_test=path_logs+directory+"test_reeb_laplacian.npy"
-    # edge_matrix_path_test=path_logs+directory+"test_edge_matrix.npy"
-    # vertices_path_test=path_logs+directory+"test_vertices.npy"
-
-    sccs_path_train=path_logs+"train_sccs.npy"
-    reeb_laplacian_path_train=path_logs+"train_reeb_laplacian.npy"
-    edge_matrix_path_train=path_logs+"train_edge_matrix.npy"
-    vertices_path_train=path_logs+"train_vertices.npy"
-
-    sccs_path_test=path_logs+"test_sccs.npy"
-    reeb_laplacian_path_test=path_logs+"test_reeb_laplacian.npy"
-    edge_matrix_path_test=path_logs+"test_edge_matrix.npy"
-    vertices_path_test=path_logs+"test_vertices.npy"
+#     train_loader = DataLoader(dataset_train,batch_size=batch_size,shuffle=True, pin_memory=True)
+#     test_loader= DataLoader(dataset_test,batch_size=batch_size)
 
 
-    timp_train=0
-    timp_test=0
+#     path_logs="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/"
+
+#     # sccs_path_train=path_logs+directory+"train_sccs.npy"
+#     # reeb_laplacian_path_train=path_logs+directory+"train_reeb_laplacian.npy"
+#     # edge_matrix_path_train=path_logs+directory+"train_edge_matrix.npy"
+#     # vertices_path_train=path_logs+directory+"train_vertices.npy"
+
+#     # sccs_path_test=path_logs+directory+"test_sccs.npy"
+#     # reeb_laplacian_path_test=path_logs+directory+"test_reeb_laplacian.npy"
+#     # edge_matrix_path_test=path_logs+directory+"test_edge_matrix.npy"
+#     # vertices_path_test=path_logs+directory+"test_vertices.npy"
+
+#     sccs_path_train=path_logs+"train_sccs.npy"
+#     reeb_laplacian_path_train=path_logs+"train_reeb_laplacian.npy"
+#     edge_matrix_path_train=path_logs+"train_edge_matrix.npy"
+#     vertices_path_train=path_logs+"train_vertices.npy"
+
+#     sccs_path_test=path_logs+"test_sccs.npy"
+#     reeb_laplacian_path_test=path_logs+"test_reeb_laplacian.npy"
+#     edge_matrix_path_test=path_logs+"test_edge_matrix.npy"
+#     vertices_path_test=path_logs+"test_vertices.npy"
 
 
-    knn_REEB = 20
-    ns = 20
-    tau = 2
-    reeb_nodes_num=20
-    reeb_sim_margin=20
-    pointNumber=200
-
-    # all_sccs_test, all_reeb_laplacian_test,edges_test,vertices_test= conv_reeb.Create_Reeb_custom_loader_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,edge_matrix_path=edge_matrix_path_test,vertices_path=vertices_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
-    # all_sccs_train, all_reeb_laplacian_train,edges_train,vertices_train=conv_reeb.Create_Reeb_custom_loader_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,edge_matrix_path=edge_matrix_path_train,vertices_path=vertices_path_train,time_execution=timp_train,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+#     timp_train=0
+#     timp_test=0
 
 
+#     knn_REEB = 20
+#     ns = 20
+#     tau = 2
+#     reeb_nodes_num=20
+#     reeb_sim_margin=20
+#     pointNumber=200
 
-    #############################################################
-    #Load Reeb_graphs from file
+#     # all_sccs_test, all_reeb_laplacian_test,edges_test,vertices_test= conv_reeb.Create_Reeb_custom_loader_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,edge_matrix_path=edge_matrix_path_test,vertices_path=vertices_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+#     # all_sccs_train, all_reeb_laplacian_train,edges_train,vertices_train=conv_reeb.Create_Reeb_custom_loader_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,edge_matrix_path=edge_matrix_path_train,vertices_path=vertices_path_train,time_execution=timp_train,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
 
-    path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/train_reeb_laplacian.npy"
-    path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/test_reeb_laplacian.npy"
 
-    path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/train_sccs.npy"
-    path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/test_sccs.npy"
 
-    path_vertices_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/train_vertices.npy"
-    path_vertices_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/test_vertices.npy"
+#     #############################################################
+#     #Load Reeb_graphs from file
 
-    path_edges_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/train_edge_matrix.npy"
-    path_edges_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/test_edge_matrix.npy"
+#     path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/train_reeb_laplacian.npy"
+#     path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/test_reeb_laplacian.npy"
 
-    all_sccs_train=np.load(path_sccs_train)
-    all_sccs_test=np.load(path_sccs_test)
+#     path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/train_sccs.npy"
+#     path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/test_sccs.npy"
 
-    all_reeb_laplacian_train=np.load(path_Reeb_laplacian_train)
-    all_reeb_laplacian_test=np.load(path_Reeb_laplacian_test)
+#     path_vertices_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/train_vertices.npy"
+#     path_vertices_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/test_vertices.npy"
 
-    vertices_train=np.load(path_vertices_train)
-    vertices_test=np.load(path_vertices_test)
+#     path_edges_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/train_edge_matrix.npy"
+#     path_edges_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/test_edge_matrix.npy"
 
-    edges_train=np.load(path_edges_train)
-    edges_test=np.load(path_edges_test)
+#     all_sccs_train=np.load(path_sccs_train)
+#     all_sccs_test=np.load(path_sccs_test)
+
+#     all_reeb_laplacian_train=np.load(path_Reeb_laplacian_train)
+#     all_reeb_laplacian_test=np.load(path_Reeb_laplacian_test)
+
+#     vertices_train=np.load(path_vertices_train)
+#     vertices_test=np.load(path_vertices_test)
+
+#     edges_train=np.load(path_edges_train)
+#     edges_test=np.load(path_edges_test)
 
     
 
-    ################################
+#     ################################
     
-    Test_reeb(loader=train_loader,all_sccs=all_sccs_train,all_Reeb_laplacian=all_reeb_laplacian_train,edges=edges_train,vertices=vertices_train,k=k_KNN,num_points=num_points) 
-    Test_reeb(loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,edges=edges_test,vertices=vertices_test,k=k_KNN,num_points=num_points)
+#     Test_reeb(loader=train_loader,all_sccs=all_sccs_train,all_Reeb_laplacian=all_reeb_laplacian_train,edges=edges_train,vertices=vertices_train,k=k_KNN,num_points=num_points) 
+#     Test_reeb(loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,edges=edges_test,vertices=vertices_test,k=k_KNN,num_points=num_points)
         
 
     

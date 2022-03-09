@@ -26,6 +26,8 @@ from torch_geometric.transforms import Compose
 import ChebConv_rgcnn_functions as conv
 import ChebConv_rgcnn_functions_reeb as conv_reeb
 import ChebConv_loader_indices as index_dataset
+import ChebConv_test_reeb as test_reeb
+
 import os
 from torch_geometric.transforms import NormalizeScale
 from torch_geometric.loader import DataLoader
@@ -183,20 +185,21 @@ def train(model, optimizer, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,
 
         batch_size=pos[1].shape[0]
         ground_truth_labels=y[1].squeeze(1)
+        num_vertices_reeb=all_Reeb_laplacian.shape[1]
+        edge_dim=edges.shape[1]
 
-        x = torch.cat([pos[1], normal[1]], dim=2)
-        
-        ceva=torch.tile(idx.unsqueeze(1).to(device),(1,all_Reeb_laplacian.shape[1]))
+        #test_reeb.Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points)
 
-        ceva=torch.reshape(ceva,[idx.shape[0]*all_Reeb_laplacian.shape[1]])
-        ceva=torch.reshape(ceva,(idx.shape[0],all_Reeb_laplacian.shape[1]))
+        ceva=torch.tile(idx.unsqueeze(1).to(device)*num_vertices_reeb,(1,num_vertices_reeb))
+        ceva=torch.reshape(ceva,[idx.shape[0]*num_vertices_reeb])
+        ceva=torch.reshape(ceva,(idx.shape[0],num_vertices_reeb))
 
-        ceva2=torch.arange(0,all_Reeb_laplacian.shape[1],device='cuda')
+        ceva2=torch.arange(0,num_vertices_reeb,device='cuda')
         ceva3=torch.tile(ceva2,[1,idx.shape[0]])
-        ceva3=torch.reshape(ceva3,(idx.shape[0],all_Reeb_laplacian.shape[1]))
+        ceva3=torch.reshape(ceva3,(idx.shape[0],num_vertices_reeb))
 
-        ceva4=torch.add(ceva,ceva3)
-        ceva4=torch.reshape(ceva4,[idx.shape[0]*all_Reeb_laplacian.shape[1]])
+        ceva4_batch=torch.add(ceva,ceva3)
+        ceva4=torch.reshape(ceva4_batch,[idx.shape[0]*num_vertices_reeb])
 
         ceva4=ceva4.to('cpu')
 
@@ -204,44 +207,12 @@ def train(model, optimizer, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,
         reeb_laplace_batch=all_Reeb_laplacian[ceva4]
         vertices_batch=vertices[ceva4]
         edges_batch=edges[ceva4]
-        
-
-        
-        
-        # sccs_batch_original=all_sccs[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_sccs.shape[1]]
-        # reeb_laplace_batch_original=all_Reeb_laplacian[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
-        # vertices_batch_original=vertices[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
-        # edges_batch_original=edges[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
-        
-        # sccs_batch=all_sccs[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_sccs.shape[1]]
-        # reeb_laplace_batch=all_Reeb_laplacian[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
-
-        for iter_pcd in range(batch_size):
-
-            points_pcd=pos[1][iter_pcd]
-            sccs_pcd=sccs_batch[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1]]
-            reeb_laplace_pcd=reeb_laplace_batch[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
-            vertices_batch_pcd=vertices_batch[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1]]
-            matrix_edges_batch_pcd=edges_batch[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*edges_batch.shape[1]]
-            t_matrix_edges_batch=torch.tensor(matrix_edges_batch_pcd)
-            
-            New_edge_indices, New_edge_values=torch_geometric.utils.dense_to_sparse(t_matrix_edges_batch)
-
-            New_edge_indices_cpu=New_edge_indices.to('cpu')
-            
-            fig = matplotlib.pyplot.figure()
-            ax = fig.add_subplot(111, projection='3d')
-            ax.set_axis_off()
-            for test_iter in range(New_edge_indices_cpu.shape[1]):
-                ax.plot([vertices[New_edge_indices_cpu[0][test_iter]][0], vertices[New_edge_indices_cpu[1][test_iter]][0]], [vertices[New_edge_indices_cpu[0][test_iter]][1], vertices[New_edge_indices_cpu[1][test_iter]][1]], [vertices[New_edge_indices_cpu[0][test_iter]][2], vertices[New_edge_indices_cpu[1][test_iter]][2]], color='b')
-            ax.scatter(points_pcd[:, 0], points_pcd[:, 1], points_pcd[:, 2], s=1, color='r')   
-            matplotlib.pyplot.show()
 
         sccs_batch=sccs_batch.astype(int)
-
         sccs_batch=np.reshape(sccs_batch,(batch_size,all_Reeb_laplacian.shape[1],all_sccs.shape[1]))
         reeb_laplace_batch=np.reshape(reeb_laplace_batch,(batch_size,all_Reeb_laplacian.shape[1],all_Reeb_laplacian.shape[1]))
 
+        x = torch.cat([pos[1], normal[1]], dim=2)
 
         logits, regularizers  = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
         loss    = criterion(logits, ground_truth_labels.to(device))
@@ -258,28 +229,26 @@ def train(model, optimizer, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,
 @torch.no_grad()
 def test(model, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
     model.eval()
-
     total_correct = 0
     for i,(pos, y, normal, idx) in enumerate(loader):
 
         batch_size=pos[1].shape[0]
         ground_truth_labels=y[1].squeeze(1)
+        num_vertices_reeb=all_Reeb_laplacian.shape[1]
+        edge_dim=edges.shape[1]
 
-        x = torch.cat([pos[1], normal[1]], dim=2)
+        #test_reeb.Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points)
 
-        x = torch.cat([pos[1], normal[1]], dim=2)
-        
-        ceva=torch.tile(idx.unsqueeze(1).to(device),(1,all_Reeb_laplacian.shape[1]))
+        ceva=torch.tile(idx.unsqueeze(1).to(device)*num_vertices_reeb,(1,num_vertices_reeb))
+        ceva=torch.reshape(ceva,[idx.shape[0]*num_vertices_reeb])
+        ceva=torch.reshape(ceva,(idx.shape[0],num_vertices_reeb))
 
-        ceva=torch.reshape(ceva,[idx.shape[0]*all_Reeb_laplacian.shape[1]])
-        ceva=torch.reshape(ceva,(idx.shape[0],all_Reeb_laplacian.shape[1]))
-
-        ceva2=torch.arange(0,all_Reeb_laplacian.shape[1],device='cuda')
+        ceva2=torch.arange(0,num_vertices_reeb,device='cuda')
         ceva3=torch.tile(ceva2,[1,idx.shape[0]])
-        ceva3=torch.reshape(ceva3,(idx.shape[0],all_Reeb_laplacian.shape[1]))
+        ceva3=torch.reshape(ceva3,(idx.shape[0],num_vertices_reeb))
 
-        ceva4=torch.add(ceva,ceva3)
-        ceva4=torch.reshape(ceva4,[idx.shape[0]*all_Reeb_laplacian.shape[1]])
+        ceva4_batch=torch.add(ceva,ceva3)
+        ceva4=torch.reshape(ceva4_batch,[idx.shape[0]*num_vertices_reeb])
 
         ceva4=ceva4.to('cpu')
 
@@ -287,38 +256,12 @@ def test(model, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
         reeb_laplace_batch=all_Reeb_laplacian[ceva4]
         vertices_batch=vertices[ceva4]
         edges_batch=edges[ceva4]
-        
-        sccs_batch_original=all_sccs[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_sccs.shape[1]]
-        reeb_laplace_batch_original=all_Reeb_laplacian[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
-        vertices_batch_original=vertices[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
-        edges_batch_original=edges[i*batch_size*all_Reeb_laplacian.shape[1]:(i+1)*batch_size*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
-      
-      
-      
-        for iter_pcd in range(batch_size):
 
-            points_original=pos[1][iter_pcd]
-            sccs_pcd=sccs_batch_original[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1]]
-            reeb_laplace_pcd=reeb_laplace_batch_original[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
-            vertices_batch_pcd=vertices_batch[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1]]
-            matrix_edges_batch_pcd=edges_batch[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*edges_batch.shape[1]]
-            t_matrix_edges_batch=torch.tensor(matrix_edges_batch_pcd)
-            
-            New_edge_indices, New_edge_values=torch_geometric.utils.dense_to_sparse(t_matrix_edges_batch)
-
-            New_edge_indices_cpu=New_edge_indices.to('cpu')
-            
-            fig = matplotlib.pyplot.figure()
-            ax = fig.add_subplot(111, projection='3d')
-            ax.set_axis_off()
-            for test_iter in range(New_edge_indices_cpu.shape[1]):
-                ax.plot([vertices[New_edge_indices_cpu[0][test_iter]][0], vertices[New_edge_indices_cpu[1][test_iter]][0]], [vertices[New_edge_indices_cpu[0][test_iter]][1], vertices[New_edge_indices_cpu[1][test_iter]][1]], [vertices[New_edge_indices_cpu[0][test_iter]][2], vertices[New_edge_indices_cpu[1][test_iter]][2]], color='b')
-            ax.scatter(points_original[:, 0], points_original[:, 1], points_original[:, 2], s=1, color='r')   
-            matplotlib.pyplot.show()
-
-
+        sccs_batch=sccs_batch.astype(int)
         sccs_batch=np.reshape(sccs_batch,(batch_size,all_Reeb_laplacian.shape[1],all_sccs.shape[1]))
         reeb_laplace_batch=np.reshape(reeb_laplace_batch,(batch_size,all_Reeb_laplacian.shape[1],all_Reeb_laplacian.shape[1]))
+
+        x = torch.cat([pos[1], normal[1]], dim=2)
 
         logits, _ = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
         pred = logits.argmax(dim=-1)
@@ -326,29 +269,50 @@ def test(model, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
 
     return total_correct / len(loader.dataset)
 
-def createConfusionMatrix(model,loader,all_sccs,all_Reeb_laplacian,k,num_points):
+def createConfusionMatrix(model, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
     y_pred = [] # save predction
     y_true = [] # save ground truth
 
     # iterate over data
-    for  i,data in enumerate(loader):
-        x = torch.cat([data.pos, data.normal], dim=1)
-        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+    for i,(pos, y, normal, idx) in enumerate(loader):
+        batch_size=pos[1].shape[0]
+        ground_truth_labels=y[1].squeeze(1)
+        num_vertices_reeb=all_Reeb_laplacian.shape[1]
+        edge_dim=edges.shape[1]
 
-        sccs_batch=all_sccs[i*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1]:(i+1)*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1],0:all_sccs.shape[1]]
-        reeb_laplace_batch=all_Reeb_laplacian[i*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1]:(i+1)*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
+        test_reeb.Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points)
 
-        
-        sccs_batch=np.reshape(sccs_batch,(data.batch.unique().shape[0],all_Reeb_laplacian.shape[1],all_sccs.shape[1]))
-        reeb_laplace_batch=np.reshape(reeb_laplace_batch,(data.batch.unique().shape[0],all_Reeb_laplacian.shape[1],all_Reeb_laplacian.shape[1]))
+        ceva=torch.tile(idx.unsqueeze(1).to(device)*num_vertices_reeb,(1,num_vertices_reeb))
+        ceva=torch.reshape(ceva,[idx.shape[0]*num_vertices_reeb])
+        ceva=torch.reshape(ceva,(idx.shape[0],num_vertices_reeb))
 
-        logits, _ = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
+        ceva2=torch.arange(0,num_vertices_reeb,device='cuda')
+        ceva3=torch.tile(ceva2,[1,idx.shape[0]])
+        ceva3=torch.reshape(ceva3,(idx.shape[0],num_vertices_reeb))
+
+        ceva4_batch=torch.add(ceva,ceva3)
+        ceva4=torch.reshape(ceva4_batch,[idx.shape[0]*num_vertices_reeb])
+
+        ceva4=ceva4.to('cpu')
+
+        sccs_batch=all_sccs[ceva4]
+        reeb_laplace_batch=all_Reeb_laplacian[ceva4]
+        vertices_batch=vertices[ceva4]
+        edges_batch=edges[ceva4]
+
+        sccs_batch=sccs_batch.astype(int)
+        sccs_batch=np.reshape(sccs_batch,(batch_size,all_Reeb_laplacian.shape[1],all_sccs.shape[1]))
+        reeb_laplace_batch=np.reshape(reeb_laplace_batch,(batch_size,all_Reeb_laplacian.shape[1],all_Reeb_laplacian.shape[1]))
+
+        x = torch.cat([pos[1], normal[1]], dim=2)
+
+        logits, _ = logits, _ = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
         pred = logits.argmax(dim=-1)
         
         output = pred.cpu().numpy()
         y_pred.extend(output)  # save prediction
 
-        labels = data.y.cpu().numpy()
+        labels = y[1].cpu().numpy()
         y_true.extend(labels)  # save ground truth
 
     # constant for classes
@@ -389,36 +353,36 @@ if __name__ == '__main__':
         
     transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
-    # root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
-    # print(root)
+    root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+    print(root)
 
 
-    # dataset_train =index_dataset.Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=True,transforms=transforms)
-    # dataset_test = index_dataset.Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=False,transforms=transforms)
-
-
-    # # Verification...
-    # print(f"Train dataset shape: {dataset_train}")
-    # print(f"Test dataset shape:  {dataset_test}")
-
-
-    # train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
-    # test_loader  = DataLoader(dataset_test, batch_size=batch_size)
-
+    dataset_train =index_dataset.Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=True,transforms=transforms)
+    dataset_test = index_dataset.Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=False,transforms=transforms)
 
     ###################################################################
+    #Testing with Geometric Shapes
 
-    root="/media/rambo/ssd2/Alex_data/RGCNN/GeometricShapes"
+    # root="/media/rambo/ssd2/Alex_data/RGCNN/GeometricShapes"
 
-    transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
+    # transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
-    dataset_train = index_dataset.Geometric_with_indices(root=root,train_bool=True,transforms=transforms)
-    dataset_test = index_dataset.Geometric_with_indices(root=root,train_bool=False,transforms=transforms)
+    # dataset_train = index_dataset.Geometric_with_indices(root=root,train_bool=True,transforms=transforms)
+    # dataset_test = index_dataset.Geometric_with_indices(root=root,train_bool=False,transforms=transforms)
 
 
-    train_loader = DataLoader(dataset_train,batch_size=batch_size, shuffle=False, pin_memory=True)
-    test_loader= DataLoader(dataset_test,batch_size=batch_size)
+    # train_loader = DataLoader(dataset_train,batch_size=batch_size, shuffle=True, pin_memory=True)
+    # test_loader= DataLoader(dataset_test,batch_size=batch_size)
 
+
+    ####################################################################3
+
+
+
+  # # Verification...
+    # print(f"Train dataset shape: {dataset_train}")
+    # print(f"Test dataset shape:  {dataset_test}")
+    
     
     model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False, reg_prior=True)
     # # path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/28_02_22_10:10:19/model50.pt"
@@ -431,34 +395,34 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
 
+    ############################################################################33
+    #######Creating Reeb graphs
 
-    # path_logs="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/"
+    path_logs="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/"
 
-    # sccs_path_train=path_logs+directory+"train_sccs.npy"
-    # reeb_laplacian_path_train=path_logs+directory+"train_reeb_laplacian.npy"
-    # edge_matrix_path_train=path_logs+directory+"train_edge_matrix.npy"
-    # vertices_path_train=path_logs+directory+"train_vertices.npy"
+    sccs_path_train=path_logs+directory+"train_sccs.npy"
+    reeb_laplacian_path_train=path_logs+directory+"train_reeb_laplacian.npy"
+    edge_matrix_path_train=path_logs+directory+"train_edge_matrix.npy"
+    vertices_path_train=path_logs+directory+"train_vertices.npy"
 
-    # sccs_path_test=path_logs+directory+"test_sccs.npy"
-    # reeb_laplacian_path_test=path_logs+directory+"test_reeb_laplacian.npy"
-    # edge_matrix_path_test=path_logs+directory+"test_edge_matrix.npy"
-    # vertices_path_test=path_logs+directory+"test_vertices.npy"
+    sccs_path_test=path_logs+directory+"test_sccs.npy"
+    reeb_laplacian_path_test=path_logs+directory+"test_reeb_laplacian.npy"
+    edge_matrix_path_test=path_logs+directory+"test_edge_matrix.npy"
+    vertices_path_test=path_logs+directory+"test_vertices.npy"
 
-    # timp_train=0
-    # timp_test=0
-
-
-    # knn_REEB = 20
-    # ns = 20
-    # tau = 2
-    # reeb_nodes_num=20
-    # reeb_sim_margin=20
-    # pointNumber=200
-
-    # all_sccs_test, all_reeb_laplacian_test,all_reeb_edge_matrix_test= conv_reeb.Create_Reeb_custom_loader_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,edge_matrix_path=edge_matrix_path_test,vertices_path=vertices_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
-    # all_sccs_train, all_reeb_laplacian_train,all_reeb_edge_matrix_train=conv_reeb.Create_Reeb_custom_loader_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,edge_matrix_path=edge_matrix_path_train,vertices_path=vertices_path_train,time_execution=timp_train,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+    timp_train=0
+    timp_test=0
 
 
+    knn_REEB = 20
+    ns = 20
+    tau = 2
+    reeb_nodes_num=20
+    reeb_sim_margin=20
+    pointNumber=200
+
+    all_sccs_test, all_reeb_laplacian_test,all_reeb_edge_matrix_test= conv_reeb.Create_Reeb_custom_loader_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,edge_matrix_path=edge_matrix_path_test,vertices_path=vertices_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+    all_sccs_train, all_reeb_laplacian_train,all_reeb_edge_matrix_train=conv_reeb.Create_Reeb_custom_loader_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,edge_matrix_path=edge_matrix_path_train,vertices_path=vertices_path_train,time_execution=timp_train,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
 
     #############################################################
     #Load Reeb_graphs from file
@@ -475,117 +439,117 @@ if __name__ == '__main__':
     # path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50sccs_train.npy"
     # path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50sccs_test.npy"
 
-    path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Geometric_shapes/09_03_22_11:39:49train_reeb_laplacian.npy"
-    path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Geometric_shapes/09_03_22_11:39:49test_reeb_laplacian.npy"
+    # path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/train_reeb_laplacian.npy"
+    # path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/test_reeb_laplacian.npy"
 
-    path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Geometric_shapes/09_03_22_11:39:49train_sccs.npy"
-    path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Geometric_shapes/09_03_22_11:39:49test_sccs.npy"
+    # path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/train_sccs.npy"
+    # path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/test_sccs.npy"
 
-    path_vertices_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Geometric_shapes/09_03_22_11:39:49train_vertices.npy"
-    path_vertices_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Geometric_shapes/09_03_22_11:39:49test_vertices.npy"
+    # path_vertices_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/train_vertices.npy"
+    # path_vertices_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/test_vertices.npy"
 
-    path_edges_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Geometric_shapes/09_03_22_11:39:49train_edge_matrix.npy"
-    path_edges_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Geometric_shapes/09_03_22_11:39:49test_edge_matrix.npy"
+    # path_edges_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/train_edge_matrix.npy"
+    # path_edges_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/test_edge_matrix.npy"
 
-    all_sccs_train=np.load(path_sccs_train)
-    all_sccs_test=np.load(path_sccs_test)
+#     all_sccs_train=np.load(path_sccs_train)
+#     all_sccs_test=np.load(path_sccs_test)
 
-    all_reeb_laplacian_train=np.load(path_Reeb_laplacian_train)
-    all_reeb_laplacian_test=np.load(path_Reeb_laplacian_test)
+#     all_reeb_laplacian_train=np.load(path_Reeb_laplacian_train)
+#     all_reeb_laplacian_test=np.load(path_Reeb_laplacian_test)
 
-    vertices_train=np.load(path_vertices_train)
-    vertices_test=np.load(path_vertices_test)
+#     vertices_train=np.load(path_vertices_train)
+#     vertices_test=np.load(path_vertices_test)
 
-    edges_train=np.load(path_edges_train)
-    edges_test=np.load(path_edges_test)
+#     edges_train=np.load(path_edges_train)
+#     edges_test=np.load(path_edges_test)
 
-    # all_sccs_train=np.delete(all_sccs_train,[0,1,2],0)
-    # all_sccs_test=np.delete(all_sccs_test,[0,1,2],0)
+#     # all_sccs_train=np.delete(all_sccs_train,[0,1,2],0)
+#     # all_sccs_test=np.delete(all_sccs_test,[0,1,2],0)
 
-    # all_reeb_laplacian_train=np.delete(all_reeb_laplacian_train,[0,1,2],0)
-    # all_reeb_laplacian_test=np.delete(all_reeb_laplacian_test,[0,1,2],0)
+#     # all_reeb_laplacian_train=np.delete(all_reeb_laplacian_train,[0,1,2],0)
+#     # all_reeb_laplacian_test=np.delete(all_reeb_laplacian_test,[0,1,2],0)
 
-    ################################
-    regularization = 1e-9
-    for epoch in range(1, num_epochs+1):
-        train_start_time = time.time()
-        loss = train(model, optimizer,loader=train_loader,all_sccs=all_sccs_train,all_Reeb_laplacian=all_reeb_laplacian_train,edges=edges_train,vertices=vertices_train,k=k_KNN,num_points=num_points,regularization=regularization)
+#     ################################
+#     regularization = 1e-9
+#     for epoch in range(1, num_epochs+1):
+#         train_start_time = time.time()
+#         loss = train(model, optimizer,loader=train_loader,all_sccs=all_sccs_train,all_Reeb_laplacian=all_reeb_laplacian_train,edges=edges_train,vertices=vertices_train,k=k_KNN,num_points=num_points,regularization=regularization)
         
-        train_stop_time = time.time()
+#         train_stop_time = time.time()
 
-        writer.add_scalar("Loss/train", loss, epoch)
+#         writer.add_scalar("Loss/train", loss, epoch)
         
-        test_start_time = time.time()
-        test_acc = test(model, loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,edges=edges_test,vertices=vertices_test,k=k_KNN,num_points=num_points)
-        test_stop_time = time.time()
+#         test_start_time = time.time()
+#         test_acc = test(model, loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,edges=edges_test,vertices=vertices_test,k=k_KNN,num_points=num_points)
+#         test_stop_time = time.time()
 
 
 
-        writer.add_scalar("Acc/test", test_acc, epoch)
-        print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
-        print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
-        Test Time: \t{test_stop_time - test_start_time }')
+#         writer.add_scalar("Acc/test", test_acc, epoch)
+#         print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
+#         print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
+#         Test Time: \t{test_stop_time - test_start_time }')
 
-        # writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,k=k_KNN,num_points=num_points), epoch)
+#         # writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,k=k_KNN,num_points=num_points), epoch)
 
-        if(epoch%5==0):
-            torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+#         if(epoch%5==0):
+#             torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
 
-        my_lr_scheduler.step()
-
-    
-    torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
-
-
-       ###################################################################################################3
-#     #Testing the model
-
-#     timp_train=0
-#     timp_test=0
-
-
-#     knn_REEB = 20
-#     ns = 20
-#     tau = 2
-#     reeb_nodes_num=20
-#     reeb_sim_margin=20
-#     pointNumber=200
-
-#     path_logs="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/"
-#     sccs_path_test=path_logs+directory+"sccs_test.npy"
-#     reeb_laplacian_path_test=path_logs+directory+"reeb_laplacian_test.npy"
-
-#     random_rotate = Compose([
-#     RandomRotate(degrees=180, axis=0),
-#     RandomRotate(degrees=180, axis=1),
-#     RandomRotate(degrees=180, axis=2),
-# ])
-
-#     test_transform = Compose([
-#     random_rotate,
-#     SamplePoints(num_points, include_normals=True),
-#     NormalizeScale()
-# ])
-#     dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
-#     dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform)
-
-#     train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
-#     test_loader  = DataLoader(dataset_test, batch_size=batch_size)
+#         my_lr_scheduler.step()
 
     
+#     torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
 
-#     all_sccs_test, all_reeb_laplacian_test= conv_reeb.Create_Reeb_from_Dataset_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+
+#        ###################################################################################################3
+# #     #Testing the model
+
+# #     timp_train=0
+# #     timp_test=0
+
+
+# #     knn_REEB = 20
+# #     ns = 20
+# #     tau = 2
+# #     reeb_nodes_num=20
+# #     reeb_sim_margin=20
+# #     pointNumber=200
+
+# #     path_logs="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/"
+# #     sccs_path_test=path_logs+directory+"sccs_test.npy"
+# #     reeb_laplacian_path_test=path_logs+directory+"reeb_laplacian_test.npy"
+
+# #     random_rotate = Compose([
+# #     RandomRotate(degrees=180, axis=0),
+# #     RandomRotate(degrees=180, axis=1),
+# #     RandomRotate(degrees=180, axis=2),
+# # ])
+
+# #     test_transform = Compose([
+# #     random_rotate,
+# #     SamplePoints(num_points, include_normals=True),
+# #     NormalizeScale()
+# # ])
+# #     dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
+# #     dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform)
+
+# #     train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
+# #     test_loader  = DataLoader(dataset_test, batch_size=batch_size)
+
+    
+
+# #     all_sccs_test, all_reeb_laplacian_test= conv_reeb.Create_Reeb_from_Dataset_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
     
     
-#     model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False, reg_prior=True)
-#     path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/28_02_22_21:52:37/model260.pt"
-#     model.load_state_dict(torch.load(path_saved_model))
-#     model = model.to(device)
+# #     model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False, reg_prior=True)
+# #     path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/28_02_22_21:52:37/model260.pt"
+# #     model.load_state_dict(torch.load(path_saved_model))
+# #     model = model.to(device)
 
-#     test_start_time = time.time()
-#     test_acc = test(model, loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,k=k_KNN,num_points=num_points)
-#     test_stop_time = time.time()
-#     print(f'Test Accuracy: {test_acc:.4f}')
+# #     test_start_time = time.time()
+# #     test_acc = test(model, loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,k=k_KNN,num_points=num_points)
+# #     test_stop_time = time.time()
+# #     print(f'Test Accuracy: {test_acc:.4f}')
 
 
     
