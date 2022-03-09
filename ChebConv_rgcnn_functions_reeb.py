@@ -394,7 +394,7 @@ def Create_Reeb_from_Dataset_batched(loader,sccs_path,reeb_laplacian_path,edge_m
     return all_sccs,all_reeb_laplacians,all_reeb_edge_matrix
 
 
-def Create_Reeb_custom_loader_batched(loader,sccs_path,reeb_laplacian_path,edge_matrix_path,time_execution,knn,ns,tau,reeb_nodes_num,reeb_sim_margin,pointNumber):
+def Create_Reeb_custom_loader_batched(loader,sccs_path,reeb_laplacian_path,edge_matrix_path,vertices_path,time_execution,knn,ns,tau,reeb_nodes_num,reeb_sim_margin,pointNumber):
     # knn = 20
     # ns = 20
     # tau = 2
@@ -405,6 +405,7 @@ def Create_Reeb_custom_loader_batched(loader,sccs_path,reeb_laplacian_path,edge_
     all_sccs=np.eye(3)
     all_reeb_laplacians = np.zeros((3,reeb_nodes_num))
     all_reeb_edge_matrix = np.zeros((3,reeb_nodes_num))
+    all_positions = np.zeros((3,3))
 
     for i, (pos, y, normal, idx) in enumerate(loader):
 
@@ -494,23 +495,27 @@ def Create_Reeb_custom_loader_batched(loader,sccs_path,reeb_laplacian_path,edge_
             all_sccs=np.concatenate((all_sccs,np_sccs_batch),0)
             all_reeb_laplacians=np.concatenate((all_reeb_laplacians,np_reeb_laplacian),0)
             all_reeb_edge_matrix=np.concatenate((all_reeb_edge_matrix,np_Matrix_edges),0)
+            all_positions=np.concatenate((all_positions,vertices),0)
 
         
         print(all_sccs.shape)
         print(all_reeb_laplacians.shape)
         print(all_reeb_edge_matrix.shape)
+        print(all_positions.shape)
        
-    all_scc=np.delete(all_sccs,[0,1,2],0)
+    all_sccs=np.delete(all_sccs,[0,1,2],0)
     all_reeb_laplacians=np.delete(all_reeb_laplacians,[0,1,2],0)
     all_reeb_edge_matrix=np.delete(all_reeb_edge_matrix,[0,1,2],0) 
+    all_positions=np.delete(all_positions,[0,1,2],0)
 
     np.save(sccs_path, all_sccs)
     np.save(reeb_laplacian_path, all_reeb_laplacians)
     np.save(edge_matrix_path, all_reeb_edge_matrix)
+    np.save(vertices_path, all_positions)
 
     
 
-    return all_sccs,all_reeb_laplacians,all_reeb_edge_matrix
+    return all_sccs,all_reeb_laplacians,all_reeb_edge_matrix,all_positions
 
 def Create_Reeb_from_Dataset(loader,sccs_path,reeb_laplacian_path,time_execution):
     

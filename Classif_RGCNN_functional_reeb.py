@@ -326,10 +326,12 @@ if __name__ == '__main__':
     sccs_path_train=path_logs+directory+"train_sccs.npy"
     reeb_laplacian_path_train=path_logs+directory+"train_reeb_laplacian.npy"
     edge_matrix_path_train=path_logs+directory+"train_edge_matrix.npy"
+    vertices_path_train=path_logs+directory+"train_vertices.npy"
 
     sccs_path_test=path_logs+directory+"test_sccs.npy"
     reeb_laplacian_path_test=path_logs+directory+"test_reeb_laplacian.npy"
     edge_matrix_path_test=path_logs+directory+"test_edge_matrix.npy"
+    vertices_path_test=path_logs+directory+"test_vertices.npy"
 
     timp_train=0
     timp_test=0
@@ -344,8 +346,8 @@ if __name__ == '__main__':
     # all_sccs_test, all_reeb_laplacian_test,all_reeb_edge_matrix_test= conv_reeb.Create_Reeb_from_Dataset_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,edge_matrix_path=edge_matrix_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
     # all_sccs_train, all_reeb_laplacian_train,all_reeb_edge_matrix_train=conv_reeb.Create_Reeb_from_Dataset_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,edge_matrix_path=edge_matrix_path_train,time_execution=timp_train,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
 
-    all_sccs_test, all_reeb_laplacian_test,all_reeb_edge_matrix_test= conv_reeb.Create_Reeb_custom_loader_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,edge_matrix_path=edge_matrix_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
-    all_sccs_train, all_reeb_laplacian_train,all_reeb_edge_matrix_train=conv_reeb.Create_Reeb_custom_loader_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,edge_matrix_path=edge_matrix_path_train,time_execution=timp_train,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+    all_sccs_test, all_reeb_laplacian_test,all_reeb_edge_matrix_test,vertices_test= conv_reeb.Create_Reeb_custom_loader_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,edge_matrix_path=edge_matrix_path_test,vertices_path=vertices_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+    all_sccs_train, all_reeb_laplacian_train,all_reeb_edge_matrix_train,vertices_train=conv_reeb.Create_Reeb_custom_loader_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,edge_matrix_path=edge_matrix_path_train,vertices_path=vertices_path_train,time_execution=timp_train,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
 
 
 
