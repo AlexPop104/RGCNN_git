@@ -192,7 +192,7 @@ def extract_reeb_graph(point_cloud, knn, ns, reeb_nodes_num, reeb_sim_margin,poi
     scc2idx = dict()
     vertices = []
     edges = []
-    # np.random.seed(0)
+    np.random.seed(0)
     for i in range(ns):
         scc_level = []
 

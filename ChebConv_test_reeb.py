@@ -89,26 +89,7 @@ def Test_reeb(loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
 
             points_pcd=pos[1][iter_pcd]
 
-            point_pcd_np=np.asarray(points_pcd)
-
-
-            knn = 20
-            ns = 20
-            tau = 2
-            reeb_nodes_num=20
-            reeb_sim_margin=20
-            pointNumber=200
-    
-
-            vertices_aux, laplacian_Reeb_aux, sccs_aux ,edges_aux= conv_reeb.extract_reeb_graph(point_pcd_np, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
-
-            fig = matplotlib.pyplot.figure()
-            ax = fig.add_subplot(111, projection='3d')
-            ax.set_axis_off()
-            for e in edges_aux:
-                ax.plot([vertices_aux[e[0]][0], vertices_aux[e[1]][0]], [vertices_aux[e[0]][1], vertices_aux[e[1]][1]], [vertices_aux[e[0]][2], vertices_aux[e[1]][2]], color='b')
-            ax.scatter(point_pcd_np[:, 0], point_pcd_np[:, 1], point_pcd_np[:, 2], s=1, color='r')   
-            matplotlib.pyplot.show()
+            
 
             # sccs_pcd=sccs_batch[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1]]
             # reeb_laplace_pcd=reeb_laplace_batch[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
@@ -131,37 +112,42 @@ def Test_reeb(loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
             New_edge_indices, New_edge_values=torch_geometric.utils.dense_to_sparse(t_matrix_edges_2)
 
             New_edge_indices_cpu=New_edge_indices.to('cpu')
+
+           
+           ##############################
+           ###############Computing Reeb graph on the spot 
+           
+            point_pcd_np=np.asarray(points_pcd)
+            knn = 20
+            ns = 20
+            tau = 2
+            reeb_nodes_num=20
+            reeb_sim_margin=20
+            pointNumber=200
+            vertices_aux, laplacian_Reeb_aux, sccs_aux ,edges_aux= conv_reeb.extract_reeb_graph(point_pcd_np, knn, ns, reeb_nodes_num, reeb_sim_margin,pointNumber)
+
+            # fig = matplotlib.pyplot.figure()
+            # ax = fig.add_subplot(111, projection='3d')
+            # ax.set_axis_off()
+            # for e in edges_aux:
+            #     ax.plot([vertices_aux[e[0]][0], vertices_aux[e[1]][0]], [vertices_aux[e[0]][1], vertices_aux[e[1]][1]], [vertices_aux[e[0]][2], vertices_aux[e[1]][2]], color='b')
+            # ax.scatter(point_pcd_np[:, 0], point_pcd_np[:, 1], point_pcd_np[:, 2], s=1, color='r')   
+            # matplotlib.pyplot.show()
             
+            ######################################333
+            #Visualizing Reeb graph
+
             fig = matplotlib.pyplot.figure()
             ax = fig.add_subplot(111, projection='3d')
             ax.set_axis_off()
             for e in edges_aux:
                 ax.plot([vertices_aux[e[0]][0], vertices_aux[e[1]][0]], [vertices_aux[e[0]][1], vertices_aux[e[1]][1]], [vertices_aux[e[0]][2], vertices_aux[e[1]][2]], color='g')
             for test_iter in range(New_edge_indices_cpu.shape[1]):
-                ax.plot([vertices[New_edge_indices_cpu[0][test_iter]][0], vertices[New_edge_indices_cpu[1][test_iter]][0]], [vertices[New_edge_indices_cpu[0][test_iter]][1], vertices[New_edge_indices_cpu[1][test_iter]][1]], [vertices[New_edge_indices_cpu[0][test_iter]][2], vertices[New_edge_indices_cpu[1][test_iter]][2]], color='b')
+                ax.plot([vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][0], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][0]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][1], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][1]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][2], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][2]], color='b')
             ax.scatter(points_pcd[:, 0], points_pcd[:, 1], points_pcd[:, 2], s=1, color='r')   
             matplotlib.pyplot.show()
 
-        # for iter_pcd in range(batch_size):
-
-        #     points_pcd=pos[1][iter_pcd]
-        #     sccs_pcd=sccs_batch_original[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1]]
-        #     reeb_laplace_pcd=reeb_laplace_batch_original[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
-        #     vertices_batch_pcd=vertices_batch_original[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*all_Reeb_laplacian.shape[1]]
-        #     matrix_edges_batch_pcd=edges_batch_original[iter_pcd*all_Reeb_laplacian.shape[1]:(iter_pcd+1)*edges_batch.shape[1]]
-        #     t_matrix_edges_batch=torch.tensor(matrix_edges_batch_pcd)
-            
-        #     New_edge_indices, New_edge_values=torch_geometric.utils.dense_to_sparse(t_matrix_edges_batch)
-
-        #     New_edge_indices_cpu=New_edge_indices.to('cpu')
-            
-        #     fig = matplotlib.pyplot.figure()
-        #     ax = fig.add_subplot(111, projection='3d')
-        #     ax.set_axis_off()
-        #     for test_iter in range(New_edge_indices_cpu.shape[1]):
-        #         ax.plot([vertices[New_edge_indices_cpu[0][test_iter]][0], vertices[New_edge_indices_cpu[1][test_iter]][0]], [vertices[New_edge_indices_cpu[0][test_iter]][1], vertices[New_edge_indices_cpu[1][test_iter]][1]], [vertices[New_edge_indices_cpu[0][test_iter]][2], vertices[New_edge_indices_cpu[1][test_iter]][2]], color='b')
-        #     ax.scatter(points_pcd[:, 0], points_pcd[:, 1], points_pcd[:, 2], s=1, color='r')   
-        #     matplotlib.pyplot.show()
+        
 
         
 
@@ -255,44 +241,44 @@ if __name__ == '__main__':
     reeb_sim_margin=20
     pointNumber=200
 
-    #all_sccs_test, all_reeb_laplacian_test,edges_test,vertices_test= conv_reeb.Create_Reeb_custom_loader_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,edge_matrix_path=edge_matrix_path_test,vertices_path=vertices_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
-    all_sccs_train, all_reeb_laplacian_train,edges_train,vertices_train=conv_reeb.Create_Reeb_custom_loader_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,edge_matrix_path=edge_matrix_path_train,vertices_path=vertices_path_train,time_execution=timp_train,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+    # all_sccs_test, all_reeb_laplacian_test,edges_test,vertices_test= conv_reeb.Create_Reeb_custom_loader_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,edge_matrix_path=edge_matrix_path_test,vertices_path=vertices_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
+    # all_sccs_train, all_reeb_laplacian_train,edges_train,vertices_train=conv_reeb.Create_Reeb_custom_loader_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,edge_matrix_path=edge_matrix_path_train,vertices_path=vertices_path_train,time_execution=timp_train,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
 
 
 
     #############################################################
     #Load Reeb_graphs from file
 
-    # path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Geometric_shapes/09_03_22_16:25:12train_reeb_laplacian.npy"
-    # path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Geometric_shapes/09_03_22_16:25:12test_reeb_laplacian.npy"
+    path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/train_reeb_laplacian.npy"
+    path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/test_reeb_laplacian.npy"
 
-    # path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Geometric_shapes/09_03_22_16:25:12train_sccs.npy"
-    # path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Geometric_shapes/09_03_22_16:25:12test_sccs.npy"
+    path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/train_sccs.npy"
+    path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/test_sccs.npy"
 
-    # path_vertices_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Geometric_shapes/09_03_22_16:25:12train_vertices.npy"
-    # path_vertices_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Geometric_shapes/09_03_22_16:25:12test_vertices.npy"
+    path_vertices_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/train_vertices.npy"
+    path_vertices_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/test_vertices.npy"
 
-    # path_edges_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Geometric_shapes/09_03_22_16:25:12train_edge_matrix.npy"
-    # path_edges_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Geometric_shapes/09_03_22_16:25:12test_edge_matrix.npy"
+    path_edges_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/train_edge_matrix.npy"
+    path_edges_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/test_edge_matrix.npy"
 
-    # all_sccs_train=np.load(path_sccs_train)
-    # all_sccs_test=np.load(path_sccs_test)
+    all_sccs_train=np.load(path_sccs_train)
+    all_sccs_test=np.load(path_sccs_test)
 
-    # all_reeb_laplacian_train=np.load(path_Reeb_laplacian_train)
-    # all_reeb_laplacian_test=np.load(path_Reeb_laplacian_test)
+    all_reeb_laplacian_train=np.load(path_Reeb_laplacian_train)
+    all_reeb_laplacian_test=np.load(path_Reeb_laplacian_test)
 
-    # vertices_train=np.load(path_vertices_train)
-    # vertices_test=np.load(path_vertices_test)
+    vertices_train=np.load(path_vertices_train)
+    vertices_test=np.load(path_vertices_test)
 
-    # edges_train=np.load(path_edges_train)
-    # edges_test=np.load(path_edges_test)
+    edges_train=np.load(path_edges_train)
+    edges_test=np.load(path_edges_test)
 
     
 
     ################################
     
     Test_reeb(loader=train_loader,all_sccs=all_sccs_train,all_Reeb_laplacian=all_reeb_laplacian_train,edges=edges_train,vertices=vertices_train,k=k_KNN,num_points=num_points) 
-    #Test_reeb(loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,edges=edges_test,vertices=vertices_test,k=k_KNN,num_points=num_points)
+    Test_reeb(loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,edges=edges_test,vertices=vertices_test,k=k_KNN,num_points=num_points)
         
 
     
