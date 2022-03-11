@@ -188,7 +188,7 @@ def train(model, optimizer, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,
         num_vertices_reeb=all_Reeb_laplacian.shape[1]
         edge_dim=edges.shape[1]
 
-        #test_reeb.Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points)
+        # test_reeb.Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points)
 
         ceva=torch.tile(idx.unsqueeze(1).to(device)*num_vertices_reeb,(1,num_vertices_reeb))
         ceva=torch.reshape(ceva,[idx.shape[0]*num_vertices_reeb])
@@ -280,7 +280,7 @@ def createConfusionMatrix(model, loader,all_sccs,all_Reeb_laplacian,edges,vertic
         num_vertices_reeb=all_Reeb_laplacian.shape[1]
         edge_dim=edges.shape[1]
 
-        test_reeb.Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points)
+        # test_reeb.Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points)
 
         ceva=torch.tile(idx.unsqueeze(1).to(device)*num_vertices_reeb,(1,num_vertices_reeb))
         ceva=torch.reshape(ceva,[idx.shape[0]*num_vertices_reeb])
@@ -339,7 +339,7 @@ if __name__ == '__main__':
     batch_size = 32
     num_epochs = 260
     learning_rate = 1e-3
-    modelnet_num = 10
+    modelnet_num = 40
     k_KNN=30
 
     F = [128, 512, 1024]  # Outputs size of convolutional filter.
@@ -427,29 +427,19 @@ if __name__ == '__main__':
     #############################################################
     #Load Reeb_graphs from file
 
-    # path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04reeb_laplacian_train.npy"
-    # path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04reeb_laplacian_test.npy"
 
-    # path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04sccs_train.npy"
-    # path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/23_02_22_12:54:04sccs_test.npy"
 
-    # path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50reeb_laplacian_train.npy"
-    # path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50reeb_laplacian_test.npy"
+    path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/train_reeb_laplacian.npy"
+    path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/test_reeb_laplacian.npy"
 
-    # path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50sccs_train.npy"
-    # path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet10_unshuffled/08_03_22_11:14:50sccs_test.npy"
+    path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/train_sccs.npy"
+    path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/test_sccs.npy"
 
-    path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/train_reeb_laplacian.npy"
-    path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/test_reeb_laplacian.npy"
+    path_vertices_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/train_vertices.npy"
+    path_vertices_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/test_vertices.npy"
 
-    path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/train_sccs.npy"
-    path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/test_sccs.npy"
-
-    path_vertices_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/train_vertices.npy"
-    path_vertices_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/test_vertices.npy"
-
-    path_edges_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/train_edge_matrix.npy"
-    path_edges_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/test_edge_matrix.npy"
+    path_edges_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/train_edge_matrix.npy"
+    path_edges_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/test_edge_matrix.npy"
 
     all_sccs_train=np.load(path_sccs_train)
     all_sccs_test=np.load(path_sccs_test)
@@ -463,11 +453,7 @@ if __name__ == '__main__':
     edges_train=np.load(path_edges_train)
     edges_test=np.load(path_edges_test)
 
-    # all_sccs_train=np.delete(all_sccs_train,[0,1,2],0)
-    # all_sccs_test=np.delete(all_sccs_test,[0,1,2],0)
-
-    # all_reeb_laplacian_train=np.delete(all_reeb_laplacian_train,[0,1,2],0)
-    # all_reeb_laplacian_test=np.delete(all_reeb_laplacian_test,[0,1,2],0)
+   
 
 #     ################################
     regularization = 1e-9

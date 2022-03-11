@@ -1,7 +1,7 @@
 import time
 
-from torch.utils.tensorboard import SummaryWriter
-writer = SummaryWriter()
+# from torch.utils.tensorboard import SummaryWriter
+# writer = SummaryWriter()
 
 from torch import nn
 import torch
@@ -118,15 +118,15 @@ def Test_reeb(loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
         #     ########################################
         #     #Visualizing both Reeb graphs 
 
-        #     fig = matplotlib.pyplot.figure()
-        #     ax = fig.add_subplot(111, projection='3d')
-        #     ax.set_axis_off()
-        #     for e in edges_aux:
-        #         ax.plot([vertices_aux[e[0]][0], vertices_aux[e[1]][0]], [vertices_aux[e[0]][1], vertices_aux[e[1]][1]], [vertices_aux[e[0]][2], vertices_aux[e[1]][2]], color='g')
-        #     for test_iter in range(New_edge_indices_cpu.shape[1]):
-        #         ax.plot([vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][0], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][0]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][1], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][1]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][2], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][2]], color='b')
-        #     ax.scatter(points_pcd[:, 0], points_pcd[:, 1], points_pcd[:, 2], s=1, color='r')   
-        #     matplotlib.pyplot.show()
+            # fig = matplotlib.pyplot.figure()
+            # ax = fig.add_subplot(111, projection='3d')
+            # ax.set_axis_off()
+            # for e in edges_aux:
+            #     ax.plot([vertices_aux[e[0]][0], vertices_aux[e[1]][0]], [vertices_aux[e[0]][1], vertices_aux[e[1]][1]], [vertices_aux[e[0]][2], vertices_aux[e[1]][2]], color='g')
+            # for test_iter in range(New_edge_indices_cpu.shape[1]):
+            #     ax.plot([vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][0], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][0]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][1], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][1]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][2], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][2]], color='b')
+            # ax.scatter(points_pcd[:, 0], points_pcd[:, 1], points_pcd[:, 2], s=1, color='r')   
+            # matplotlib.pyplot.show()
 
 def Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
     
