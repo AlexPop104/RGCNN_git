@@ -180,6 +180,7 @@ criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 def train(model, optimizer, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points, regularization):
     model.train()
     total_loss = 0
+    total_correct = 0
     for i, (pos, y, normal, idx) in enumerate(loader):
         optimizer.zero_grad()
 
@@ -215,20 +216,26 @@ def train(model, optimizer, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,
         x = torch.cat([pos[1], normal[1]], dim=2)
 
         logits, regularizers  = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
+
+        pred = logits.argmax(dim=-1)
+        total_correct += int((pred == ground_truth_labels.to(device)).sum())
+
         loss    = criterion(logits, ground_truth_labels.to(device))
         s = t.sum(t.as_tensor(regularizers))
         loss = loss + regularization * s
+
         loss.backward()
         optimizer.step()
         total_loss += loss.item() * batch_size
         #if i%100 == 0:
             #print(f"{i}: curr loss: {loss}")
             #$print(f"{data.y} --- {logits.argmax(dim=1)}")
-    return total_loss / len(loader.dataset)
+    return total_loss / len(loader.dataset) , total_correct / len(loader.dataset) 
 
 @torch.no_grad()
 def test(model, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
     model.eval()
+    total_loss = 0
     total_correct = 0
     for i,(pos, y, normal, idx) in enumerate(loader):
 
@@ -263,11 +270,17 @@ def test(model, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
 
         x = torch.cat([pos[1], normal[1]], dim=2)
 
-        logits, _ = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
+        logits, regularizers = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
+        
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == ground_truth_labels.to(device)).sum())
 
-    return total_correct / len(loader.dataset)
+        loss    = criterion(logits, ground_truth_labels.to(device))
+        s = t.sum(t.as_tensor(regularizers))
+        loss = loss + regularization * s
+        total_loss += loss.item() * batch_size
+
+    return total_loss / len(loader.dataset) , total_correct / len(loader.dataset) 
 
 def createConfusionMatrix(model, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
     y_pred = [] # save predction
@@ -306,7 +319,7 @@ def createConfusionMatrix(model, loader,all_sccs,all_Reeb_laplacian,edges,vertic
 
         x = torch.cat([pos[1], normal[1]], dim=2)
 
-        logits, _ = logits, _ = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
+        logits, _  = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
         pred = logits.argmax(dim=-1)
         
         output = pred.cpu().numpy()
@@ -337,7 +350,7 @@ if __name__ == '__main__':
 
     num_points = 1024
     batch_size = 32
-    num_epochs = 260
+    num_epochs = 55
     learning_rate = 1e-3
     modelnet_num = 40
     k_KNN=30
@@ -459,20 +472,24 @@ if __name__ == '__main__':
     regularization = 1e-9
     for epoch in range(1, num_epochs+1):
         train_start_time = time.time()
-        loss = train(model, optimizer,loader=train_loader,all_sccs=all_sccs_train,all_Reeb_laplacian=all_reeb_laplacian_train,edges=edges_train,vertices=vertices_train,k=k_KNN,num_points=num_points,regularization=regularization)
+        train_loss,train_acc = train(model, optimizer,loader=train_loader,all_sccs=all_sccs_train,all_Reeb_laplacian=all_reeb_laplacian_train,edges=edges_train,vertices=vertices_train,k=k_KNN,num_points=num_points,regularization=regularization)
         
         train_stop_time = time.time()
 
-        writer.add_scalar("Loss/train", loss, epoch)
+        
         
         test_start_time = time.time()
-        test_acc = test(model, loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,edges=edges_test,vertices=vertices_test,k=k_KNN,num_points=num_points)
+        test_loss,test_acc = test(model, loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,edges=edges_test,vertices=vertices_test,k=k_KNN,num_points=num_points)
         test_stop_time = time.time()
 
 
-
+        writer.add_scalar("Loss/train", train_loss, epoch)
+        writer.add_scalar("Loss/test", test_loss, epoch)
+        writer.add_scalar("Acc/train", train_acc, epoch)
         writer.add_scalar("Acc/test", test_acc, epoch)
-        print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
+
+
+        print(f'Epoch: {epoch:02d}, Loss: {train_loss:.4f}, Test Accuracy: {test_acc:.4f}')
         print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
         Test Time: \t{test_stop_time - test_start_time }')
 

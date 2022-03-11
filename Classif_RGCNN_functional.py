@@ -69,7 +69,7 @@ class cls_model(nn.Module):
         #self.conv1 = conv.DenseChebConv(3, 128, 6)
         #self.conv1 = conv.DenseChebConv(6, 128, 6)
 
-        self.conv1 = conv.DenseChebConv(1, 128, 6)
+        self.conv1 = conv.DenseChebConv(7, 128, 6)
         self.conv2 = conv.DenseChebConv(128, 512, 5)
         self.conv3 = conv.DenseChebConv(512, 1024, 3)
         
@@ -89,7 +89,7 @@ class cls_model(nn.Module):
             L = conv.pairwise_distance(x) # W - weight matrix
             L = conv.get_laplacian(L)
 
-        out = self.conv1(x2, L)
+        out = self.conv1(x, L)
         out = self.relu1(out)
 
         if self.reg_prior:
@@ -147,19 +147,13 @@ criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 def train(model, optimizer, loader, regularization):
     model.train()
     total_loss = 0
+    total_correct = 0
     for i, data in enumerate(loader):
         optimizer.zero_grad()
 
         x=data.pos
         x=x.reshape(data.batch.unique().shape[0], num_points, 3)
         x2=conv.get_centroid(point_cloud=x,num_points=num_points)
-
-        # x2=x2.reshape((data.batch.unique().shape[0]*num_points,1))
-        # x2=torch.cat([x2,data.normal],dim=1)
-        # x2 = x2.reshape(data.batch.unique().shape[0], num_points, 4)
-
-
-        
 
         x = torch.cat([data.pos, data.normal], dim=1)   
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
@@ -168,23 +162,26 @@ def train(model, optimizer, loader, regularization):
         # logits, regularizers  = model(x.to(device))
 
         logits, regularizers  = model(x=x.to(device),x2=x2.to(device))
+        pred = logits.argmax(dim=-1)
+        total_correct += int((pred == data.y.to(device)).sum())
+        
         loss    = criterion(logits, data.y.to(device))
-        s = t.sum(t.as_tensor(regularizers))
-        loss = loss + regularization * s
+        # s = t.sum(t.as_tensor(regularizers))
+        # loss = loss + regularization * s
         loss.backward()
         optimizer.step()
         total_loss += loss.item() * data.num_graphs
         #if i%100 == 0:
             #print(f"{i}: curr loss: {loss}")
             #$print(f"{data.y} --- {logits.argmax(dim=1)}")
-    return total_loss / len(loader.dataset)
+    return total_loss / len(loader.dataset) , total_correct / len(loader.dataset) 
 
 @torch.no_grad()
 def test(model, loader):
     model.eval()
 
+    total_loss = 0
     total_correct = 0
-    total_confidence=0
     for data in loader:
         x=data.pos
         x=x.reshape(data.batch.unique().shape[0], num_points, 3)
@@ -203,8 +200,10 @@ def test(model, loader):
         
 
         logits, regularizers  = model(x=x.to(device),x2=x2.to(device))
-
-
+        loss    = criterion(logits, data.y.to(device))
+        # s = t.sum(t.as_tensor(regularizers))
+        # loss = loss + regularization * s
+        total_loss += loss.item() * data.num_graphs
         # x = torch.cat([data.pos, data.normal], dim=1)
         # x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
@@ -213,23 +212,9 @@ def test(model, loader):
 
         # logits, _ = model(x.to(device))
         pred = logits.argmax(dim=-1)
-
-
-        # maximum_value, pred= logits.max(dim=1)
-        # minimum_value,_=logits.min(dim=1)
-        
-        # #value_interval=torch.subtract(maximum_value,minimum_value)
-        # value_interval=torch.abs(minimum_value)
-        # pred_values_sum=torch.sum(logits,1)
-        # pred_values_sum=torch.add(pred_values_sum,logits.shape[1]*value_interval)
-        # maximum_value_final=torch.add(maximum_value,value_interval)
-        # confidence=torch.div(maximum_value_final,pred_values_sum)
-        # total_confidence += confidence.sum()
-
-
         total_correct += int((pred == data.y.to(device)).sum())
 
-    return total_correct / len(loader.dataset) 
+    return total_loss / len(loader.dataset) , total_correct / len(loader.dataset) 
 
 def createConfusionMatrix(model,loader):
     y_pred = [] # save predction
@@ -272,8 +257,8 @@ if __name__ == '__main__':
     os.mkdir(path)
 
     num_points = 1024
-    batch_size = 64
-    num_epochs = 200
+    batch_size = 32
+    num_epochs = 55
     learning_rate = 1e-3
     modelnet_num = 40
 
@@ -321,8 +306,8 @@ if __name__ == '__main__':
 
 
 
-    dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=train_transform)
-    dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform)
+    dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
+    dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms)
 
 
     # Verification...
@@ -344,19 +329,24 @@ if __name__ == '__main__':
     regularization = 1e-9
     for epoch in range(1, num_epochs+1):
         train_start_time = time.time()
-        loss = train(model, optimizer, train_loader, regularization=regularization)
+        train_loss,train_acc = train(model, optimizer, train_loader, regularization=regularization)
         train_stop_time = time.time()
 
-        writer.add_scalar("Loss/train", loss, epoch)
+        
+        
         
         test_start_time = time.time()
-        test_acc = test(model, test_loader)
+        test_loss,test_acc = test(model, test_loader)
         test_stop_time = time.time()
 
 
-
+        writer.add_scalar("Loss/train", train_loss, epoch)
+        writer.add_scalar("Loss/test", test_loss, epoch)
+        writer.add_scalar("Acc/train", train_acc, epoch)
         writer.add_scalar("Acc/test", test_acc, epoch)
-        print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
+
+
+        print(f'Epoch: {epoch:02d}, Loss: {train_loss:.4f}, Test Accuracy: {test_acc:.4f}')
         print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
         Test Time: \t{test_stop_time - test_start_time }')
 
