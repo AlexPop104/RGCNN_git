@@ -174,12 +174,13 @@ criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 
 def train(model, optimizer, loader,k,num_points, regularization):
     model.train()
+    total_correct = 0
     total_loss = 0
     for i, data in enumerate(loader):
         optimizer.zero_grad()
 
         x=data.pos
-        nr_points_fps=55
+        nr_points_fps=5
         
         nr_points_batch=int(data.batch.shape[0]/data.batch.unique().shape[0])
       
@@ -195,8 +196,12 @@ def train(model, optimizer, loader,k,num_points, regularization):
 
         logits, regularizers  = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points,sccs=sccs_batch)
         loss    = criterion(logits, data.y.to(device))
-        s = t.sum(t.as_tensor(regularizers))
-        loss = loss + regularization * s
+
+        pred = logits.argmax(dim=-1)
+        total_correct += int((pred == data.y.to(device)).sum())
+
+        # s = t.sum(t.as_tensor(regularizers))
+        #loss = loss + regularization * s
         loss.backward()
         optimizer.step()
         
@@ -204,17 +209,18 @@ def train(model, optimizer, loader,k,num_points, regularization):
         #if i%100 == 0:
             #print(f"{i}: curr loss: {loss}")
             #$print(f"{data.y} --- {logits.argmax(dim=1)}")
-    return total_loss / len(loader.dataset)
+    return total_loss / len(loader.dataset),total_correct / len(loader.dataset)
 
 @torch.no_grad()
 def test(model, loader,k,num_points):
     model.eval()
 
     total_correct = 0
+    total_loss = 0
     for i,data in enumerate(loader):
         
         x=data.pos
-        nr_points_fps=55
+        nr_points_fps=5
         
         nr_points_batch=int(data.batch.shape[0]/data.batch.unique().shape[0])
       
@@ -231,12 +237,15 @@ def test(model, loader,k,num_points):
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
-        logits,  _  = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points,sccs=sccs_batch)
-        
+        logits, regularizers  = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points,sccs=sccs_batch)
+        loss    = criterion(logits, data.y.to(device))
+        # s = t.sum(t.as_tensor(regularizers))
+        #loss = loss + regularization * s
+        total_loss += loss.item() * data.num_graphs
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == data.y.to(device)).sum())
 
-    return total_correct / len(loader.dataset)
+    return total_loss / len(loader.dataset),total_correct / len(loader.dataset)
 
 def createConfusionMatrix(model,loader,k,num_points):
     y_pred = [] # save predction
@@ -292,7 +301,7 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 1024
+    num_points = 16
     batch_size = 32
     num_epochs = 260
     learning_rate = 1e-3
@@ -347,20 +356,25 @@ if __name__ == '__main__':
     regularization = 1e-9
     for epoch in range(1, num_epochs+1):
         train_start_time = time.time()
-        loss = train(model, optimizer,loader=train_loader,k=k_KNN,num_points=num_points,regularization=regularization)
+        train_loss,train_acc = train(model, optimizer,loader=train_loader,k=k_KNN,num_points=num_points,regularization=regularization)
         
         train_stop_time = time.time()
 
-        writer.add_scalar("Loss/train", loss, epoch)
+        
         
         test_start_time = time.time()
-        test_acc = test(model, loader=test_loader,k=k_KNN,num_points=num_points)
+        test_loss,test_acc = test(model, loader=test_loader,k=k_KNN,num_points=num_points)
         test_stop_time = time.time()
 
 
-
+        writer.add_scalar("Loss/train", train_loss, epoch)
+        writer.add_scalar("Loss/test", test_loss, epoch)
+        writer.add_scalar("Acc/train", train_acc, epoch)
         writer.add_scalar("Acc/test", test_acc, epoch)
-        print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
+
+
+        
+        print(f'Epoch: {epoch:02d}, Loss: {train_loss:.4f}, Test Accuracy: {test_acc:.4f}')
         print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
         Test Time: \t{test_stop_time - test_start_time }')
 
