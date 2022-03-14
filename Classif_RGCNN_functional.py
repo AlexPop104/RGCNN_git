@@ -256,8 +256,8 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 1024
-    batch_size = 32
+    num_points = 128
+    batch_size = 8
     num_epochs = 55
     learning_rate = 1e-3
     modelnet_num = 40
