@@ -69,13 +69,13 @@ class cls_model(nn.Module):
         #self.conv1 = conv.DenseChebConv(3, 128, 6)
         #self.conv1 = conv.DenseChebConv(6, 128, 6)
 
-        self.conv1 = conv.DenseChebConv(7, 256, 6)
-        self.conv2 = conv.DenseChebConv(256,128, 5)
-        self.conv3 = conv.DenseChebConv(128, 64, 3)
+        self.conv1 = conv.DenseChebConv(7, 64, 6)
+        self.conv2 = conv.DenseChebConv(64,256, 5)
+        self.conv3 = conv.DenseChebConv(256,512, 3)
         
-        # self.fc1 = nn.Linear(256, 128, bias=True)
-        # self.fc2 = nn.Linear(128, 64, bias=True)
-        self.fc3 = nn.Linear(64, class_num, bias=True)
+        self.fc1 = nn.Linear(512, 256, bias=True)
+        self.fc2 = nn.Linear(256, 128, bias=True)
+        self.fc3 = nn.Linear(128, class_num, bias=True)
         
         self.max_pool = nn.MaxPool1d(self.vertice)
 
@@ -128,12 +128,12 @@ class cls_model(nn.Module):
         # out = self.relu4(out)
         # #out = self.dropout(out)
 
-        # out = self.fc2(out)
-        # if self.reg_prior:
-        #     self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
-        #     self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
-        # out = self.relu5(out)
-        # #out = self.dropout(out)
+        out = self.fc2(out)
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
+            self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
+        out = self.relu5(out)
+        #out = self.dropout(out)
 
         out = self.fc3(out)
         if self.reg_prior:
