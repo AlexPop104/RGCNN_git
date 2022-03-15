@@ -77,11 +77,12 @@ class cls_model(nn.Module):
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
-        self.conv1 = conv.DenseChebConv(6, 1000, 3)
+        self.conv1 = conv.DenseChebConv(7, 1000, 3)
+        self.conv2 = conv.DenseChebConv(1000, 1000, 6)
         self.conv_FPS = conv.DenseChebConv(1000, 1000, 6)
         self.conv_Reeb = conv.DenseChebConv(1000, 1000, 6)
         
-        self.fc1 = nn.Linear(2000, 600, bias=True)
+        self.fc1 = nn.Linear(3000, 600, bias=True)
         #self.fc2 = nn.Linear(512, 128, bias=True)
         self.fc3 = nn.Linear(600, class_num, bias=True)
         
@@ -96,11 +97,11 @@ class cls_model(nn.Module):
         self.regularization = []
 
 
-    def forward(self, x,k,batch_size,num_points,laplacian_Reeb,sccs):
+    def forward(self, x,x2,k,batch_size,num_points,laplacian_Reeb,sccs):
         self.regularizers = []
         with torch.no_grad():
             L = conv.pairwise_distance(x) # W - weight matrix
-            L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+            #L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
             L = conv.get_laplacian(L)
 
         out = self.conv1(x, L)
@@ -111,16 +112,16 @@ class cls_model(nn.Module):
         
         
 
-        # with torch.no_grad():
+        with torch.no_grad():
 
-        #     L = conv.pairwise_distance(out) # W - weight matrix
-        #     L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
-        #     L = conv.get_laplacian(L)
+            L = conv.pairwise_distance(out) # W - weight matrix
+            #L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+            L = conv.get_laplacian(L)
         
-        # out = self.conv2(out, L)
-        # out = self.relu2(out)
-        # if self.reg_prior:
-        #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+        out_conv = self.conv2(out, L)
+        out_conv = self.relu2(out)
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out_conv, (0, 2, 1)), L), out_conv))**2)
 
         with torch.no_grad():
             Vertices_final_Reeb=torch.zeros([batch_size,laplacian_Reeb.shape[2], out.shape[2]], dtype=torch.float32,device='cuda')
@@ -169,9 +170,10 @@ class cls_model(nn.Module):
         # out, _ = t.max(out, 1)
         out_FPS, _ = t.max(out_FPS, 1)
         out_Reeb, _ = t.max(out_Reeb, 1)
+        out_conv, _ = t.max(out_conv, 1)
 
         #out=torch.cat((out_Reeb,out),1)
-        out=torch.cat((out_Reeb,out_FPS),1)
+        out=torch.cat((out_Reeb,out_FPS,out_conv),1)
 
         # ~~~~ Fully Connected ~~~~
         
@@ -237,10 +239,14 @@ def train(model, optimizer, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,
         sccs_batch=np.reshape(sccs_batch,(batch_size,all_Reeb_laplacian.shape[1],all_sccs.shape[1]))
         reeb_laplace_batch=np.reshape(reeb_laplace_batch,(batch_size,all_Reeb_laplacian.shape[1],all_Reeb_laplacian.shape[1]))
 
+        x=pos[1]
+        x2=conv.get_centroid(point_cloud=x,num_points=num_points)
+
         x = torch.cat([pos[1], normal[1]], dim=2)
         #x=pos[1]
+        x=torch.cat([x,x2],dim=2)
 
-        logits, regularizers  = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
+        logits, regularizers  = model(x=x.to(device),x2=x2.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
 
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == ground_truth_labels.to(device)).sum())
@@ -293,10 +299,13 @@ def test(model, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
         sccs_batch=np.reshape(sccs_batch,(batch_size,all_Reeb_laplacian.shape[1],all_sccs.shape[1]))
         reeb_laplace_batch=np.reshape(reeb_laplace_batch,(batch_size,all_Reeb_laplacian.shape[1],all_Reeb_laplacian.shape[1]))
 
-        x = torch.cat([pos[1], normal[1]], dim=2)
-        #x=pos[1]
+        x=pos[1]
+        x2=conv.get_centroid(point_cloud=x,num_points=num_points)
 
-        logits, regularizers = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
+        x = torch.cat([pos[1], normal[1]], dim=2)
+        x=torch.cat([x,x2],dim=2)
+
+        logits, regularizers = model(x=x.to(device),x2=x2.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
         
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == ground_truth_labels.to(device)).sum())

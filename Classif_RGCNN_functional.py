@@ -332,9 +332,7 @@ if __name__ == '__main__':
         train_loss,train_acc = train(model, optimizer, train_loader, regularization=regularization)
         train_stop_time = time.time()
 
-        
-        
-        
+    
         test_start_time = time.time()
         test_loss,test_acc = test(model, test_loader)
         test_stop_time = time.time()

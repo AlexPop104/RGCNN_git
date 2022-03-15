@@ -104,7 +104,6 @@ class cls_model(nn.Module):
 
             with torch.no_grad():
 
-                
                 nr_points_fps=55
                 nr_points_batch=int(num_points)
                 out_2=torch.reshape(out,(batch_size*num_points,out.shape[2]))

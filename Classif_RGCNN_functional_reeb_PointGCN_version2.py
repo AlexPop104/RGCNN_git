@@ -77,13 +77,13 @@ class cls_model(nn.Module):
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
-        self.conv1 = conv.DenseChebConv(6, 1000, 3)
-        self.conv_FPS = conv.DenseChebConv(1000, 1000, 6)
-        self.conv_Reeb = conv.DenseChebConv(1000, 1000, 6)
+        self.conv1 = conv.DenseChebConv(7, 128, 3)
+        self.conv_FPS = conv.DenseChebConv(128, 256, 6)
+        self.conv_Reeb = conv.DenseChebConv(128, 256, 6)
         
-        self.fc1 = nn.Linear(2000, 600, bias=True)
+        self.fc1 = nn.Linear(512, 256, bias=True)
         #self.fc2 = nn.Linear(512, 128, bias=True)
-        self.fc3 = nn.Linear(600, class_num, bias=True)
+        self.fc3 = nn.Linear(256, class_num, bias=True)
         
         self.fc_t = nn.Linear(128, class_num)
 
@@ -96,7 +96,7 @@ class cls_model(nn.Module):
         self.regularization = []
 
 
-    def forward(self, x,k,batch_size,num_points,laplacian_Reeb,sccs):
+    def forward(self, x,x2,k,batch_size,num_points,laplacian_Reeb,sccs):
         self.regularizers = []
         with torch.no_grad():
             L = conv.pairwise_distance(x) # W - weight matrix
@@ -237,10 +237,14 @@ def train(model, optimizer, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,
         sccs_batch=np.reshape(sccs_batch,(batch_size,all_Reeb_laplacian.shape[1],all_sccs.shape[1]))
         reeb_laplace_batch=np.reshape(reeb_laplace_batch,(batch_size,all_Reeb_laplacian.shape[1],all_Reeb_laplacian.shape[1]))
 
+        x=pos[1]
+        x2=conv.get_centroid(point_cloud=x,num_points=num_points)
+
         x = torch.cat([pos[1], normal[1]], dim=2)
         #x=pos[1]
+        x=torch.cat([x,x2],dim=2)
 
-        logits, regularizers  = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
+        logits, regularizers  = model(x=x.to(device),x2=x2.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
 
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == ground_truth_labels.to(device)).sum())
@@ -293,10 +297,13 @@ def test(model, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
         sccs_batch=np.reshape(sccs_batch,(batch_size,all_Reeb_laplacian.shape[1],all_sccs.shape[1]))
         reeb_laplace_batch=np.reshape(reeb_laplace_batch,(batch_size,all_Reeb_laplacian.shape[1],all_Reeb_laplacian.shape[1]))
 
-        x = torch.cat([pos[1], normal[1]], dim=2)
-        #x=pos[1]
+        x=pos[1]
+        x2=conv.get_centroid(point_cloud=x,num_points=num_points)
 
-        logits, regularizers = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
+        x = torch.cat([pos[1], normal[1]], dim=2)
+        x=torch.cat([x,x2],dim=2)
+
+        logits, regularizers = model(x=x.to(device),x2=x2.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
         
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == ground_truth_labels.to(device)).sum())
