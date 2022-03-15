@@ -77,9 +77,9 @@ class cls_model(nn.Module):
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
-        self.conv1 = conv.DenseChebConv(7, 128, 3)
-        self.conv_FPS = conv.DenseChebConv(128, 256, 6)
-        self.conv_Reeb = conv.DenseChebConv(128, 256, 6)
+        self.conv1 = conv.DenseChebConv(7, 64, 3)
+        self.conv_FPS = conv.DenseChebConv(64, 256, 6)
+        self.conv_Reeb = conv.DenseChebConv(64, 256, 6)
         
         self.fc1 = nn.Linear(512, 256, bias=True)
         #self.fc2 = nn.Linear(512, 128, bias=True)
