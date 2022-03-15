@@ -69,13 +69,13 @@ class cls_model(nn.Module):
         #self.conv1 = conv.DenseChebConv(3, 128, 6)
         #self.conv1 = conv.DenseChebConv(6, 128, 6)
 
-        self.conv1 = conv.DenseChebConv(7, 128, 6)
-        self.conv2 = conv.DenseChebConv(128, 512, 5)
-        self.conv3 = conv.DenseChebConv(512, 1024, 3)
+        self.conv1 = conv.DenseChebConv(7, 64, 6)
+        self.conv2 = conv.DenseChebConv(64, 128, 5)
+        self.conv3 = conv.DenseChebConv(128, 256, 3)
         
-        self.fc1 = nn.Linear(1024, 512, bias=True)
-        self.fc2 = nn.Linear(512, 128, bias=True)
-        self.fc3 = nn.Linear(128, class_num, bias=True)
+        self.fc1 = nn.Linear(256, 128, bias=True)
+        self.fc2 = nn.Linear(128, 64, bias=True)
+        self.fc3 = nn.Linear(64, class_num, bias=True)
         
         self.max_pool = nn.MaxPool1d(self.vertice)
 
@@ -119,13 +119,13 @@ class cls_model(nn.Module):
 
         # ~~~~ Fully Connected ~~~~
         
-        out = self.fc1(out)
+        # out = self.fc1(out)
 
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
-            self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
 
-        out = self.relu4(out)
+        # out = self.relu4(out)
         #out = self.dropout(out)
 
         out = self.fc2(out)
@@ -256,8 +256,8 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 16
-    batch_size = 32
+    num_points = 512
+    batch_size = 16
     num_epochs = 250
     learning_rate = 1e-3
     modelnet_num = 40
