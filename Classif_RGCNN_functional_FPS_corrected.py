@@ -106,36 +106,22 @@ class cls_model(nn.Module):
 
                 
                 nr_points_fps=55
-        
                 nr_points_batch=int(num_points)
-
                 out_2=torch.reshape(out,(batch_size*num_points,out.shape[2]))
-      
                 sccs_batch=conv.get_fps_matrix_2(point_cloud=out_2,batch_size=batch_size,nr_points=num_points,nr_points_fps=nr_points_fps)
-
-        
                 sccs_batch=sccs_batch.long()
-
                 sccs_batch=torch.reshape(sccs_batch,(batch_size,nr_points_fps,nr_points_batch))
-
                 Vertices_final_FPS=torch.zeros([batch_size,sccs_batch.shape[1], out_2.shape[1]], dtype=torch.float32,device='cuda')
 
                 for batch_iter in range(batch_size):   
                     for i in range(sccs_batch.shape[1]):
                         Vertices_pool_FPS=torch.zeros([sccs_batch[batch_iter,i].shape[0],out_2.shape[1]], dtype=torch.float32,device='cuda')
-                        
                         Vertices_pool_FPS=out[batch_iter,sccs_batch[batch_iter,i]]
-
                         Vertices_final_FPS[batch_iter,i],_ =t.max(Vertices_pool_FPS, 0)
-
-                
-
 
                 L = conv.pairwise_distance(out) # W - weight matrix
                 #L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
                 L = conv.get_laplacian(L)
-
-           
 
             out = self.conv2(out, L)
             out = self.relu2(out)

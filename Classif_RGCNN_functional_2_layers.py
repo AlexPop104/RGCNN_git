@@ -119,13 +119,13 @@ class cls_model(nn.Module):
 
         # ~~~~ Fully Connected ~~~~
         
-        out = self.fc1(out)
+        # out = self.fc1(out)
 
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
-            self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
 
-        out = self.relu4(out)
+        # out = self.relu4(out)
         #out = self.dropout(out)
 
         out = self.fc2(out)
@@ -256,8 +256,8 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 128
-    batch_size = 32
+    num_points = 512
+    batch_size = 16
     num_epochs = 250
     learning_rate = 1e-3
     modelnet_num = 40

@@ -71,13 +71,14 @@ class cls_model(nn.Module):
         self.relu1 = nn.ReLU()
         self.relu2 = nn.ReLU()
         self.relu_Reeb = nn.ReLU()
+        self.relu_FPS = nn.ReLU()
         self.relu4 = nn.ReLU()
         self.relu5 = nn.ReLU()
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
         self.conv1 = conv.DenseChebConv(6, 1000, 3)
-        self.conv2 = conv.DenseChebConv(1000, 1000, 6)
+        self.conv_FPS = conv.DenseChebConv(1000, 1000, 6)
         self.conv_Reeb = conv.DenseChebConv(1000, 1000, 6)
         
         self.fc1 = nn.Linear(2000, 600, bias=True)
@@ -108,70 +109,93 @@ class cls_model(nn.Module):
         if self.reg_prior:
             self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
         
-        if self.one_layer == False:
+        
 
+        # with torch.no_grad():
 
-            with torch.no_grad():
-                Vertices_final_Reeb=torch.zeros([batch_size,laplacian_Reeb.shape[2], out.shape[2]], dtype=torch.float32,device='cuda')
+        #     L = conv.pairwise_distance(out) # W - weight matrix
+        #     L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+        #     L = conv.get_laplacian(L)
+        
+        # out = self.conv2(out, L)
+        # out = self.relu2(out)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+
+        with torch.no_grad():
+            Vertices_final_Reeb=torch.zeros([batch_size,laplacian_Reeb.shape[2], out.shape[2]], dtype=torch.float32,device='cuda')
+
+            for batch_iter in range(batch_size):   
+                for i in range(laplacian_Reeb.shape[1]):
+                    Vertices_pool_Reeb=torch.zeros([sccs[batch_iter,i].shape[0],out.shape[2]], dtype=torch.float32,device='cuda')
+                    Vertices_pool_Reeb=out[batch_iter,sccs[batch_iter,i]]
+                    Vertices_final_Reeb[batch_iter,i],_ =t.max(Vertices_pool_Reeb, 0)
+                    
+                
+            laplacian_Reeb_final= torch.tensor(laplacian_Reeb, dtype=torch.float32,device='cuda')
+
+        out_Reeb=self.conv_Reeb(Vertices_final_Reeb,laplacian_Reeb_final)
+        out_Reeb=self.relu_Reeb(out_Reeb)
+
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out_Reeb, (0, 2, 1)), laplacian_Reeb_final), out_Reeb))**2)
+
+        with torch.no_grad():
+
+                nr_points_fps=55
+                nr_points_batch=int(num_points)
+                out_2=torch.reshape(out,(batch_size*num_points,out.shape[2]))
+                sccs_batch=conv.get_fps_matrix_2(point_cloud=out_2,batch_size=batch_size,nr_points=num_points,nr_points_fps=nr_points_fps)
+                sccs_batch=sccs_batch.long()
+                sccs_batch=torch.reshape(sccs_batch,(batch_size,nr_points_fps,nr_points_batch))
+                Vertices_final_FPS=torch.zeros([batch_size,sccs_batch.shape[1], out_2.shape[1]], dtype=torch.float32,device='cuda')
 
                 for batch_iter in range(batch_size):   
-                    for i in range(laplacian_Reeb.shape[1]):
-                        Vertices_pool_Reeb=torch.zeros([sccs[batch_iter,i].shape[0],out.shape[2]], dtype=torch.float32,device='cuda')
-                        
-                        Vertices_pool_Reeb=out[batch_iter,sccs[batch_iter,i]]
+                    for i in range(sccs_batch.shape[1]):
+                        Vertices_pool_FPS=torch.zeros([sccs_batch[batch_iter,i].shape[0],out_2.shape[1]], dtype=torch.float32,device='cuda')
+                        Vertices_pool_FPS=out[batch_iter,sccs_batch[batch_iter,i]]
+                        Vertices_final_FPS[batch_iter,i],_ =t.max(Vertices_pool_FPS, 0)
 
-                        Vertices_final_Reeb[batch_iter,i],_ =t.max(Vertices_pool_Reeb, 0)
-                        
-                    
-                laplacian_Reeb_final= torch.tensor(laplacian_Reeb, dtype=torch.float32,device='cuda')
-
-
-
-                L = conv.pairwise_distance(out) # W - weight matrix
-                L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+                L = conv.pairwise_distance(Vertices_final_FPS) # W - weight matrix
+                #L = conv.get_one_matrix_knn(L, 40,batch_size,L.shape[2])
                 L = conv.get_laplacian(L)
-            
-            out = self.conv2(out, L)
-            out = self.relu2(out)
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
-            out_Reeb=self.conv_Reeb(Vertices_final_Reeb,laplacian_Reeb_final)
-            out_Reeb=self.relu_Reeb(out_Reeb)
-    
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out_Reeb, (0, 2, 1)), laplacian_Reeb_final), out_Reeb))**2)
-    
-            out, _ = t.max(out, 1)
-            out_Reeb, _ = t.max(out_Reeb, 1)
+        out_FPS=self.conv_FPS(Vertices_final_FPS,L)
+        out_FPS=self.relu_FPS(out_FPS)
 
-            out=torch.cat((out_Reeb,out),1)
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out_FPS, (0, 2, 1)), L), out_FPS))**2)
 
-            # ~~~~ Fully Connected ~~~~
-            
-            out = self.fc1(out)
+        # out, _ = t.max(out, 1)
+        out_fps, _ = t.max(out_FPS, 1)
+        out_Reeb, _ = t.max(out_Reeb, 1)
 
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
+        #out=torch.cat((out_Reeb,out),1)
+        out=torch.cat((out_Reeb,out_FPS),1)
 
-            out = self.relu4(out)
-            #out = self.dropout(out)
+        # ~~~~ Fully Connected ~~~~
+        
+        out = self.fc1(out)
 
-            # out = self.fc2(out)
-            # if self.reg_prior:
-            #     self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
-            #     self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
-            # out = self.relu5(out)
-            #out = self.dropout(out)
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
+            self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
 
-            out = self.fc3(out)
-            if self.reg_prior:
+        out = self.relu4(out)
+        #out = self.dropout(out)
+
+        # out = self.fc2(out)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
+        # out = self.relu5(out)
+        #out = self.dropout(out)
+
+        out = self.fc3(out)
+        if self.reg_prior:
                 self.regularizers.append(t.linalg.norm(self.fc3.weight.data[0]) ** 2)
                 self.regularizers.append(t.linalg.norm(self.fc3.bias.data[0]) ** 2)
-        else:
-            out, _ = t.max(out, 1)
-            out = self.fc(out)
+
 
         return out, self.regularizers
 
