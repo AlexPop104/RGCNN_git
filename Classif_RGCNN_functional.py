@@ -40,6 +40,9 @@ import seaborn as sn
 import pandas as pd
 import numpy as np
 
+import matplotlib.pyplot
+from mpl_toolkits.mplot3d import Axes3D
+
 
 
 class cls_model(nn.Module):
@@ -70,12 +73,12 @@ class cls_model(nn.Module):
         #self.conv1 = conv.DenseChebConv(6, 128, 6)
 
         self.conv1 = conv.DenseChebConv(7, 64, 6)
-        self.conv2 = conv.DenseChebConv(64,256, 5)
-        self.conv3 = conv.DenseChebConv(256,512, 3)
+        self.conv2 = conv.DenseChebConv(64,128, 5)
+        self.conv3 = conv.DenseChebConv(128,256, 3)
         
-        self.fc1 = nn.Linear(512, 256, bias=True)
-        self.fc2 = nn.Linear(256, 128, bias=True)
-        self.fc3 = nn.Linear(128, class_num, bias=True)
+        self.fc1 = nn.Linear(256, 128, bias=True)
+        self.fc2 = nn.Linear(128, 64, bias=True)
+        self.fc3 = nn.Linear(64, class_num, bias=True)
         
         self.max_pool = nn.MaxPool1d(self.vertice)
 
@@ -119,14 +122,14 @@ class cls_model(nn.Module):
 
         # ~~~~ Fully Connected ~~~~
         
-        # out = self.fc1(out)
+        out = self.fc1(out)
 
-        # if self.reg_prior:
-        #     self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
-        #     self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
+            self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
 
-        # out = self.relu4(out)
-        # #out = self.dropout(out)
+        out = self.relu4(out)
+        #out = self.dropout(out)
 
         out = self.fc2(out)
         if self.reg_prior:
@@ -180,6 +183,9 @@ def train(model, optimizer, loader, regularization):
 def test(model, loader):
     model.eval()
 
+    # Dict from labels to names
+
+
     total_loss = 0
     total_correct = 0
     for data in loader:
@@ -201,6 +207,9 @@ def test(model, loader):
 
         logits, regularizers  = model(x=x.to(device),x2=x2.to(device))
         loss    = criterion(logits, data.y.to(device))
+
+        
+
         # s = t.sum(t.as_tensor(regularizers))
         # loss = loss + regularization * s
         total_loss += loss.item() * data.num_graphs
@@ -256,7 +265,7 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 512
+    num_points = 2048
     batch_size = 16
     num_epochs = 250
     learning_rate = 1e-3
@@ -332,17 +341,16 @@ if __name__ == '__main__':
         train_loss,train_acc = train(model, optimizer, train_loader, regularization=regularization)
         train_stop_time = time.time()
 
-    
         test_start_time = time.time()
         test_loss,test_acc = test(model, test_loader)
         test_stop_time = time.time()
 
+        conv.test_pcd_pred(model=model,loader=train_loader,num_points=num_points,device=device)
 
         writer.add_scalar("Loss/train", train_loss, epoch)
         writer.add_scalar("Loss/test", test_loss, epoch)
         writer.add_scalar("Acc/train", train_acc, epoch)
         writer.add_scalar("Acc/test", test_acc, epoch)
-
 
         print(f'Epoch: {epoch:02d}, Loss: {train_loss:.4f}, Test Accuracy: {test_acc:.4f}')
         print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \

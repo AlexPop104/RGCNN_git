@@ -69,12 +69,12 @@ class cls_model(nn.Module):
         #self.conv1 = conv.DenseChebConv(3, 128, 6)
         #self.conv1 = conv.DenseChebConv(6, 128, 6)
 
-        self.conv1 = conv.DenseChebConv(7, 128, 6)
-        self.conv2 = conv.DenseChebConv(128, 512, 5)
+        self.conv1 = conv.DenseChebConv(7, 64, 6)
+        self.conv2 = conv.DenseChebConv(64, 256, 5)
         # self.conv3 = conv.DenseChebConv(512, 1024, 3)
         
         # self.fc1 = nn.Linear(1024, 512, bias=True)
-        self.fc2 = nn.Linear(512, 128, bias=True)
+        self.fc2 = nn.Linear(256, 128, bias=True)
         self.fc3 = nn.Linear(128, class_num, bias=True)
         
         self.max_pool = nn.MaxPool1d(self.vertice)
@@ -256,7 +256,7 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 512
+    num_points = 128
     batch_size = 16
     num_epochs = 250
     learning_rate = 1e-3

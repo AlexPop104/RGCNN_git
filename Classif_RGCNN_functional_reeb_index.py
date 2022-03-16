@@ -76,13 +76,13 @@ class cls_model(nn.Module):
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
-        self.conv1 = conv.DenseChebConv(6, 1000, 3)
-        self.conv2 = conv.DenseChebConv(1000, 1000, 6)
-        self.conv_Reeb = conv.DenseChebConv(1000, 1000, 6)
+        self.conv1 = conv.DenseChebConv(6, 32, 3)
+        self.conv2 = conv.DenseChebConv(32, 256, 6)
+        self.conv_Reeb = conv.DenseChebConv(32, 256, 6)
         
-        self.fc1 = nn.Linear(2000, 600, bias=True)
-        #self.fc2 = nn.Linear(512, 128, bias=True)
-        self.fc3 = nn.Linear(600, class_num, bias=True)
+        self.fc1 = nn.Linear(512, 256, bias=True)
+        self.fc2 = nn.Linear(256, 128, bias=True)
+        self.fc3 = nn.Linear(128, class_num, bias=True)
         
         self.fc_t = nn.Linear(128, class_num)
 
@@ -158,12 +158,12 @@ class cls_model(nn.Module):
             out = self.relu4(out)
             #out = self.dropout(out)
 
-            # out = self.fc2(out)
-            # if self.reg_prior:
-            #     self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
-            #     self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
-            # out = self.relu5(out)
-            #out = self.dropout(out)
+            out = self.fc2(out)
+            if self.reg_prior:
+                self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
+                self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
+            out = self.relu5(out)
+            out = self.dropout(out)
 
             out = self.fc3(out)
             if self.reg_prior:

@@ -15,6 +15,10 @@ import h5py
 from sklearn.neighbors import NearestNeighbors
 import numpy as np
 
+import matplotlib.pyplot as plt
+
+from mpl_toolkits.mplot3d import Axes3D
+
 
 
 
@@ -220,7 +224,141 @@ def get_centroid(point_cloud,num_points):
     Distances=torch.unsqueeze(Distances,2)
 
     return Distances
-    
+
+def test_pcd_pred(model, loader,num_points,device):
+    with torch.no_grad():
+        label_to_names = {0: 'airplane',
+                                1: 'bathtub',
+                                2: 'bed',
+                                3: 'bench',
+                                4: 'bookshelf',
+                                5: 'bottle',
+                                6: 'bowl',
+                                7: 'car',
+                                8: 'chair',
+                                9: 'cone',
+                                10: 'cup',
+                                11: 'curtain',
+                                12: 'desk',
+                                13: 'door',
+                                14: 'dresser',
+                                15: 'flower_pot',
+                                16: 'glass_box',
+                                17: 'guitar',
+                                18: 'keyboard',
+                                19: 'lamp',
+                                20: 'laptop',
+                                21: 'mantel',
+                                22: 'monitor',
+                                23: 'night_stand',
+                                24: 'person',
+                                25: 'piano',
+                                26: 'plant',
+                                27: 'radio',
+                                28: 'range_hood',
+                                29: 'sink',
+                                30: 'sofa',
+                                31: 'stairs',
+                                32: 'stool',
+                                33: 'table',
+                                34: 'tent',
+                                35: 'toilet',
+                                36: 'tv_stand',
+                                37: 'vase',
+                                38: 'wardrobe',
+                                39: 'xbox'}
+        for data in loader:
+                x=data.pos
+                x=x.reshape(data.batch.unique().shape[0], num_points, 3)
+                x2=get_centroid(point_cloud=x,num_points=num_points)
+
+                x = torch.cat([data.pos, data.normal], dim=1)   
+                x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+
+                x=torch.cat([x,x2],dim=2)
+        
+                logits, regularizers  = model(x=x.to(device),x2=x2.to(device))
+
+                viz_points=data.pos
+                viz_points=viz_points.reshape(data.batch.unique().shape[0], num_points, 3)
+
+                pred = logits.argmax(dim=-1)
+
+                ground_truth=data.y.to(device)
+                
+                for it_pcd in range(data.batch.unique().shape[0]):
+                    if(ground_truth[it_pcd]!=pred[it_pcd]):
+
+                        print("Actual label:")
+                        print(label_to_names[ground_truth[it_pcd].item()])
+                        print("Predicted label:")
+                        print(label_to_names[pred[it_pcd].item()])
+
+                        fig = plt.figure()
+                        ax = fig.add_subplot(111, projection='3d')
+                        ax.set_axis_off()
+                        ax.scatter(viz_points[it_pcd,:,0], viz_points[it_pcd,:, 1], viz_points[it_pcd,:,2], s=1, color='r')   
+                        plt.show()
+
+def test_pcd_with_index(model, loader,num_points,device):
+    with torch.no_grad():
+        label_to_names = {0: 'airplane',
+                                1: 'bathtub',
+                                2: 'bed',
+                                3: 'bench',
+                                4: 'bookshelf',
+                                5: 'bottle',
+                                6: 'bowl',
+                                7: 'car',
+                                8: 'chair',
+                                9: 'cone',
+                                10: 'cup',
+                                11: 'curtain',
+                                12: 'desk',
+                                13: 'door',
+                                14: 'dresser',
+                                15: 'flower_pot',
+                                16: 'glass_box',
+                                17: 'guitar',
+                                18: 'keyboard',
+                                19: 'lamp',
+                                20: 'laptop',
+                                21: 'mantel',
+                                22: 'monitor',
+                                23: 'night_stand',
+                                24: 'person',
+                                25: 'piano',
+                                26: 'plant',
+                                27: 'radio',
+                                28: 'range_hood',
+                                29: 'sink',
+                                30: 'sofa',
+                                31: 'stairs',
+                                32: 'stool',
+                                33: 'table',
+                                34: 'tent',
+                                35: 'toilet',
+                                36: 'tv_stand',
+                                37: 'vase',
+                                38: 'wardrobe',
+                                39: 'xbox'}
+        for i,(pos, y, normal, idx) in loader:
+               
+                viz_points=pos[1]
+                viz_points=viz_points.reshape(pos[1].shape[0], num_points, 3)
+
+                
+                for it_pcd in range(pos[1][0]):
+                     
+                        print(idx[it_pcd])
+                        fig = plt.figure()
+                        ax = fig.add_subplot(111, projection='3d')
+                        ax.set_axis_off()
+                        ax.scatter(viz_points[it_pcd,:,0], viz_points[it_pcd,:, 1], viz_points[it_pcd,:,2], s=1, color='r')   
+                        plt.show()
+
+
+
 
 class DenseChebConv(nn.Module):
     def __init__(self, in_channels: int, out_channels: int, K: int, normalization: Optional[bool]=True, bias: bool=False, **kwargs):
