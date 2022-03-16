@@ -256,7 +256,7 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 128
+    num_points = 2048
     batch_size = 16
     num_epochs = 250
     learning_rate = 1e-3

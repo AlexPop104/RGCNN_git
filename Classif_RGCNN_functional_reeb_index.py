@@ -76,13 +76,13 @@ class cls_model(nn.Module):
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
-        self.conv1 = conv.DenseChebConv(6, 32, 3)
-        self.conv2 = conv.DenseChebConv(32, 256, 6)
-        self.conv_Reeb = conv.DenseChebConv(32, 256, 6)
+        self.conv1 = conv.DenseChebConv(6, 1000, 3)
+        self.conv2 = conv.DenseChebConv(1000, 1000, 6)
+        self.conv_Reeb = conv.DenseChebConv(1000, 1000, 6)
         
-        self.fc1 = nn.Linear(512, 256, bias=True)
-        self.fc2 = nn.Linear(256, 128, bias=True)
-        self.fc3 = nn.Linear(128, class_num, bias=True)
+        self.fc1 = nn.Linear(2000, 600, bias=True)
+        #self.fc2 = nn.Linear(256, 128, bias=True)
+        self.fc3 = nn.Linear(600, class_num, bias=True)
         
         self.fc_t = nn.Linear(128, class_num)
 
@@ -158,12 +158,12 @@ class cls_model(nn.Module):
             out = self.relu4(out)
             #out = self.dropout(out)
 
-            out = self.fc2(out)
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
-            out = self.relu5(out)
-            out = self.dropout(out)
+            # out = self.fc2(out)
+            # if self.reg_prior:
+            #     self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
+            #     self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
+            # out = self.relu5(out)
+            # out = self.dropout(out)
 
             out = self.fc3(out)
             if self.reg_prior:
@@ -189,7 +189,7 @@ def train(model, optimizer, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,
         num_vertices_reeb=all_Reeb_laplacian.shape[1]
         edge_dim=edges.shape[1]
 
-        # test_reeb.Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points)
+        #test_reeb.Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points)
 
         ceva=torch.tile(idx.unsqueeze(1).to(device)*num_vertices_reeb,(1,num_vertices_reeb))
         ceva=torch.reshape(ceva,[idx.shape[0]*num_vertices_reeb])
@@ -373,7 +373,6 @@ if __name__ == '__main__':
     root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
     print(root)
 
-
     dataset_train =index_dataset.Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=True,transforms=transforms)
     dataset_test = index_dataset.Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=False,transforms=transforms)
 
@@ -470,7 +469,7 @@ if __name__ == '__main__':
     edges_test=np.load(path_edges_test)
 
    
-
+    #conv.test_pcd_with_index(model=model,loader=train_loader,num_points=num_points,device=device)
 #     ################################
     regularization = 1e-9
     for epoch in range(1, num_epochs+1):
@@ -479,8 +478,6 @@ if __name__ == '__main__':
         
         train_stop_time = time.time()
 
-        
-        
         test_start_time = time.time()
         test_loss,test_acc = test(model, loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,edges=edges_test,vertices=vertices_test,k=k_KNN,num_points=num_points)
         test_stop_time = time.time()

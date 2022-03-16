@@ -300,7 +300,7 @@ def test_pcd_pred(model, loader,num_points,device):
                         ax.scatter(viz_points[it_pcd,:,0], viz_points[it_pcd,:, 1], viz_points[it_pcd,:,2], s=1, color='r')   
                         plt.show()
 
-def test_pcd_with_index(model, loader,num_points,device):
+def test_pcd_with_index(model,loader,num_points,device):
     with torch.no_grad():
         label_to_names = {0: 'airplane',
                                 1: 'bathtub',
@@ -342,15 +342,18 @@ def test_pcd_with_index(model, loader,num_points,device):
                                 37: 'vase',
                                 38: 'wardrobe',
                                 39: 'xbox'}
-        for i,(pos, y, normal, idx) in loader:
+        for i,(pos, y, normal, idx) in enumerate(loader):
                
                 viz_points=pos[1]
                 viz_points=viz_points.reshape(pos[1].shape[0], num_points, 3)
 
                 
-                for it_pcd in range(pos[1][0]):
+                for it_pcd in range(pos[1].shape[0]):
                      
+                        print("PCD nr:")
                         print(idx[it_pcd])
+                        print("PCD label")
+                        print(label_to_names[y[1][it_pcd].item()])
                         fig = plt.figure()
                         ax = fig.add_subplot(111, projection='3d')
                         ax.set_axis_off()
