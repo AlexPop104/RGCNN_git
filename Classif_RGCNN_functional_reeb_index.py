@@ -76,13 +76,13 @@ class cls_model(nn.Module):
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
-        self.conv1 = conv.DenseChebConv(6, 1000, 3)
-        self.conv2 = conv.DenseChebConv(1000, 1000, 6)
-        self.conv_Reeb = conv.DenseChebConv(1000, 1000, 6)
+        self.conv1 = conv.DenseChebConv(6, 64, 2)
+        self.conv2 = conv.DenseChebConv(64, 256, 2)
+        self.conv_Reeb = conv.DenseChebConv(64, 256,2)
         
-        self.fc1 = nn.Linear(2000, 600, bias=True)
+        self.fc1 = nn.Linear(512, 300, bias=True)
         #self.fc2 = nn.Linear(256, 128, bias=True)
-        self.fc3 = nn.Linear(600, class_num, bias=True)
+        self.fc3 = nn.Linear(300, class_num, bias=True)
         
         self.fc_t = nn.Linear(128, class_num)
 
@@ -99,7 +99,7 @@ class cls_model(nn.Module):
         self.regularizers = []
         with torch.no_grad():
             L = conv.pairwise_distance(x) # W - weight matrix
-            L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+            # L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
             L = conv.get_laplacian(L)
 
         out = self.conv1(x, L)
@@ -128,7 +128,7 @@ class cls_model(nn.Module):
 
 
                 L = conv.pairwise_distance(out) # W - weight matrix
-                L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+                # L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
                 L = conv.get_laplacian(L)
             
             out = self.conv2(out, L)

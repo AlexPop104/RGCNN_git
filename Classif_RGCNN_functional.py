@@ -69,12 +69,27 @@ class cls_model(nn.Module):
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
+
+
+        # self.fc_test_1 = nn.Linear(7, 64, bias=True)
+        # self.fc_test_2 = nn.Linear(64, 128, bias=True)
+        # self.fc_test_3 = nn.Linear(128,256,bias=True)
+        # self.relu_test_1 = nn.ReLU()
+        # self.relu_test_2 = nn.ReLU()
+        # self.relu_test_3 = nn.ReLU()
+
+
+
+
         #self.conv1 = conv.DenseChebConv(3, 128, 6)
         #self.conv1 = conv.DenseChebConv(6, 128, 6)
 
-        self.conv1 = conv.DenseChebConv(7, 64, 6)
-        self.conv2 = conv.DenseChebConv(64,128, 5)
-        self.conv3 = conv.DenseChebConv(128,256, 3)
+        # self.conv1 = conv.DenseChebConv(7, 64, 6)
+        # self.conv2 = conv.DenseChebConv(64,128, 5)
+        # self.conv3 = conv.DenseChebConv(128,256, 3)
+
+        
+
         
         self.fc1 = nn.Linear(256, 128, bias=True)
         self.fc2 = nn.Linear(128, 64, bias=True)
@@ -85,39 +100,69 @@ class cls_model(nn.Module):
         self.regularizer = 0
         self.regularization = []
 
+        
+
 
     def forward(self, x,x2):
-        self.regularizers = []
-        with torch.no_grad():
-            L = conv.pairwise_distance(x) # W - weight matrix
-            L = conv.get_laplacian(L)
+    #     self.regularizers = []
+    #     with torch.no_grad():
+    #         L = conv.pairwise_distance(x) # W - weight matrix
+    #         L = conv.get_laplacian(L)
 
-        out = self.conv1(x, L)
-        out = self.relu1(out)
+    #     out = self.conv1(x, L)
+    #     out = self.relu1(out)
 
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+    #     if self.reg_prior:
+    #         self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
         
        
-        with torch.no_grad():
-            L = conv.pairwise_distance(out) # W - weight matrix
-            L = conv.get_laplacian(L)
+    #     with torch.no_grad():
+    #         L = conv.pairwise_distance(out) # W - weight matrix
+    #         L = conv.get_laplacian(L)
         
-        out = self.conv2(out, L)
-        out = self.relu2(out)
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+    #     out = self.conv2(out, L)
+    #     out = self.relu2(out)
+    #     if self.reg_prior:
+    #         self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
-        with torch.no_grad():
-            L = conv.pairwise_distance(out) # W - weight matrix
-            L = conv.get_laplacian(L)
+    #     with torch.no_grad():
+    #         L = conv.pairwise_distance(out) # W - weight matrix
+    #         L = conv.get_laplacian(L)
         
-        out = self.conv3(out, L)
-        out = self.relu3(out)
+    #     out = self.conv3(out, L)
+    #     out = self.relu3(out)
         
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+    #     if self.reg_prior:
+    #         self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
+        #   out, _ = t.max(out, 1)
+        #################################################################################
+        #Test fully connected
+        
+
+        
+
+        out = self.fc_test_1(x)
+
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(self.fc_test_1.weight.data[0]) ** 2)
+            self.regularizers.append(t.linalg.norm(self.fc_test_1.bias.data[0]) ** 2)
+
+        out = self.relu_test_1(out)
+        #out = self.dropout(out)
+
+        out = self.fc2_test_2(out)
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(self.fc2_test_2.weight.data[0]) ** 2)
+            self.regularizers.append(t.linalg.norm(self.fc2_test_2.bias.data[0]) ** 2)
+        out = self.relu_test_2(out)
+        #out = self.dropout(out)
+
+        out = self.fc_test_3(out)
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(self.fc_test_3.weight.data[0]) ** 2)
+            self.regularizers.append(t.linalg.norm(self.fc_test_3.bias.data[0]) ** 2)
+        
         out, _ = t.max(out, 1)
 
         # ~~~~ Fully Connected ~~~~
