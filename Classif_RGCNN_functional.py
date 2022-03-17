@@ -81,19 +81,24 @@ class cls_model(nn.Module):
 
 
 
-        #self.conv1 = conv.DenseChebConv(3, 128, 6)
-        #self.conv1 = conv.DenseChebConv(6, 128, 6)
+        # self.conv1 = conv.DenseChebConv(3, 128, 6)
+        # self.conv1 = conv.DenseChebConv(6, 128, 6)
 
-        # self.conv1 = conv.DenseChebConv(7, 64, 6)
-        # self.conv2 = conv.DenseChebConv(64,128, 5)
-        # self.conv3 = conv.DenseChebConv(128,256, 3)
+        self.conv1 = conv.DenseChebConv(6, 128, 3)
+        self.conv2 = conv.DenseChebConv(128,512, 3)
+        self.conv3 = conv.DenseChebConv(512,1024, 3)
+
+        # self.conv1 = conv.DenseChebConv(7, 128, 6)
+        # self.conv2 = conv.DenseChebConv(128,512, 5)
+        # self.conv3 = conv.DenseChebConv(512,1024, 3)
+
 
         
 
         
-        self.fc1 = nn.Linear(256, 128, bias=True)
-        self.fc2 = nn.Linear(128, 64, bias=True)
-        self.fc3 = nn.Linear(64, class_num, bias=True)
+        self.fc1 = nn.Linear(1024, 512, bias=True)
+        self.fc2 = nn.Linear(512, 128, bias=True)
+        self.fc3 = nn.Linear(128, class_num, bias=True)
         
         self.max_pool = nn.MaxPool1d(self.vertice)
 
@@ -102,68 +107,68 @@ class cls_model(nn.Module):
 
         
 
+    def forward(self, x):
+    #def forward(self, x,x2):
+        self.regularizers = []
+        with torch.no_grad():
+            L = conv.pairwise_distance(x) # W - weight matrix
+            L = conv.get_laplacian(L)
 
-    def forward(self, x,x2):
-    #     self.regularizers = []
-    #     with torch.no_grad():
-    #         L = conv.pairwise_distance(x) # W - weight matrix
-    #         L = conv.get_laplacian(L)
+        out = self.conv1(x, L)
+        out = self.relu1(out)
 
-    #     out = self.conv1(x, L)
-    #     out = self.relu1(out)
-
-    #     if self.reg_prior:
-    #         self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
         
        
-    #     with torch.no_grad():
-    #         L = conv.pairwise_distance(out) # W - weight matrix
-    #         L = conv.get_laplacian(L)
+        with torch.no_grad():
+            L = conv.pairwise_distance(out) # W - weight matrix
+            L = conv.get_laplacian(L)
         
-    #     out = self.conv2(out, L)
-    #     out = self.relu2(out)
-    #     if self.reg_prior:
-    #         self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+        out = self.conv2(out, L)
+        out = self.relu2(out)
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
-    #     with torch.no_grad():
-    #         L = conv.pairwise_distance(out) # W - weight matrix
-    #         L = conv.get_laplacian(L)
+        with torch.no_grad():
+            L = conv.pairwise_distance(out) # W - weight matrix
+            L = conv.get_laplacian(L)
         
-    #     out = self.conv3(out, L)
-    #     out = self.relu3(out)
+        out = self.conv3(out, L)
+        out = self.relu3(out)
         
-    #     if self.reg_prior:
-    #         self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
-        #   out, _ = t.max(out, 1)
+        out, _ = t.max(out, 1)
         #################################################################################
         #Test fully connected
         
 
         
 
-        out = self.fc_test_1(x)
+        # out = self.fc_test_1(x)
 
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(self.fc_test_1.weight.data[0]) ** 2)
-            self.regularizers.append(t.linalg.norm(self.fc_test_1.bias.data[0]) ** 2)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc_test_1.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc_test_1.bias.data[0]) ** 2)
 
-        out = self.relu_test_1(out)
-        #out = self.dropout(out)
+        # out = self.relu_test_1(out)
+        # #out = self.dropout(out)
 
-        out = self.fc2_test_2(out)
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(self.fc2_test_2.weight.data[0]) ** 2)
-            self.regularizers.append(t.linalg.norm(self.fc2_test_2.bias.data[0]) ** 2)
-        out = self.relu_test_2(out)
-        #out = self.dropout(out)
+        # out = self.fc_test_2(out)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc_test_2.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc_test_2.bias.data[0]) ** 2)
+        # out = self.relu_test_2(out)
+        # #out = self.dropout(out)
 
-        out = self.fc_test_3(out)
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(self.fc_test_3.weight.data[0]) ** 2)
-            self.regularizers.append(t.linalg.norm(self.fc_test_3.bias.data[0]) ** 2)
+        # out = self.fc_test_3(out)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc_test_3.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc_test_3.bias.data[0]) ** 2)
         
-        out, _ = t.max(out, 1)
+        # out, _ = t.max(out, 1)
 
         # ~~~~ Fully Connected ~~~~
         
@@ -199,17 +204,18 @@ def train(model, optimizer, loader, regularization):
     for i, data in enumerate(loader):
         optimizer.zero_grad()
 
-        x=data.pos
-        x=x.reshape(data.batch.unique().shape[0], num_points, 3)
-        x2=conv.get_centroid(point_cloud=x,num_points=num_points)
+        # x=data.pos
+        # x=x.reshape(data.batch.unique().shape[0], num_points, 3)
+        # x2=conv.get_centroid(point_cloud=x,num_points=num_points)
 
         x = torch.cat([data.pos, data.normal], dim=1)   
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
-        x=torch.cat([x,x2],dim=2)
+        # x=torch.cat([x,x2],dim=2)
         # logits, regularizers  = model(x.to(device))
 
-        logits, regularizers  = model(x=x.to(device),x2=x2.to(device))
+        #logits, regularizers  = model(x=x.to(device),x2=x2.to(device))
+        logits, regularizers  = model(x=x.to(device))
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == data.y.to(device)).sum())
         
@@ -234,9 +240,9 @@ def test(model, loader):
     total_loss = 0
     total_correct = 0
     for data in loader:
-        x=data.pos
-        x=x.reshape(data.batch.unique().shape[0], num_points, 3)
-        x2=conv.get_centroid(point_cloud=x,num_points=num_points)
+        # x=data.pos
+        # x=x.reshape(data.batch.unique().shape[0], num_points, 3)
+        # x2=conv.get_centroid(point_cloud=x,num_points=num_points)
 
         # x2=x2.reshape((data.batch.unique().shape[0]*num_points,1))
         # x2=torch.cat([x2,data.normal],dim=1)
@@ -247,10 +253,11 @@ def test(model, loader):
         x = torch.cat([data.pos, data.normal], dim=1)   
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
-        x=torch.cat([x,x2],dim=2)
+        # x=torch.cat([x,x2],dim=2)
         
 
-        logits, regularizers  = model(x=x.to(device),x2=x2.to(device))
+        #logits, regularizers  = model(x=x.to(device),x2=x2.to(device))
+        logits, regularizers  = model(x=x.to(device))
         loss    = criterion(logits, data.y.to(device))
 
         
@@ -290,10 +297,7 @@ def createConfusionMatrix(model,loader):
         labels = data.y.cpu().numpy()
         y_true.extend(labels)  # save ground truth
 
-    # constant for classes
-    # classes = ('T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
-    #            'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle Boot')
-
+   
     # Build confusion matrix
     cf_matrix = confusion_matrix(y_true, y_pred,normalize='true')
     df_cm = pd.DataFrame(cf_matrix, index=[i for i in range(40)],
@@ -310,7 +314,7 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 2048
+    num_points = 512
     batch_size = 16
     num_epochs = 250
     learning_rate = 1e-3
@@ -390,7 +394,7 @@ if __name__ == '__main__':
         test_loss,test_acc = test(model, test_loader)
         test_stop_time = time.time()
 
-        conv.test_pcd_pred(model=model,loader=train_loader,num_points=num_points,device=device)
+        #conv.test_pcd_pred(model=model,loader=train_loader,num_points=num_points,device=device)
 
         writer.add_scalar("Loss/train", train_loss, epoch)
         writer.add_scalar("Loss/test", test_loss, epoch)

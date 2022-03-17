@@ -69,12 +69,12 @@ class cls_model(nn.Module):
         #self.conv1 = conv.DenseChebConv(3, 128, 6)
         #self.conv1 = conv.DenseChebConv(6, 128, 6)
 
-        self.conv1 = conv.DenseChebConv(7, 64, 1)
-        self.conv2 = conv.DenseChebConv(64, 256, 1)
+        self.conv1 = conv.DenseChebConv(6, 128, 1)
+        self.conv2 = conv.DenseChebConv(128, 512, 1)
         # self.conv3 = conv.DenseChebConv(512, 1024, 3)
         
-        # self.fc1 = nn.Linear(1024, 512, bias=True)
-        self.fc2 = nn.Linear(256, 128, bias=True)
+        self.fc1 = nn.Linear(512, 128, bias=True)
+        #self.fc2 = nn.Linear(128, 128, bias=True)
         self.fc3 = nn.Linear(128, class_num, bias=True)
         
         self.max_pool = nn.MaxPool1d(self.vertice)
@@ -83,7 +83,8 @@ class cls_model(nn.Module):
         self.regularization = []
 
 
-    def forward(self, x,x2):
+    def forward(self, x):
+    #def forward(self, x,x2):
         self.regularizers = []
         with torch.no_grad():
             L = conv.pairwise_distance(x) # W - weight matrix
@@ -119,20 +120,20 @@ class cls_model(nn.Module):
 
         # ~~~~ Fully Connected ~~~~
         
-        # out = self.fc1(out)
+        out = self.fc1(out)
 
-        # if self.reg_prior:
-        #     self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
-        #     self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
+            self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
 
-        # out = self.relu4(out)
+        out = self.relu4(out)
         #out = self.dropout(out)
 
-        out = self.fc2(out)
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
-            self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
-        out = self.relu5(out)
+        # out = self.fc2(out)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
+        # out = self.relu5(out)
         #out = self.dropout(out)
 
         out = self.fc3(out)
@@ -151,17 +152,18 @@ def train(model, optimizer, loader, regularization):
     for i, data in enumerate(loader):
         optimizer.zero_grad()
 
-        x=data.pos
-        x=x.reshape(data.batch.unique().shape[0], num_points, 3)
-        x2=conv.get_centroid(point_cloud=x,num_points=num_points)
+        # x=data.pos
+        # x=x.reshape(data.batch.unique().shape[0], num_points, 3)
+        # x2=conv.get_centroid(point_cloud=x,num_points=num_points)
 
         x = torch.cat([data.pos, data.normal], dim=1)   
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
-        x=torch.cat([x,x2],dim=2)
+        # x=torch.cat([x,x2],dim=2)
         # logits, regularizers  = model(x.to(device))
 
-        logits, regularizers  = model(x=x.to(device),x2=x2.to(device))
+        logits, regularizers  = model(x.to(device))
+        #logits, regularizers  = model(x=x.to(device),x2=x2.to(device))
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == data.y.to(device)).sum())
         
@@ -183,9 +185,9 @@ def test(model, loader):
     total_loss = 0
     total_correct = 0
     for data in loader:
-        x=data.pos
-        x=x.reshape(data.batch.unique().shape[0], num_points, 3)
-        x2=conv.get_centroid(point_cloud=x,num_points=num_points)
+        # x=data.pos
+        # x=x.reshape(data.batch.unique().shape[0], num_points, 3)
+        # x2=conv.get_centroid(point_cloud=x,num_points=num_points)
 
         # x2=x2.reshape((data.batch.unique().shape[0]*num_points,1))
         # x2=torch.cat([x2,data.normal],dim=1)
@@ -196,10 +198,10 @@ def test(model, loader):
         x = torch.cat([data.pos, data.normal], dim=1)   
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
-        x=torch.cat([x,x2],dim=2)
+        # x=torch.cat([x,x2],dim=2)
         
-
-        logits, regularizers  = model(x=x.to(device),x2=x2.to(device))
+        logits, regularizers  = model(x=x.to(device))
+        #logits, regularizers  = model(x=x.to(device),x2=x2.to(device))
         loss    = criterion(logits, data.y.to(device))
         # s = t.sum(t.as_tensor(regularizers))
         # loss = loss + regularization * s
