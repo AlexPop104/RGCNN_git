@@ -176,7 +176,7 @@ def train(model, optimizer, loader,all_sccs,all_Reeb_laplacian,k,num_points, reg
         x = torch.cat([data.pos, data.normal], dim=1)
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
-
+        
         sccs_batch=all_sccs[i*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1]:(i+1)*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1],0:all_sccs.shape[1]]
         reeb_laplace_batch=all_Reeb_laplacian[i*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1]:(i+1)*data.batch.unique().shape[0]*all_Reeb_laplacian.shape[1],0:all_Reeb_laplacian.shape[1]]
 

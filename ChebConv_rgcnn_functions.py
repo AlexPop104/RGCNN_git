@@ -225,6 +225,46 @@ def get_centroid(point_cloud,num_points):
 
     return Distances
 
+def get_RotationInvariantFeatures(point_cloud,num_points):
+
+    nr_coordinates=point_cloud.shape[2]
+    batch_size=point_cloud.shape[0]
+    
+    centroid=torch.sum(point_cloud,1)
+    centroid=centroid/num_points
+
+    centroid_pos=torch.tile(centroid[:,0:3],(1,num_points))
+    centroid_pos=torch.reshape(centroid_pos,(batch_size,num_points,3))
+
+    centroid_norm=torch.tile(centroid[:,3:6],(1,num_points))
+    centroid_norm=torch.reshape(centroid_pos,(batch_size,num_points,3))
+
+
+    Pos_dif=torch.subtract(point_cloud[:,:,0:3],centroid_pos)
+    
+
+    Distances=torch.linalg.norm(Pos_dif,dim=2)
+    Distances=torch.unsqueeze(Distances,2)
+
+    cosine_sim=torch.nn.CosineSimilarity(dim=2, eps=1e-6)
+
+    output_1 = cosine_sim(centroid_norm, point_cloud[:,:,3:6])
+    output_1=torch.unsqueeze(output_1,2)
+    output_2 = cosine_sim(centroid_norm, Pos_dif)
+    output_2=torch.unsqueeze(output_2,2)
+    output_3=cosine_sim(point_cloud[:,:,3:6],Pos_dif)
+    output_3=torch.unsqueeze(output_3,2)
+    
+    PPF_features=torch.cat((Distances,output_1,output_2,output_3),dim=2)
+
+    
+
+    
+    
+
+
+    return PPF_features
+
 def test_pcd_pred(model, loader,num_points,device):
     with torch.no_grad():
         label_to_names = {0: 'airplane',

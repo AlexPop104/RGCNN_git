@@ -6,8 +6,8 @@ import torch_geometric as tg
 
 import time
 
-from torch.utils.tensorboard import SummaryWriter
-writer = SummaryWriter()
+# from torch.utils.tensorboard import SummaryWriter
+# writer = SummaryWriter()
 
 from torch.nn import Parameter
 
@@ -158,6 +158,9 @@ def train(model, optimizer, loader, regularization):
 
         x = torch.cat([data.pos, data.normal], dim=1)   
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+
+        x2= conv.get_RotationInvariantFeatures(point_cloud=x,num_points=num_points)
+
 
         # x=torch.cat([x,x2],dim=2)
         # logits, regularizers  = model(x.to(device))
@@ -340,10 +343,10 @@ if __name__ == '__main__':
         test_stop_time = time.time()
 
 
-        writer.add_scalar("Loss/train", train_loss, epoch)
-        writer.add_scalar("Loss/test", test_loss, epoch)
-        writer.add_scalar("Acc/train", train_acc, epoch)
-        writer.add_scalar("Acc/test", test_acc, epoch)
+        # writer.add_scalar("Loss/train", train_loss, epoch)
+        # writer.add_scalar("Loss/test", test_loss, epoch)
+        # writer.add_scalar("Acc/train", train_acc, epoch)
+        # writer.add_scalar("Acc/test", test_acc, epoch)
 
 
         print(f'Epoch: {epoch:02d}, Loss: {train_loss:.4f}, Test Accuracy: {test_acc:.4f}')

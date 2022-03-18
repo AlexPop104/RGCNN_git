@@ -84,7 +84,7 @@ class cls_model(nn.Module):
         # self.conv1 = conv.DenseChebConv(3, 128, 6)
         # self.conv1 = conv.DenseChebConv(6, 128, 6)
 
-        self.conv1 = conv.DenseChebConv(6, 128, 3)
+        self.conv1 = conv.DenseChebConv(4, 128, 3)
         self.conv2 = conv.DenseChebConv(128,512, 3)
         self.conv3 = conv.DenseChebConv(512,1024, 3)
 
@@ -211,6 +211,8 @@ def train(model, optimizer, loader, regularization):
         x = torch.cat([data.pos, data.normal], dim=1)   
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
+        x2= conv.get_RotationInvariantFeatures(point_cloud=x,num_points=num_points)
+
         # x=torch.cat([x,x2],dim=2)
         # logits, regularizers  = model(x.to(device))
 
@@ -252,6 +254,8 @@ def test(model, loader):
 
         x = torch.cat([data.pos, data.normal], dim=1)   
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+
+        x2= conv.get_RotationInvariantFeatures(point_cloud=x,num_points=num_points)
 
         # x=torch.cat([x,x2],dim=2)
         
