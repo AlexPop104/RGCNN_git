@@ -84,7 +84,7 @@ class cls_model(nn.Module):
         # self.conv1 = conv.DenseChebConv(3, 128, 6)
         # self.conv1 = conv.DenseChebConv(6, 128, 6)
 
-        self.conv1 = conv.DenseChebConv(4, 128, 3)
+        self.conv1 = conv.DenseChebConv(6, 128, 3)
         self.conv2 = conv.DenseChebConv(128,512, 3)
         self.conv3 = conv.DenseChebConv(512,1024, 3)
 
@@ -211,7 +211,7 @@ def train(model, optimizer, loader, regularization):
         x = torch.cat([data.pos, data.normal], dim=1)   
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
-        x2= conv.get_RotationInvariantFeatures(point_cloud=x,num_points=num_points)
+        #x2= conv.get_RotationInvariantFeatures(point_cloud=x,num_points=num_points)
 
         # x=torch.cat([x,x2],dim=2)
         # logits, regularizers  = model(x.to(device))
@@ -255,9 +255,9 @@ def test(model, loader):
         x = torch.cat([data.pos, data.normal], dim=1)   
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
-        x2= conv.get_RotationInvariantFeatures(point_cloud=x,num_points=num_points)
+        #x2= conv.get_RotationInvariantFeatures(point_cloud=x,num_points=num_points)
 
-        # x=torch.cat([x,x2],dim=2)
+        #x=torch.cat([x,x2],dim=2)
         
 
         #logits, regularizers  = model(x=x.to(device),x2=x2.to(device))
@@ -336,15 +336,15 @@ if __name__ == '__main__':
     transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
     
     random_rotate_train = Compose([
-    RandomRotate(degrees=(0,45), axis=0),
-    RandomRotate(degrees=(0,45), axis=1),
-    RandomRotate(degrees=(0,45), axis=2),
+    RandomRotate(degrees=15, axis=0),
+    RandomRotate(degrees=15, axis=1),
+    RandomRotate(degrees=15, axis=2),
 ])
 
     random_rotate_test = Compose([
-    RandomRotate(degrees=(89,90), axis=0),
-    RandomRotate(degrees=(89,90), axis=1),
-    RandomRotate(degrees=(89,90), axis=2),
+    RandomRotate(degrees=45, axis=0),
+    RandomRotate(degrees=45, axis=1),
+    RandomRotate(degrees=45, axis=2),
 ])
 
     train_transform = Compose([
