@@ -185,7 +185,6 @@ class DenseChebConvV2(nn.Module):
         # x = x.reshape([N, M, self.out_channels])
 
         if self.bias is not None:
-
             out += self.bias
         return out
 
