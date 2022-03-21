@@ -14,7 +14,7 @@ import time
 from torch.nn.functional import one_hot
 from Classif_RGCNN_n_DenseConv_functions import DenseChebConv as DenseChebConvPyG
 from torch.utils.tensorboard import SummaryWriter
-writer = SummaryWriter()
+writer = SummaryWriter(filename_suffix='_no_reg')
 import numpy as np
 from torch.optim import lr_scheduler
 
@@ -27,6 +27,7 @@ seg_classes = {'Earphone': [16, 17, 18], 'Motorbike': [30, 31, 32, 33, 34, 35], 
                     'Mug': [36, 37], 'Guitar': [19, 20, 21], 'Bag': [4, 5], 'Lamp': [24, 25, 26, 27],
                     'Table': [47, 48, 49], 'Airplane': [0, 1, 2, 3], 'Pistol': [38, 39, 40],
                     'Chair': [12, 13, 14, 15], 'Knife': [22, 23]}
+
 label_to_cat = {}
 for key in seg_classes.keys():
     for label in seg_classes[key]:
@@ -48,6 +49,7 @@ def create_batched_dataset(class_num, dataset, batch_size):
     batch_pos = torch.zeros((batch_size, 2048, 3))
     batch_x = torch.zeros((batch_size,   2048, 3))
     i = 0
+
     for d in data:
         if i<batch_size:
             batch_y[i,:] = d.y
@@ -102,9 +104,9 @@ class seg_model(nn.Module):
         self.bias_relu5 = nn.Parameter(torch.zeros((1, 1, 128)), requires_grad=True)
         self.bias_relu6 = nn.Parameter(torch.zeros((1, 1, 50)), requires_grad=True)
 
-        self.conv1 = conv.DenseChebConv(input_dim, 128, 6)
-        self.conv2 = conv.DenseChebConv(128, 512, 5)
-        self.conv3 = conv.DenseChebConv(512, 1024, 3)
+        self.conv1 = conv.DenseChebConvV2(input_dim, 128, 6)
+        self.conv2 = conv.DenseChebConvV2(128, 512, 5)
+        self.conv3 = conv.DenseChebConvV2(512, 1024, 3)
 
         '''
         self.conv4 = conv.DenseChebConv(1152, 512, 1)
@@ -265,21 +267,15 @@ def test(model, loader):
         cat_iou[cat].append(np.mean(part_ious))
         tot_iou.append(np.mean(part_ious))
 
-
-    print("~~~" * 50)
-    for key, value in cat_iou.items():
-        print(key + ': {:.4f}, total: {:d}'.format(np.mean(value), len(value)))
     # print(tot_iou)
     # accuracy = 100 * sklearn.metrics.accuracy_score(labels, predictions)
     # f1 = 100 * sklearn.metrics.f1_score(labels, predictions, average='weighted')
-        
 
     ncorrects = np.sum(predictions == labels)
     accuracy  = ncorrects * 100 / (len(dataset_test) * num_points)
-    print("~~~" * 30)
-    print(f"\tAccuracy: {accuracy}, ncorrect: {ncorrects} / {len(dataset_test) * num_points}")
-    print(f"\tIoU: \t{np.mean(tot_iou)*100}")
-    return accuracy
+    # print(f"\tAccuracy: {accuracy}, ncorrect: {ncorrects} / {len(dataset_test) * num_points}")
+    # print(f"\tIoU: \t{np.mean(tot_iou)*100}")
+    return accuracy, cat_iou, tot_iou, ncorrects
 
 def start_training(model, train_loader, test_loader, optimizer, epochs=50, learning_rate=1e-3, regularization=1e-9, decay_rate=0.95):
     print(model.parameters)
@@ -296,23 +292,29 @@ def start_training(model, train_loader, test_loader, optimizer, epochs=50, learn
         writer.add_scalar('loss/train', loss, epoch)
 
         test_start_time = time.time()
-        test_acc = test(model, test_loader)
+        test_acc, cat_iou, tot_iou, ncorrects = test(model, test_loader)
         test_stop_time = time.time()
 
+        for key, value in cat_iou.items():
+            print(key + ': {:.4f}, total: {:d}'.format(np.mean(value), len(value)))
+            writer.add_scalar(key + '/test', np.mean(value), epoch)
+
+        writer.add_scalar("IoU/test", np.mean(tot_iou) * 100, epoch)
         writer.add_scalar("accuracy/test", test_acc, epoch)
 
-        print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
-        print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
-            Test Time: \t{test_stop_time - test_start_time }')
+        print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}%, IoU: {np.mean(tot_iou)*100:.4f}%')
+        print(f'ncorrect: {ncorrects} / {len(dataset_test) * num_points}')
+        print(f'Train Time: \t{train_stop_time - train_start_time} \nTest Time: \t{test_stop_time - test_start_time }')
+        print("~~~" * 30)
 
         my_lr_scheduler.step()
 
         # Save the model every 5 epochs
         if epoch % 5 == 0:
-            torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+            torch.save(model.state_dict(), path + '/2048p_normal_model' + str(epoch) + '.pt')
 
     print(f"Training finished")
-    print(model.parameters())
+
 
 def IoU_accuracy(pred, target, n_classes=16):
     ious = []
@@ -349,9 +351,8 @@ if __name__ == '__main__':
     print(root)
     dataset_train = ShapeNet(root=root, split="train", transform=FixedPoints(num_points))
     dataset_test = ShapeNet(root=root, split="test", transform=FixedPoints(num_points))
-   
 
-    batch_size = 4
+    batch_size = 2
     num_epochs = 50
     learning_rate = 1e-3
     decay_rate = 0.95
@@ -370,7 +371,7 @@ if __name__ == '__main__':
     test_loader = DenseDataLoader(dataset_test, batch_size=batch_size, shuffle=False)
 
     model = seg_model(num_points, F, K, M,
-                      dropout=1, one_layer=False, reg_prior=True)
+                      dropout=1, one_layer=False, reg_prior=False)
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     

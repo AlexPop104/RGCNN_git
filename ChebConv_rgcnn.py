@@ -1,7 +1,7 @@
 from typing import Optional
 
 from time import time
-import tensorflow as tf
+# import tensorflow as tf
 import torch
 import torch as t
 import torch_geometric as tg
@@ -11,6 +11,7 @@ from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.nn.dense.linear import Linear
 from torch_geometric.nn.inits import zeros
 from torch_geometric.utils import get_laplacian
+
 
 def get_laplacian(adj_matrix, normalize=True):
     if normalize:
@@ -27,6 +28,7 @@ def get_laplacian(adj_matrix, normalize=True):
 
     return L
 
+'''
 def get_laplacian_tf(adj_matrix, normalize=True):
     if normalize:
         D = tf.reduce_sum(adj_matrix, axis=1)  # (batch_size,num_points)
@@ -43,7 +45,7 @@ def get_laplacian_tf(adj_matrix, normalize=True):
         D = tf.matrix_diag(D)
         L = D - adj_matrix
     return L
-
+'''
 
 def pairwise_distance(point_cloud):
     """Compute the pairwise distance of a point cloud.
@@ -80,7 +82,8 @@ class DenseChebConv(nn.Module):
 
 
     def reset_parameters(self):        
-        self.lin.reset_parameters()
+        self.lin.weight = torch.nn.init.trunc_normal_(self.lin.weight, 0, 0.1)
+        # self.lin.reset_parameters()
 
 
     def forward(self, x, L, mask=None):
@@ -112,6 +115,79 @@ class DenseChebConv(nn.Module):
         x = self.lin(x)
         x = x.reshape([N, M, self.out_channels])
         return x
+
+    def __repr__(self) -> str:
+        return (f'{self.__class__.__name__}({self.in_channels}, '
+                f'{self.out_channels}, K={self.K}, '
+                f'normalization={self.normalization})')
+
+class DenseChebConvV2(nn.Module):
+    def __init__(self, in_channels: int, out_channels: int, K: int, normalization: Optional[bool]=True, bias: bool=False, **kwargs):
+        assert K > 0
+        super(DenseChebConvV2, self).__init__()
+        self.K = K
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.normalization = normalization
+
+        self.lin = Linear(in_channels * K, out_channels, bias=bias)
+        self.lins = t.nn.ModuleList([
+            Linear(in_channels, out_channels, bias=False, 
+                weight_initializer='glorot') for _ in range(K)
+        ])
+
+        if bias:
+            self.bias = Parameter(t.Tensor(out_channels))
+        else:
+            self.register_parameter('bias', None)
+
+        self.reset_parameters()
+
+
+    def reset_parameters(self):        
+        for lin in self.lins:
+            lin.weight = t.nn.init.trunc_normal_(lin.weight, 0, 0.1)
+        
+        # self.lin.weight = torch.nn.init.trunc_normal_(self.lin.weight, 0, 0.1)
+        # self.lin.reset_parameters()
+
+
+    def forward(self, x, L, mask=None):
+        #x = x.unsqueeze if x.dim() == 2 else x
+        #L = L.unsqueeze if L.dim() == 2 else L
+
+        #N, M, Fin = x.shape
+        #N, M, Fin = int(N), int(M), int(Fin)
+
+        x0 = x # N x M x Fin
+        # x = x0.unsqueeze(0)
+        out = self.lins[0](x0)
+
+        def concat(x, x_):
+            x_ = x_.unsqueeze(0)
+            return t.cat([x, x_], dim=0)
+
+        if self.K > 1:
+            x1 = t.matmul(L, x0)
+            out = out + self.lins[1](x1)
+            # x = concat(x, x1)
+
+        for i in range(2, self.K):
+            x2 = 2 * t.matmul(L, x1) - x0
+            out += self.lins[i](x2)
+            # x = concat(x, x2)
+            x0, x1 = x1, x2
+
+        # x = x.permute([1,2,3,0])
+        # x = x.reshape([N * M, Fin * self.K])
+
+        # x = self.lin(x)
+        # x = x.reshape([N, M, self.out_channels])
+
+        if self.bias is not None:
+
+            out += self.bias
+        return out
 
     def __repr__(self) -> str:
         return (f'{self.__class__.__name__}({self.in_channels}, '
@@ -173,12 +249,12 @@ if __name__ == "__main__":
     L = get_laplacian(L)
     out = conv_dense(A, L)
     print("OK")
-    
+    '''
     test_tf = tf.reduce_max(out.cpu().detach().numpy(), 1)
     with tf.Session() as sess:
         print(test_tf.eval())
         print(out.shape)
-
+    '''
     values, indices = t.max(out, 1)
     #print(f"Indices: {indices} ")
     print(f"Vals:    {values} ")

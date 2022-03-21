@@ -1,6 +1,5 @@
 from collections import defaultdict
 from datetime import datetime
-from typing import Optional
 from venv import create
 from torch_geometric.loader import DenseDataLoader
 import os
@@ -13,10 +12,12 @@ from torch import nn
 import time
 from torch.nn.functional import one_hot
 from Classif_RGCNN_n_DenseConv_functions import DenseChebConv as DenseChebConvPyG
+
 from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter()
 import numpy as np
 from torch.optim import lr_scheduler
+
 
 import numpy as np
 
@@ -114,6 +115,7 @@ class seg_model(nn.Module):
         self.recompute_L = True
 
         bias=True
+
         self.fc1 = t.nn.Linear(1024, 512, bias=bias)
         self.fc2 = t.nn.Linear(512 + 512, 128, bias=bias)
         self.fc3 = t.nn.Linear(128, 50, bias=bias)
@@ -335,21 +337,21 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 512
+    num_points = 2048
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     print(f"Training on {device}")
 
-    root = "/home/victor/workspace/thesis_ws/datasets/ShapeNet"
+    root = "/home/victor/workspace/thesis_ws/datasets/S3DIS"
     print(root)
     dataset_train = ShapeNet(root=root, split="train", transform=FixedPoints(num_points))
     dataset_test = ShapeNet(root=root, split="test", transform=FixedPoints(num_points))
    
 
-    batch_size = 64
+    batch_size = 2
     num_epochs = 50
-    learning_rate = 1e-4
+    learning_rate = 1e-3
     decay_rate = 0.95
     decay_steps = len(dataset_train) / batch_size
 
