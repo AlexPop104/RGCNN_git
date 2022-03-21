@@ -84,9 +84,14 @@ class cls_model(nn.Module):
         # self.conv1 = conv.DenseChebConv(3, 128, 6)
         # self.conv1 = conv.DenseChebConv(6, 128, 6)
 
-        self.conv1 = conv.DenseChebConv_theta_and_sum(6, 128, 5)
-        self.conv2 = conv.DenseChebConv_theta_and_sum(128,512, 5)
-        self.conv3 = conv.DenseChebConv_theta_and_sum(512,1024, 5)
+        self.conv1 = conv.DenseChebConvV2(6, 128, 3)
+        self.conv2 = conv.DenseChebConvV2(128,512, 3)
+        self.conv3 = conv.DenseChebConvV2(512,1024, 3)
+
+        # self.conv1 = conv.DenseChebConv_theta_and_sum(6, 128, 3)
+        # self.conv2 = conv.DenseChebConv_theta_and_sum(128,512, 3)
+        # self.conv3 = conv.DenseChebConv_theta_and_sum(512,1024, 3)
+
 
         # self.conv1 = conv.DenseChebConv(7, 128, 6)
         # self.conv2 = conv.DenseChebConv(128,512, 5)
@@ -319,7 +324,7 @@ if __name__ == '__main__':
     os.mkdir(path)
 
     num_points = 512
-    batch_size = 1
+    batch_size = 16
     num_epochs = 250
     learning_rate = 1e-3
     modelnet_num = 40
