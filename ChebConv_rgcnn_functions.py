@@ -758,7 +758,7 @@ class DenseChebConv_theta_nosum(nn.Module):
         x0=torch.reshape(x0,(x.shape[0],x.shape[1],x.shape[2]))
 
         out_theta=out_theta.unsqueeze(1)
-        out_theta=torch.reshape(out_theta,(x.shape[0]*x.shape[1],x.shape[2]))
+        out_theta=torch.reshape(out_theta,(x.shape[0],x.shape[1],x.shape[2]))
 
         # x = x0.unsqueeze(0)
         out = self.lins[0](out_theta)
