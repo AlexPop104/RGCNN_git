@@ -87,7 +87,19 @@ class cls_model(nn.Module):
         self.regularizers = []
         with torch.no_grad():
             L = conv.pairwise_distance(x) # W - weight matrix
+            #L = conv.get_laplacian(L)
+
+            for it_pcd in range(1):
+                viz_points_2=x[it_pcd,:,:]
+                distances=L[it_pcd,:,:]
+                threshold=0.3
+                conv.view_graph(viz_points_2,distances,threshold,1)
+                
+
+
             L = conv.get_laplacian(L)
+
+        
 
         out = self.conv1(x, L)
         out = self.relu1(out)
@@ -97,6 +109,12 @@ class cls_model(nn.Module):
         
         with torch.no_grad():
             L = conv.pairwise_distance(out) # W - weight matrix
+            #L = conv.get_laplacian(L)
+            for it_pcd in range(1):
+                viz_points_2=x[it_pcd,:,:]
+                distances=L[it_pcd,:,:]
+                threshold=0.3
+                conv.view_graph(viz_points_2,distances,threshold,2)
             L = conv.get_laplacian(L)
         
         out = self.conv2(out, L)
@@ -106,8 +124,17 @@ class cls_model(nn.Module):
 
         with torch.no_grad():
             L = conv.pairwise_distance(out) # W - weight matrix
+            #L = conv.get_laplacian(L)
+            for it_pcd in range(1):
+                viz_points_2=x[it_pcd,:,:]
+                distances=L[it_pcd,:,:]
+                threshold=0.005
+                conv.view_graph(viz_points_2,distances,threshold,3)
             L = conv.get_laplacian(L)
         
+        plt.show()
+
+
         out = self.conv3(out, L)
         out = self.relu3(out)
         
@@ -220,7 +247,7 @@ if __name__ == '__main__':
     os.mkdir(path)
 
     num_points = 100
-    batch_size = 16
+    batch_size = 1
     num_epochs = 250
     learning_rate = 1e-3
     modelnet_num = 40
@@ -250,7 +277,7 @@ if __name__ == '__main__':
     test_start_time = time.time()
     test_acc,confidence = test(model, test_loader)
     test_stop_time = time.time()
-    conv.test_pcd_pred(model, test_loader,num_points,device)
+    # conv.test_pcd_pred(model, test_loader,num_points,device)
     print(f'Test loss: {test_acc:.4f}')
     print(f'Test accuracy: {confidence:.4f}')
     print(f'Time for test: {test_stop_time-test_start_time:.4f}')
