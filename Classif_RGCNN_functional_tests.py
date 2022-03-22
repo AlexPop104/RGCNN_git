@@ -219,7 +219,7 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 1024
+    num_points = 50
     batch_size = 16
     num_epochs = 250
     learning_rate = 1e-3
@@ -250,6 +250,7 @@ if __name__ == '__main__':
     test_start_time = time.time()
     test_acc,confidence = test(model, test_loader)
     test_stop_time = time.time()
+    conv.test_pcd_pred(model, test_loader,num_points,device)
     print(f'Test loss: {test_acc:.4f}')
     print(f'Test accuracy: {confidence:.4f}')
     print(f'Time for test: {test_stop_time-test_start_time:.4f}')

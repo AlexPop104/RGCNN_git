@@ -308,16 +308,20 @@ def test_pcd_pred(model, loader,num_points,device):
                                 38: 'wardrobe',
                                 39: 'xbox'}
         for data in loader:
-                x=data.pos
-                x=x.reshape(data.batch.unique().shape[0], num_points, 3)
-                x2=get_centroid(point_cloud=x,num_points=num_points)
+                # x=data.pos
+                # x=x.reshape(data.batch.unique().shape[0], num_points, 3)
+                # x2=get_centroid(point_cloud=x,num_points=num_points)
 
                 x = torch.cat([data.pos, data.normal], dim=1)   
                 x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
-                x=torch.cat([x,x2],dim=2)
+                L = pairwise_distance(x)
+
+                # x=torch.cat([x,x2],dim=2)
         
-                logits, regularizers  = model(x=x.to(device),x2=x2.to(device))
+                #logits, regularizers  = model(x=x.to(device),x2=x2.to(device))
+                logits, regularizers  = model(x=x.to(device))
+
 
                 viz_points=data.pos
                 viz_points=viz_points.reshape(data.batch.unique().shape[0], num_points, 3)
@@ -327,7 +331,7 @@ def test_pcd_pred(model, loader,num_points,device):
                 ground_truth=data.y.to(device)
                 
                 for it_pcd in range(data.batch.unique().shape[0]):
-                    if(ground_truth[it_pcd]!=pred[it_pcd]):
+                    # if(ground_truth[it_pcd]!=pred[it_pcd]):
 
                         print("Actual label:")
                         print(label_to_names[ground_truth[it_pcd].item()])
@@ -337,7 +341,14 @@ def test_pcd_pred(model, loader,num_points,device):
                         fig = plt.figure()
                         ax = fig.add_subplot(111, projection='3d')
                         ax.set_axis_off()
-                        ax.scatter(viz_points[it_pcd,:,0], viz_points[it_pcd,:, 1], viz_points[it_pcd,:,2], s=1, color='r')   
+                        for i in range(viz_points.shape[1]):
+                            ax.scatter(viz_points[it_pcd,i,0].item(),viz_points[it_pcd,i, 1].item(), viz_points[it_pcd,i,2].item(),color='r')
+                        
+                        for i in range(viz_points.shape[1]):
+                            for j in range(viz_points.shape[1]):
+                                ax.plot([viz_points[it_pcd,i,0].item(),viz_points[it_pcd,j,0].item()],[viz_points[it_pcd,i, 1].item(),viz_points[it_pcd,j, 1].item()], [viz_points[it_pcd,i,2].item(),viz_points[it_pcd,j,2].item()],alpha=0.5,color=(0,0,L[it_pcd,i,j].item()))
+                        
+                        #ax.scatter(viz_points[it_pcd,:,0], viz_points[it_pcd,:, 1], viz_points[it_pcd,:,2], s=1, color=(0, 0, 0.5, viz_points[it_pcd,:,2]))   
                         plt.show()
 
 def test_pcd_with_index(model,loader,num_points,device):
