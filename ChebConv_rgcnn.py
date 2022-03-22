@@ -80,7 +80,8 @@ class DenseChebConv(nn.Module):
 
 
     def reset_parameters(self):        
-        self.lin.reset_parameters()
+        self.lin.weight = torch.nn.init.trunc_normal_(self.lin.weight, 0, 0.1)
+        # self.lin.reset_parameters()
 
 
     def forward(self, x, L, mask=None):
