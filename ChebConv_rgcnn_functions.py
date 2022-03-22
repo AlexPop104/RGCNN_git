@@ -343,10 +343,13 @@ def test_pcd_pred(model, loader,num_points,device):
                         ax.set_axis_off()
                         for i in range(viz_points.shape[1]):
                             ax.scatter(viz_points[it_pcd,i,0].item(),viz_points[it_pcd,i, 1].item(), viz_points[it_pcd,i,2].item(),color='r')
+
+                        distances=L[it_pcd,:,:].cpu().numpy()
                         
                         for i in range(viz_points.shape[1]):
                             for j in range(viz_points.shape[1]):
-                                ax.plot([viz_points[it_pcd,i,0].item(),viz_points[it_pcd,j,0].item()],[viz_points[it_pcd,i, 1].item(),viz_points[it_pcd,j, 1].item()], [viz_points[it_pcd,i,2].item(),viz_points[it_pcd,j,2].item()],alpha=0.5,color=(0,0,L[it_pcd,i,j].item()))
+                                ax.plot([viz_points[it_pcd,i,0].item(),viz_points[it_pcd,j,0].item()],[viz_points[it_pcd,i, 1].item(),viz_points[it_pcd,j, 1].item()], [viz_points[it_pcd,i,2].item(),viz_points[it_pcd,j,2].item()],alpha=1,color=(0,0,0.6))
+                                #ax.plot([viz_points[it_pcd,i,0].item(),viz_points[it_pcd,j,0].item()],[viz_points[it_pcd,i, 1].item(),viz_points[it_pcd,j, 1].item()], [viz_points[it_pcd,i,2].item(),viz_points[it_pcd,j,2].item()],alpha=0.5,color=(0,0,0.4))
                         
                         #ax.scatter(viz_points[it_pcd,:,0], viz_points[it_pcd,:, 1], viz_points[it_pcd,:,2], s=1, color=(0, 0, 0.5, viz_points[it_pcd,:,2]))   
                         plt.show()
