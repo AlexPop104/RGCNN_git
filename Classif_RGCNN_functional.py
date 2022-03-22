@@ -84,13 +84,22 @@ class cls_model(nn.Module):
         # self.conv1 = conv.DenseChebConv(3, 128, 6)
         # self.conv1 = conv.DenseChebConv(6, 128, 6)
 
-        self.conv1 = conv.DenseChebConvV2(6, 128, 3)
-        self.conv2 = conv.DenseChebConvV2(128,512, 3)
-        self.conv3 = conv.DenseChebConvV2(512,1024, 3)
+        # self.conv1 = conv.DenseChebConvV2(6, 128, 3)
+        # self.conv2 = conv.DenseChebConvV2(128,512, 3)
+        # self.conv3 = conv.DenseChebConvV2(512,1024, 3)
+
+        # self.conv1 = conv.DenseChebConv_small_linear(6, 128, 3)
+        # self.conv2 = conv.DenseChebConv_small_linear(128,512, 3)
+        # self.conv3 = conv.DenseChebConv_small_linear(512,1024, 3)
+
 
         # self.conv1 = conv.DenseChebConv_theta_and_sum(6, 128, 3)
         # self.conv2 = conv.DenseChebConv_theta_and_sum(128,512, 3)
         # self.conv3 = conv.DenseChebConv_theta_and_sum(512,1024, 3)
+
+        self.conv1 = conv.DenseChebConv_theta_nosum(6, 128, 3)
+        self.conv2 = conv.DenseChebConv_theta_nosum(128,512, 3)
+        self.conv3 = conv.DenseChebConv_theta_nosum(512,1024, 3)
 
 
         # self.conv1 = conv.DenseChebConv(7, 128, 6)
