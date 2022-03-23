@@ -57,11 +57,9 @@ class PointNet(torch.nn.Module):
         torch.manual_seed(12345)
         self.conv1 = PointNetLayer(3, 32)
         self.conv2 = PointNetLayer(32, 32)
-
-        #self.RGCNN_conv= conv.DenseChebConv_theta_nosum(6, 128, 3)
-
-
         self.classifier = Linear(32, num_classes)
+
+        
         
     def forward(self, pos, batch):
         # Compute the kNN graph:
