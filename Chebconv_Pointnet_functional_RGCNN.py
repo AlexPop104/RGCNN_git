@@ -19,6 +19,8 @@ from torch_geometric.loader import DataLoader
 
 import ChebConv_rgcnn_functions as conv
 
+import matplotlib.pyplot as plt
+
 
 class Tnet(nn.Module):
     def __init__(self, k):
@@ -86,11 +88,11 @@ class Transform(nn.Module):
         xb = self.bn3(self.conv3(xb))
 
         
-        xb = nn.MaxPool1d(xb.size(-1))(xb)
-        output = nn.Flatten(1)(xb)
+        # xb = nn.MaxPool1d(xb.size(-1))(xb)
+        # output = nn.Flatten(1)(xb)
 
-        #return xb, matrix3x3, matrix64x64
-        return output, matrix3x3, matrix64x64
+        return xb, matrix3x3, matrix64x64
+        #return output, matrix3x3, matrix64x64
 
 class PointNet(nn.Module):
     def __init__(self, num_classes ,nr_features):
@@ -99,7 +101,10 @@ class PointNet(nn.Module):
         self.fc1 = nn.Linear(1024, 512)
         self.fc2 = nn.Linear(512, 256)
         self.fc3 = nn.Linear(256, num_classes)
+
+        self.RGCNN_conv=conv.DenseChebConv(1024,1024,3)
         
+        self.relu_rgcnn=torch.nn.ReLU()
 
         self.bn1 = nn.BatchNorm1d(512)
         self.bn2 = nn.BatchNorm1d(256)
@@ -108,6 +113,33 @@ class PointNet(nn.Module):
 
     def forward(self, input):
         xb, matrix3x3, matrix64x64 = self.transform(input)
+
+        xb=torch.permute(xb,(0,2,1))
+
+        with torch.no_grad():
+            L = conv.pairwise_distance(xb) # W - weight matrix
+            # for it_pcd in range(1):
+            #     viz_points_2=input[it_pcd,:,:]
+            #     viz_points_2=torch.permute(viz_points_2,(1,0))
+            #     distances=L[it_pcd,:,:]
+            #     threshold=0.3
+            #     conv.view_graph(viz_points_2,distances,threshold,1)
+            # plt.show()
+            L = conv.get_laplacian(L)
+
+        xb = self.RGCNN_conv(xb, L)
+        xb = self.relu_rgcnn(xb)
+
+        
+        
+
+        xb=torch.permute(xb,(0,2,1))
+
+
+        xb = nn.MaxPool1d(xb.size(-1))(xb)
+        xb = nn.Flatten(1)(xb)
+
+
         xb = F.relu(self.bn1(self.fc1(xb)))
         xb = F.relu(self.bn2(self.dropout(self.fc2(xb))))
         output = self.fc3(xb)
@@ -138,10 +170,10 @@ def train(model, optimizer, loader,nr_points):
         
         batch_size=int(data.y.shape[0])
 
-        x = torch.cat([data.pos, data.normal], dim=1)   
-        x=torch.reshape(x,(batch_size,nr_points,x.shape[1]))
+        # x = torch.cat([data.pos, data.normal], dim=1)   
+        # x=torch.reshape(x,(batch_size,nr_points,x.shape[1]))
 
-        # x=torch.reshape(data.pos,(batch_size,nr_points,data.pos.shape[1]))
+        x=torch.reshape(data.pos,(batch_size,nr_points,data.pos.shape[1]))
 
         k=x.shape[2]
         
@@ -172,10 +204,10 @@ def test(model, loader,nr_points):
 
         batch_size=int(data.y.shape[0])
 
-        x = torch.cat([data.pos, data.normal], dim=1)   
-        x=torch.reshape(x,(batch_size,nr_points,x.shape[1]))
+        # x = torch.cat([data.pos, data.normal], dim=1)   
+        # x=torch.reshape(x,(batch_size,nr_points,x.shape[1]))
 
-        # x=torch.reshape(data.pos,(batch_size,nr_points,data.pos.shape[1]))
+        x=torch.reshape(data.pos,(batch_size,nr_points,data.pos.shape[1]))
 
         x=x.to(device)
         labels=data.y.to(device)
@@ -204,7 +236,7 @@ def test(model, loader,nr_points):
 modelnet_num = 40
 num_points= 512
 batch_size=16
-nr_features=6
+nr_features=3
 
 
 torch.manual_seed(42)

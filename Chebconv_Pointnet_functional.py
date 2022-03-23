@@ -21,7 +21,7 @@ import ChebConv_rgcnn_functions as conv
 
 
 class Tnet(nn.Module):
-    def __init__(self, k=3):
+    def __init__(self, k):
         super().__init__()
         self.k=k
         self.conv1 = nn.Conv1d(k,64,1)
@@ -58,11 +58,11 @@ class Tnet(nn.Module):
 
 
 class Transform(nn.Module):
-    def __init__(self):
+    def __init__(self,k_transform):
         super().__init__()
-        self.input_transform = Tnet(k=3)
+        self.input_transform = Tnet(k=k_transform)
         self.feature_transform = Tnet(k=64)
-        self.conv1 = nn.Conv1d(3,64,1)
+        self.conv1 = nn.Conv1d(k_transform,64,1)
 
         self.conv2 = nn.Conv1d(64,128,1)
         self.conv3 = nn.Conv1d(128,1024,1)
@@ -84,14 +84,18 @@ class Transform(nn.Module):
 
         xb = F.relu(self.bn2(self.conv2(xb)))
         xb = self.bn3(self.conv3(xb))
+
+        
         xb = nn.MaxPool1d(xb.size(-1))(xb)
         output = nn.Flatten(1)(xb)
+
+        #return xb, matrix3x3, matrix64x64
         return output, matrix3x3, matrix64x64
 
 class PointNet(nn.Module):
-    def __init__(self, num_classes ):
+    def __init__(self, num_classes ,nr_features):
         super().__init__()
-        self.transform = Transform()
+        self.transform = Transform(k_transform=nr_features)
         self.fc1 = nn.Linear(1024, 512)
         self.fc2 = nn.Linear(512, 256)
         self.fc3 = nn.Linear(256, num_classes)
@@ -109,10 +113,11 @@ class PointNet(nn.Module):
         output = self.fc3(xb)
         return self.logsoftmax(output), matrix3x3, matrix64x64
 
-def pointnetloss(outputs, labels, m3x3, m64x64, alpha = 0.0001):
+def pointnetloss(outputs, labels, m3x3, m64x64,k, alpha = 0.0001,):
     criterion = torch.nn.NLLLoss()
     bs=outputs.size(0)
-    id3x3 = torch.eye(3, requires_grad=True).repeat(bs,1,1)
+    #id3x3 = torch.eye(6, requires_grad=True).repeat(bs,1,1)
+    id3x3 = torch.eye(k, requires_grad=True).repeat(bs,1,1)
     id64x64 = torch.eye(64, requires_grad=True).repeat(bs,1,1)
     if outputs.is_cuda:
         id3x3=id3x3.cuda()
@@ -133,7 +138,12 @@ def train(model, optimizer, loader,nr_points):
         
         batch_size=int(data.y.shape[0])
 
+        # x = torch.cat([data.pos, data.normal], dim=1)   
+        # x=torch.reshape(x,(batch_size,nr_points,x.shape[1]))
+
         x=torch.reshape(data.pos,(batch_size,nr_points,data.pos.shape[1]))
+
+        k=x.shape[2]
         
 
         x=x.to(device)
@@ -144,7 +154,7 @@ def train(model, optimizer, loader,nr_points):
         #logits = model(data.pos.to(device).transpose(1,2))  # Forward pass.
 
         #loss = criterion(outputs, labels)  # Loss computation.
-        loss = pointnetloss(outputs, labels, m3x3, m64x64)
+        loss = pointnetloss(outputs, labels, m3x3, m64x64,k=k)
         loss.backward()  # Backward pass.
         optimizer.step()  # Update model parameters.
         total_loss += loss.item() * data.num_graphs
@@ -162,8 +172,10 @@ def test(model, loader,nr_points):
 
         batch_size=int(data.y.shape[0])
 
+        # x = torch.cat([data.pos, data.normal], dim=1)   
+        # x=torch.reshape(x,(batch_size,nr_points,x.shape[1]))
+
         x=torch.reshape(data.pos,(batch_size,nr_points,data.pos.shape[1]))
-        
 
         x=x.to(device)
         labels=data.y.to(device)
@@ -192,6 +204,7 @@ def test(model, loader,nr_points):
 modelnet_num = 40
 num_points= 512
 batch_size=16
+nr_features=3
 
 
 torch.manual_seed(42)
@@ -218,7 +231,7 @@ test_dataset = ModelNet(root=root, train=False,
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
-model = PointNet(num_classes=modelnet_num)
+model = PointNet(num_classes=modelnet_num,nr_features=nr_features)
 print(model)
 
 
