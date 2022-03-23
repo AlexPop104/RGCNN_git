@@ -113,10 +113,11 @@ class PointNet(nn.Module):
         output = self.fc3(xb)
         return self.logsoftmax(output), matrix3x3, matrix64x64
 
-def pointnetloss(outputs, labels, m3x3, m64x64, alpha = 0.0001):
+def pointnetloss(outputs, labels, m3x3, m64x64,k, alpha = 0.0001,):
     criterion = torch.nn.NLLLoss()
     bs=outputs.size(0)
-    id3x3 = torch.eye(6, requires_grad=True).repeat(bs,1,1)
+    #id3x3 = torch.eye(6, requires_grad=True).repeat(bs,1,1)
+    id3x3 = torch.eye(k, requires_grad=True).repeat(bs,1,1)
     id64x64 = torch.eye(64, requires_grad=True).repeat(bs,1,1)
     if outputs.is_cuda:
         id3x3=id3x3.cuda()
@@ -141,6 +142,8 @@ def train(model, optimizer, loader,nr_points):
         x=torch.reshape(x,(batch_size,nr_points,x.shape[1]))
 
         # x=torch.reshape(data.pos,(batch_size,nr_points,data.pos.shape[1]))
+
+        k=x.shape[2]
         
 
         x=x.to(device)
@@ -151,7 +154,7 @@ def train(model, optimizer, loader,nr_points):
         #logits = model(data.pos.to(device).transpose(1,2))  # Forward pass.
 
         #loss = criterion(outputs, labels)  # Loss computation.
-        loss = pointnetloss(outputs, labels, m3x3, m64x64)
+        loss = pointnetloss(outputs, labels, m3x3, m64x64,k=k)
         loss.backward()  # Backward pass.
         optimizer.step()  # Update model parameters.
         total_loss += loss.item() * data.num_graphs
