@@ -22,6 +22,8 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 
+
+
 def get_laplacian(adj_matrix, normalize=True):
     if normalize:
         D = t.sum(adj_matrix, dim=1)
