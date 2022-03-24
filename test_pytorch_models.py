@@ -6,7 +6,7 @@ from open3d.visualization.tensorboard_plugin import summary
 from open3d.visualization.tensorboard_plugin.util import to_dict_batch
 
 from cls_model_rambo import cls_model
-from seg_model_rambo import seg_model
+from seg_model_rambo_v2 import seg_model
 import torch as t
 import numpy as np
 from GaussianNoiseTransform import GaussianNoiseTransform
@@ -114,26 +114,24 @@ def test_shapenet_model(PATH, num_points=2048, batch_size=2, input_dim=22, dropo
     loader_original  = DenseDataLoader(dataset_original, batch_size=batch_size, shuffle=True, pin_memory=True)
     loader_noisy     = DenseDataLoader(dataset_noisy, batch_size=batch_size, shuffle=True, pin_memory=True)
 
-    model = seg_model(num_points, [0,0], [0,0], [0,0], input_dim, dropout=1, reg_prior=False)
-    model.to(device)
+    model = seg_model(num_points, [0,0], [0,0], [0,0], input_dim, dropout=1, reg_prior=True)
     model.load_state_dict(t.load(PATH))
+    print(model.state_dict)
+    model.to(device)
     model.eval()
 
     @t.no_grad()
-    def test_model(loader, model, noisy):
-        model.eval()
-        
+    def test_model(loader, model, noisy):        
         size = len(loader.dataset)
         predictions = np.empty((size, num_points))
         labels = np.empty((size, num_points))
         total_correct = 0
         
         for i, data in enumerate(loader):
-            cat = one_hot(data.category, num_classes=16)
-            cat = t.tile(cat, [1, num_points, 1]) 
-            x = t.cat([data.pos, data.x, cat], dim=2)  ### Pass this to the model
+            cat = data.category
+            x = t.cat([data.pos, data.x], dim=2)  ### Pass this to the model
             y = data.y
-            logits, _ = model(x.to(device))
+            logits, _, _ = model(x.to(device), cat.to(device))
             logits = logits.to('cpu')
             pred = logits.argmax(dim=2)
             # print(pred)
@@ -174,8 +172,8 @@ def test_shapenet_model(PATH, num_points=2048, batch_size=2, input_dim=22, dropo
 
 
 if __name__ == '__main__':
-    PATH = '/home/victor/workspace/thesis_ws/github/RGCNN_git/models/ModelNet/18_03_22_19:04:50/1024_40_chebconv_model50.pt'
-    test_modelnet_model(PATH, mu=0, sigma=0.01)
+    # PATH = '/home/victor/workspace/thesis_ws/github/RGCNN_git/models/ModelNet/18_03_22_19:04:50/1024_40_chebconv_model50.pt'
+    # test_modelnet_model(PATH, mu=0, sigma=0.01)
     
-    #PATH = '/home/victor/workspace/thesis_ws/github/RGCNN_git/models/17_03_22_22:00:42/2048p_normal_model50.pt'
-    #test_shapenet_model(PATH)
+    PATH = '/home/victor/workspace/thesis_ws/github/RGCNN_git/models/21_03_22_21:06:30/2048p_model_v2200.pt'
+    test_shapenet_model(PATH, num_points=2048)

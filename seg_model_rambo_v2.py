@@ -12,6 +12,8 @@ import torch
 from torch import nn
 import time
 from torch.nn.functional import one_hot
+from torch.nn.functional import relu
+
 from Classif_RGCNN_n_DenseConv_functions import DenseChebConv as DenseChebConvPyG
 from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter(filename_suffix='_no_reg')
@@ -71,7 +73,7 @@ def create_batched_dataset(class_num, dataset, batch_size):
 
 
 class seg_model(nn.Module):
-    def __init__(self, vertice, F, K, M, input_dim=22 ,regularization=0, one_layer=True, dropout=0, reg_prior: bool = True):
+    def __init__(self, vertice, F, K, M, input_dim=22 , one_layer=False, dropout=1, reg_prior: bool = True):
         assert len(F) == len(K)
         super(seg_model, self).__init__()
 
@@ -83,37 +85,38 @@ class seg_model(nn.Module):
 
         self.reg_prior = reg_prior
         self.vertice = vertice
-        self.regularization = regularization    # gamma from the paper: 10^-9
         self.dropout = dropout
         self.regularizers = []
 
         # self.get_laplacian = GetLaplacian(normalize=True)
-        self.relu1 = nn.ReLU(inplace=True)
-        self.relu2 = nn.ReLU(inplace=True)
-        self.relu3 = nn.ReLU(inplace=True)
-        self.relu4 = nn.ReLU(inplace=True)
-        self.relu5 = nn.ReLU(inplace=True)
-        self.relu6 = nn.ReLU(inplace=True)
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
-
+        self.relus = [128, 512, 1024, 512, 128, 50]
+        aux = [i for i in self.relus]
+        print(aux)
+        self.bias_relus = nn.ParameterList([
+            torch.nn.parameter.Parameter(torch.zeros((1, 1, i))) for i in self.relus
+            ])
+        
+        '''
         self.bias_relu1 = nn.Parameter(torch.zeros((1, 1, 128)), requires_grad=True)
         self.bias_relu2 = nn.Parameter(torch.zeros((1, 1, 512)), requires_grad=True)
         self.bias_relu3 = nn.Parameter(torch.zeros((1, 1, 1024)), requires_grad=True)
         self.bias_relu4 = nn.Parameter(torch.zeros((1, 1, 512)), requires_grad=True)
         self.bias_relu5 = nn.Parameter(torch.zeros((1, 1, 128)), requires_grad=True)
         self.bias_relu6 = nn.Parameter(torch.zeros((1, 1, 50)), requires_grad=True)
+        '''
 
-        self.conv1 = conv.DenseChebConv(input_dim, 128, 6)
-        self.conv2 = conv.DenseChebConv(128, 512, 5)
-        self.conv3 = conv.DenseChebConv(512, 1024, 3)
+        self.conv1 = conv.DenseChebConvV2(input_dim, 128, 6)
+        self.conv2 = conv.DenseChebConvV2(128, 512, 5)
+        self.conv3 = conv.DenseChebConvV2(512, 1024, 3)
 
         '''
         self.conv4 = conv.DenseChebConv(1152, 512, 1)
         self.conv5 = conv.DenseChebConv(512, 128, 1)
         self.conv6 = conv.DenseChebConv(128, 50, 1)
         '''
-        self.recompute_L = True
+        self.recompute_L = False
 
         bias=True
         self.fc1 = t.nn.Linear(1024, 512, bias=bias)
@@ -122,81 +125,88 @@ class seg_model(nn.Module):
 
         self.regularizer = 0
         self.regularization = []
+        self.L = []
+        self.x = []
 
     
-    def b1relu(self, x, bias, relu):
+    def b1relu(self, x, bias):
         return relu(x + bias)
 
     def get_laplacian(self, x):
         with torch.no_grad():
             return conv.get_laplacian(conv.pairwise_distance(x))
+    
+    @torch.no_grad()
+    def append_regularization_terms(self, x, L):
+        if self.reg_prior:
+            self.L.append(L)
+            self.x.append(x)
+    
 
-    def forward(self, x):
-        self.regularizers = []
-        x1 = 0  # cache for layer1
+    def reset_regularization_terms(self):
+        self.L = []
+        self.x = []
+
+    def forward(self, x, cat):
+        self.reset_regularization_terms()
+
+        x1 = 0  # cache for layer 1
 
         L = self.get_laplacian(x)
-
+        cat = one_hot(cat, num_classes=16)
+        cat = torch.tile(cat, [1, self.vertice, 1]) 
+        x = torch.cat([x, cat], dim=2)  ### Pass this to the model
         out = self.conv1(x, L)
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(
-                t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
-        out = self.b1relu(out, self.bias_relu1, self.relu1)
-
-
+        self.append_regularization_terms(out, L)
+        out = self.b1relu(out, self.bias_relus[0])
+        
         if self.recompute_L:
             L = self.get_laplacian(out)
-        
         out = self.conv2(out, L)
-        
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(
-                t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
-        out = self.b1relu(out, self.bias_relu2, self.relu2)
-
+        self.append_regularization_terms(out, L)
+        out = self.b1relu(out, self.bias_relus[1])
         x1 = out
 
         if self.recompute_L:
             L = self.get_laplacian(out)
-
         out = self.conv3(out, L)
-
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(
-                t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
-        out = self.b1relu(out, self.bias_relu3, self.relu3)
-
+        self.append_regularization_terms(out, L)
+        out = self.b1relu(out, self.bias_relus[2])
 
         out = self.fc1(out)
-
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(
-                t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
-        out = self.b1relu(out, self.bias_relu4, self.relu4)
+        self.append_regularization_terms(out, L)
+        out = self.b1relu(out, self.bias_relus[3])
 
         out = t.concat([out, x1], dim=2)
 
         out = self.fc2(out)
 
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(
-                t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
-        out = self.b1relu(out, self.bias_relu5, self.relu5)
+        self.append_regularization_terms(out, L)
 
+        out = self.b1relu(out, self.bias_relus[4])
 
         out = self.fc3(out)
 
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(
-                t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+        self.append_regularization_terms(out, L)
         
-        out = self.b1relu(out, self.bias_relu6, self.relu6)
+        out = self.b1relu(out, self.bias_relus[5])
 
-        return out, self.regularizers
+        return out, self.x, self.L
 
 
 criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 
+def compute_loss(logits, y, x, L, s=1e-9):
+    if not logits.device == y.device:
+        y = y.to(logits.device)
+
+    loss = criterion(logits, y)
+    l=0
+    for i in range(len(x)):
+        l += (1/2) * t.linalg.norm(t.matmul(t.matmul(t.permute(x[i], (0, 2, 1)), L[i]), x[i]))**2
+    l = l * s
+    loss += l
+    return loss
 
 def train(model, optimizer, loader, regularization):
     model.train()
@@ -204,18 +214,14 @@ def train(model, optimizer, loader, regularization):
 
     for i, data in enumerate(loader):
         optimizer.zero_grad()
-        cat = one_hot(data.category, num_classes=16)
-        cat = torch.tile(cat, [1, num_points, 1]) 
-        x = torch.cat([data.pos, data.x, cat], dim=2)  ### Pass this to the model
+        cat = data.category
         y = data.y.type(torch.LongTensor)
-
-        logits, regularizers = model(x.to(device))
+        x = t.cat([data.pos, data.x], dim=2)
+        logits, out, L = model(x.to(device), cat.to(device)) # out, L are for regularization
         logits = logits.permute([0, 2, 1])
 
-        loss = criterion(logits, y.to(device))
-        s = t.sum(t.as_tensor(regularizers))
-        loss = t.mean(loss)
-        loss = loss + regularization * s
+        loss = compute_loss(logits, y, out, L, s=regularization)
+
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
@@ -223,7 +229,6 @@ def train(model, optimizer, loader, regularization):
             print(f"{i}: curr loss: {loss}")
             #print(f"{data.y} --- {logits.argmax(dim=1)}")
     return total_loss * batch_size / len(dataset_train)
-
 
 @torch.no_grad()
 def test(model, loader):
@@ -234,11 +239,10 @@ def test(model, loader):
     total_correct = 0
     
     for i, data in enumerate(loader):
-        cat = one_hot(data.category, num_classes=16)
-        cat = torch.tile(cat, [1, num_points, 1]) 
-        x = torch.cat([data.pos, data.x, cat], dim=2)  ### Pass this to the model
+        cat = data.category
+        x = t.cat([data.pos, data.x], dim=2)
         y = data.y
-        logits, _ = model(x.to(device))
+        logits, _, _= model(x.to(device), cat.to(device))
         logits = logits.to('cpu')
         pred = logits.argmax(dim=2)
         # print(pred)
@@ -311,7 +315,7 @@ def start_training(model, train_loader, test_loader, optimizer, epochs=50, learn
 
         # Save the model every 5 epochs
         if epoch % 5 == 0:
-            torch.save(model.state_dict(), path + '/2048p_normal_model' + str(epoch) + '.pt')
+            torch.save(model.state_dict(), path + '/2048p_model_v2' + str(epoch) + '.pt')
 
     print(f"Training finished")
 
@@ -353,7 +357,7 @@ if __name__ == '__main__':
     dataset_test = ShapeNet(root=root, split="test", transform=FixedPoints(num_points))
 
     batch_size = 2
-    num_epochs = 50
+    num_epochs = 200
     learning_rate = 1e-3
     decay_rate = 0.95
     decay_steps = len(dataset_train) / batch_size
@@ -376,4 +380,4 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     
 
-    start_training(model, train_loader, test_loader, optimizer, epochs=50)
+    start_training(model, train_loader, test_loader, optimizer, epochs=num_epochs)

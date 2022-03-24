@@ -19,7 +19,6 @@ from torch_geometric.utils import (add_self_loops, get_laplacian,
 import torch as t
 import torch_geometric as tg
  
- 
 from torch_geometric.utils import get_laplacian as get_laplacian_pyg
 from torch_geometric.transforms import Compose
 
@@ -61,7 +60,7 @@ class cls_model(nn.Module):
         self.conv1 = conv.DenseChebConv(6, 128, 1)
         self.conv2 = conv.DenseChebConv(128, 512, 1)
         self.conv3 = conv.DenseChebConv(512, 1024, 1)
-    
+
 
         self.fc1 = nn.Linear(1024, 512, bias=True)
         self.fc2 = nn.Linear(512, 128, bias=True)
@@ -74,10 +73,10 @@ class cls_model(nn.Module):
 
         if one_layer == True:
             self.fc = nn.Linear(128, class_num)
-
+        
         self.regularizer = 0
         self.regularization = []
-
+    
 
     def forward(self, x):
         self.regularizers = []
@@ -100,7 +99,7 @@ class cls_model(nn.Module):
             out = self.relu2(out)
             if self.reg_prior:
                 self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), x))**2)
-    
+
             with torch.no_grad():
                 L = conv.pairwise_distance(out) # W - weight matrix
                 L = conv.get_laplacian(L)
@@ -116,7 +115,7 @@ class cls_model(nn.Module):
             # ~~~~ Fully Connected ~~~~
             
             out = self.fc1(out)
-
+            
             if self.reg_prior:
                 self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
                 self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
@@ -138,7 +137,7 @@ class cls_model(nn.Module):
         else:
             out, _ = t.max(out, 1)
             out = self.fc(out)
-
+        
         return out, self.regularizers
 
 criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.

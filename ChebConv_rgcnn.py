@@ -1,3 +1,4 @@
+from re import T
 from typing import Optional
 
 from time import time
@@ -57,13 +58,14 @@ def pairwise_distance(point_cloud):
         pairwise distance: (batch_size, num_points, num_points)
     """
 
+
     point_cloud_transpose = point_cloud.permute(0, 2, 1)
-    point_cloud_inner = torch.matmul(point_cloud, point_cloud_transpose)
+    point_cloud_inner = t.matmul(point_cloud, point_cloud_transpose)
     point_cloud_inner = -2 * point_cloud_inner
-    point_cloud_square = torch.sum(torch.mul(point_cloud, point_cloud), dim=2, keepdim=True)
+    point_cloud_square = t.sum(t.mul(point_cloud, point_cloud), dim=2, keepdim=True)
     point_cloud_square_tranpose = point_cloud_square.permute(0, 2, 1)
     adj_matrix = point_cloud_square + point_cloud_inner + point_cloud_square_tranpose
-    adj_matrix = torch.exp(-adj_matrix)
+    adj_matrix = t.exp(-adj_matrix)
     return adj_matrix
 
 
