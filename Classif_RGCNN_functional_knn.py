@@ -89,6 +89,11 @@ class cls_model(nn.Module):
         with torch.no_grad():
             L = conv.pairwise_distance(x) # W - weight matrix
             L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+            for it_pcd in range(1):
+                viz_points_2=x[it_pcd,:,:]
+                distances=L[it_pcd,:,:]
+                threshold=0.3
+                conv.view_graph(viz_points_2,distances,threshold,1)
             L = conv.get_laplacian(L)
 
         out = self.conv1(x, L)
@@ -101,6 +106,11 @@ class cls_model(nn.Module):
             with torch.no_grad():
                 L = conv.pairwise_distance(out) # W - weight matrix
                 L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+                for it_pcd in range(1):
+                    viz_points_2=x[it_pcd,:,:]
+                    distances=L[it_pcd,:,:]
+                    threshold=0.3
+                    conv.view_graph(viz_points_2,distances,threshold,2)
                 L = conv.get_laplacian(L)
             
             out = self.conv2(out, L)
@@ -111,8 +121,14 @@ class cls_model(nn.Module):
             with torch.no_grad():
                 L = conv.pairwise_distance(out) # W - weight matrix
                 L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+                for it_pcd in range(1):
+                    viz_points_2=x[it_pcd,:,:]
+                    distances=L[it_pcd,:,:]
+                    threshold=0.3
+                    conv.view_graph(viz_points_2,distances,threshold,3)
                 L = conv.get_laplacian(L)
             
+            plt.show()
             out = self.conv3(out, L)
             out = self.relu3(out)
             
@@ -221,12 +237,12 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 1024
+    num_points = 100
     batch_size = 32
     num_epochs = 50
     learning_rate = 1e-3
     modelnet_num = 40
-    k_KNN=30
+    k_KNN=6
 
     F = [128, 512, 1024]  # Outputs size of convolutional filter.
     K = [6, 5, 3]         # Polynomial orders.

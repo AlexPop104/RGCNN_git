@@ -89,11 +89,11 @@ class cls_model(nn.Module):
             L = conv.pairwise_distance(x) # W - weight matrix
             #L = conv.get_laplacian(L)
 
-            # for it_pcd in range(1):
-            #     viz_points_2=x[it_pcd,:,:]
-            #     distances=L[it_pcd,:,:]
-            #     threshold=0.3
-            #     conv.view_graph(viz_points_2,distances,threshold,1)
+            for it_pcd in range(1):
+                viz_points_2=x[it_pcd,:,:]
+                distances=L[it_pcd,:,:]
+                threshold=0.3
+                conv.view_graph(viz_points_2,distances,threshold,1)
                 
 
 
@@ -110,11 +110,11 @@ class cls_model(nn.Module):
         with torch.no_grad():
             L = conv.pairwise_distance(out) # W - weight matrix
             #L = conv.get_laplacian(L)
-            # for it_pcd in range(1):
-            #     viz_points_2=x[it_pcd,:,:]
-            #     distances=L[it_pcd,:,:]
-            #     threshold=0.3
-            #     conv.view_graph(viz_points_2,distances,threshold,2)
+            for it_pcd in range(1):
+                viz_points_2=x[it_pcd,:,:]
+                distances=L[it_pcd,:,:]
+                threshold=0.3
+                conv.view_graph(viz_points_2,distances,threshold,2)
             L = conv.get_laplacian(L)
         
         out = self.conv2(out, L)
@@ -125,14 +125,14 @@ class cls_model(nn.Module):
         with torch.no_grad():
             L = conv.pairwise_distance(out) # W - weight matrix
             #L = conv.get_laplacian(L)
-            # for it_pcd in range(1):
-            #     viz_points_2=x[it_pcd,:,:]
-            #     distances=L[it_pcd,:,:]
-            #     threshold=0.005
-            #     conv.view_graph(viz_points_2,distances,threshold,3)
+            for it_pcd in range(1):
+                viz_points_2=x[it_pcd,:,:]
+                distances=L[it_pcd,:,:]
+                threshold=0.3
+                conv.view_graph(viz_points_2,distances,threshold,3)
             L = conv.get_laplacian(L)
         
-        #plt.show()
+        plt.show()
 
 
         out = self.conv3(out, L)
@@ -246,8 +246,8 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 256
-    batch_size = 16
+    num_points = 100
+    batch_size = 1
     num_epochs = 250
     learning_rate = 1e-3
     modelnet_num = 40
@@ -269,7 +269,7 @@ if __name__ == '__main__':
     test_loader  = DataLoader(dataset_test, batch_size=batch_size)
     
     model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, reg_prior=True)
-    path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/17_03_22_17:01:12/model140.pt"
+    path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Modele_selectate/RGCNN_3_layers/Graph_changed/model65.pt"
     model.load_state_dict(torch.load(path_saved_model))
     print(model.parameters)
     model = model.to(device)

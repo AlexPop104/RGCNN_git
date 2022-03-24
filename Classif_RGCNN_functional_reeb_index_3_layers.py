@@ -90,8 +90,6 @@ class cls_model(nn.Module):
 
         self.max_pool = nn.MaxPool1d(self.vertice)
 
-        
-
         self.regularizer = 0
         self.regularization = []
 
@@ -100,8 +98,15 @@ class cls_model(nn.Module):
         self.regularizers = []
         with torch.no_grad():
             L = conv.pairwise_distance(x) # W - weight matrix
-            # L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+            L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+
+            # for it_pcd in range(1):
+            #     viz_points_2=x[it_pcd,:,:]
+            #     distances=L[it_pcd,:,:]
+            #     threshold=0.3
+            #     conv.view_graph(viz_points_2,distances,threshold,1)
             L = conv.get_laplacian(L)
+
 
         out = self.conv1(x, L)
         out = self.relu1(out)
@@ -111,8 +116,14 @@ class cls_model(nn.Module):
 
         with torch.no_grad():
             L = conv.pairwise_distance(out) # W - weight matrix
-            # L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+            L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+            # for it_pcd in range(1):
+            #     viz_points_2=x[it_pcd,:,:]
+            #     distances=L[it_pcd,:,:]
+            #     threshold=0.3
+            #     conv.view_graph(viz_points_2,distances,threshold,2)
             L = conv.get_laplacian(L)
+        
 
         out = self.conv2(out, L)
         out = self.relu2(out)
@@ -131,10 +142,29 @@ class cls_model(nn.Module):
                     Vertices_pool_Reeb=out[batch_iter,sccs[batch_iter,i]]
                     Vertices_final_Reeb[batch_iter,i],_ =t.max(Vertices_pool_Reeb, 0)
             laplacian_Reeb_final= torch.tensor(laplacian_Reeb, dtype=torch.float32,device='cuda')
+            
+            
+            
+            for it_pcd in range(1):
 
+                viz_points_Reeb=Vertices_final_Reeb[it_pcd,:,:]
+                viz_points_pcd=x[it_pcd,:,:]
+
+               
+
+                
+                
+                
             L = conv.pairwise_distance(out) # W - weight matrix
-            # L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+            L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+            # for it_pcd in range(1):
+            #     viz_points_2=x[it_pcd,:,:]
+            #     distances=L[it_pcd,:,:]
+            #     threshold=0.3
+            #     conv.view_graph(viz_points_2,distances,threshold,4)
             L = conv.get_laplacian(L)
+
+        #plt.show()
         
         out = self.conv3(out, L)
         out = self.relu3(out)
@@ -353,7 +383,7 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 1024
+    num_points = 100
     batch_size = 16
     num_epochs = 260
     learning_rate = 1e-3
@@ -447,17 +477,17 @@ if __name__ == '__main__':
 
 
 
-    path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/train_reeb_laplacian.npy"
-    path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/test_reeb_laplacian.npy"
+    path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/100/_100_train_reeb_laplacian.npy"
+    path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/100/_100_test_reeb_laplacian.npy"
 
-    path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/train_sccs.npy"
-    path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/test_sccs.npy"
+    path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/100/_100_train_sccs.npy"
+    path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/100/_100_test_sccs.npy"
 
-    path_vertices_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/train_vertices.npy"
-    path_vertices_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/test_vertices.npy"
+    path_vertices_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/100/_100_train_vertices.npy"
+    path_vertices_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/100/_100_test_vertices.npy"
 
-    path_edges_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/train_edge_matrix.npy"
-    path_edges_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/test_edge_matrix.npy"
+    path_edges_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/100/_100_train_edge_matrix.npy"
+    path_edges_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/100/_100_test_edge_matrix.npy"
 
     all_sccs_train=np.load(path_sccs_train)
     all_sccs_test=np.load(path_sccs_test)

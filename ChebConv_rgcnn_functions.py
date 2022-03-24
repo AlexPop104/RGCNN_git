@@ -32,6 +32,22 @@ def get_laplacian(adj_matrix, normalize=True):
         D = 1 / t.sqrt(D)
         D = t.diag_embed(D)
         L = eye - t.matmul(t.matmul(D, adj_matrix), D)
+
+
+        #################################3
+        #Trying to not have small values / failed because laplacian has almost 1 on diagonal and negativ in rest
+        # nr_points=adj_matrix.shape[1]
+
+        # maximum_values=torch.max(adj_matrix,dim=2)
+        # minimum_values=torch.min(adj_matrix,dim=2)
+
+        # interval=torch.subtract(maximum_values[0],minimum_values[0])
+        # interval=torch.tile(interval,[nr_points])
+        # interval=torch.reshape(interval,(adj_matrix.shape[0],adj_matrix.shape[1],adj_matrix.shape[1]))
+        # L=torch.div(L,interval)
+
+        #######################
+
     else:
         D = t.sum(adj_matrix, dim=1)
         D = t.diag(D)
@@ -69,8 +85,8 @@ def pairwise_distance(point_cloud):
     interval=torch.reshape(interval,(point_cloud.shape[0],point_cloud.shape[1],point_cloud.shape[1]))
 
     adj_matrix=torch.div(adj_matrix,interval)
-
     adj_matrix = torch.exp(-adj_matrix)
+
     return adj_matrix
 
 def get_one_matrix_knn(matrix, k,batch_size,nr_points):
@@ -395,6 +411,26 @@ def view_graph(viz_points,distances,threshold,nr):
         for j in range(viz_points.shape[0]):
             if (distances[i,j].item()>threshold):
                 ax.plot([viz_points[i,0].item(),viz_points[j,0].item()],[viz_points[i, 1].item(),viz_points[j, 1].item()], [viz_points[i,2].item(),viz_points[j,2].item()],alpha=1,color=(0,0,distances[i,j].item()))
+
+def view_graph_Reeb(viz_points,Reeb_points,distances,threshold,nr):
+
+    distances=torch.where(distances<1,distances,torch.tensor(1., dtype=distances.dtype,device='cuda'))
+
+    fig = plt.figure(nr)
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_axis_off()
+    
+
+    for t in range(Reeb_points.shape[0]):
+        ax.scatter(Reeb_points[t,0].item(),Reeb_points[t, 1].item(), Reeb_points[t,2].item(),color='g')
+
+    for k in range(viz_points.shape[0]):
+        ax.scatter(viz_points[k,0].item(),viz_points[k, 1].item(), viz_points[k,2].item(),color='r')    
+
+    for i in range(Reeb_points.shape[0]):
+        for j in range(Reeb_points.shape[0]):
+            if (distances[i,j].item()>threshold):
+                ax.plot([Reeb_points[i,0].item(),Reeb_points[j,0].item()],[Reeb_points[i, 1].item(),Reeb_points[j, 1].item()], [Reeb_points[i,2].item(),Reeb_points[j,2].item()],alpha=1,color=(0,0,distances[i,j].item()))
                             
     
 

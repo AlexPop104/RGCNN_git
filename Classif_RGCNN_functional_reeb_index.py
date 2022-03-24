@@ -95,7 +95,7 @@ class cls_model(nn.Module):
         self.regularization = []
 
 
-    def forward(self, x,k,batch_size,num_points,laplacian_Reeb,sccs):
+    def forward(self, x,k,batch_size,num_points,laplacian_Reeb,sccs,edges,vertices):
         self.regularizers = []
         with torch.no_grad():
             L = conv.pairwise_distance(x) # W - weight matrix
@@ -124,6 +124,34 @@ class cls_model(nn.Module):
                         
                     
                 laplacian_Reeb_final= torch.tensor(laplacian_Reeb, dtype=torch.float32,device='cuda')
+
+                num_vertices_reeb=laplacian_Reeb.shape[1]
+                edge_dim=edges.shape[1]
+
+                for iter_pcd in range(batch_size):
+
+                    points_pcd=x[iter_pcd,:,:].to('cpu')
+
+                    sccs_pcd=sccs[iter_pcd*num_vertices_reeb:(iter_pcd+1)*num_vertices_reeb]
+                    reeb_laplace_pcd=laplacian_Reeb_final[iter_pcd*num_vertices_reeb:(iter_pcd+1)*num_vertices_reeb,0:num_vertices_reeb]
+                    vertices_batch_pcd=vertices[iter_pcd*num_vertices_reeb:(iter_pcd+1)*num_vertices_reeb]
+                    matrix_edges_batch_pcd=edges[iter_pcd*laplacian_Reeb_final.shape[1]:(iter_pcd+1)*edge_dim]
+
+                    t_matrix_edges_batch=torch.tensor(matrix_edges_batch_pcd)
+                    t_matrix_edges_2=t_matrix_edges_batch.unsqueeze(0)
+                    New_edge_indices, New_edge_values=torch_geometric.utils.dense_to_sparse(t_matrix_edges_2)
+                    New_edge_indices_cpu=New_edge_indices.to('cpu')
+
+
+                    fig = matplotlib.pyplot.figure()
+                    ax = fig.add_subplot(111, projection='3d')
+                    ax.set_axis_off()
+                    for test_iter in range(New_edge_indices_cpu.shape[1]):
+                        ax.plot([vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][0], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][0]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][1], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][1]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][2], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][2]], color='b')
+                    ax.scatter(points_pcd[:, 0], points_pcd[:, 1], points_pcd[:, 2], s=1, color='r') 
+                    ax.scatter(vertices_batch_pcd[:,0],vertices_batch_pcd[:,1],vertices_batch_pcd[:,2],s=1,color='g')  
+                    matplotlib.pyplot.show()
+
 
 
 
@@ -216,7 +244,7 @@ def train(model, optimizer, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,
         x = torch.cat([pos[1], normal[1]], dim=2)
         #x=pos[1]
 
-        logits, regularizers  = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
+        logits, regularizers  = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch,edges=edges_batch,vertices=vertices_batch)
 
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == ground_truth_labels.to(device)).sum())
@@ -272,7 +300,7 @@ def test(model, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
         x = torch.cat([pos[1], normal[1]], dim=2)
         #x=pos[1]
 
-        logits, regularizers = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
+        logits, regularizers = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch,edges=edges_batch,vertices=vertices_batch)
         
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == ground_truth_labels.to(device)).sum())
@@ -350,7 +378,7 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 1024
+    num_points = 100
     batch_size = 16
     num_epochs = 260
     learning_rate = 1e-3
@@ -403,15 +431,15 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
 
-    train_loader = DataLoader(dataset_train,batch_size=batch_size, shuffle=True, pin_memory=True)
+    train_loader = DataLoader(dataset_train,batch_size=batch_size,shuffle=True, pin_memory=True)
     test_loader= DataLoader(dataset_test,batch_size=batch_size)
 
     ############################################################################33
-    #######Creating Reeb graphs
+    ######Creating Reeb graphs
 
     # path_logs="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/"
 
-    # label="_2048_"
+    # label="_100_"
 
     # sccs_path_train=path_logs+label+"train_sccs.npy"
     # reeb_laplacian_path_train=path_logs+label+"train_reeb_laplacian.npy"
@@ -444,17 +472,17 @@ if __name__ == '__main__':
 
 
 
-    path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/train_reeb_laplacian.npy"
-    path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/test_reeb_laplacian.npy"
+    path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/100/_100_train_reeb_laplacian.npy"
+    path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/100/_100_test_reeb_laplacian.npy"
 
-    path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/train_sccs.npy"
-    path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/test_sccs.npy"
+    path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/100/_100_train_sccs.npy"
+    path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/100/_100_test_sccs.npy"
 
-    path_vertices_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/train_vertices.npy"
-    path_vertices_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/test_vertices.npy"
+    path_vertices_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/100/_100_train_vertices.npy"
+    path_vertices_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/100/_100_test_vertices.npy"
 
-    path_edges_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/train_edge_matrix.npy"
-    path_edges_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/test_edge_matrix.npy"
+    path_edges_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/100/_100_train_edge_matrix.npy"
+    path_edges_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/100/_100_test_edge_matrix.npy"
 
     all_sccs_train=np.load(path_sccs_train)
     all_sccs_test=np.load(path_sccs_test)
