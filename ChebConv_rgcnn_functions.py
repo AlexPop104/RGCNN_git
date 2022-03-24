@@ -170,7 +170,7 @@ def get_fps_matrix(point_cloud,data,nr_points_fps):
     return Matrix_near_4
 
 
-def get_fps_matrix_2(point_cloud,batch_size,nr_points,nr_points_fps):
+def get_fps_matrix_2(point_cloud,original_cloud,batch_size,nr_points,nr_points_fps):
     nr_points_batch=nr_points
 
     Batch_indexes=torch.arange(0,batch_size,device='cuda')
@@ -181,6 +181,7 @@ def get_fps_matrix_2(point_cloud,batch_size,nr_points,nr_points_fps):
     index = fps(point_cloud, Batch_indexes, ratio=float(nr_points_fps/nr_points) , random_start=True)
 
     fps_point_cloud=point_cloud[index]
+    fps_original_cloud=original_cloud[index]
     fps_batch=Batch_indexes[index]
 
     cluster = nearest(point_cloud, fps_point_cloud, Batch_indexes, fps_batch)
@@ -211,7 +212,9 @@ def get_fps_matrix_2(point_cloud,batch_size,nr_points,nr_points_fps):
 
     for i in range(nr_points_fps*batch_size):
         Matrix_near_4[i]=torch.where(Matrix_near_4[i] > 0, Matrix_near_4[i], Matrix_near_4[i,0])
-    return Matrix_near_4
+
+    fps_original_cloud=torch.reshape(fps_original_cloud,(batch_size,nr_points_fps,fps_original_cloud.shape[1]))
+    return Matrix_near_4 ,fps_original_cloud
 
 def get_fps_matrix_topk(point_cloud,batch_size,nr_points,nr_points_fps):
     nr_points_batch=nr_points
@@ -406,6 +409,24 @@ def view_graph(viz_points,distances,threshold,nr):
     ax.set_axis_off()
     for i in range(viz_points.shape[0]):
         ax.scatter(viz_points[i,0].item(),viz_points[i, 1].item(), viz_points[i,2].item(),color='r')
+
+    for i in range(viz_points.shape[0]):
+        for j in range(viz_points.shape[0]):
+            if (distances[i,j].item()>threshold):
+                ax.plot([viz_points[i,0].item(),viz_points[j,0].item()],[viz_points[i, 1].item(),viz_points[j, 1].item()], [viz_points[i,2].item(),viz_points[j,2].item()],alpha=1,color=(0,0,distances[i,j].item()))
+
+def view_graph_with_original_pcd(viz_points,original_points,distances,threshold,nr):
+
+    distances=torch.where(distances<1,distances,torch.tensor(1., dtype=distances.dtype,device='cuda'))
+
+    fig = plt.figure(nr)
+    ax = fig.add_subplot(111, projection='3d')
+    ax.set_axis_off()
+    for i in range(viz_points.shape[0]):
+        ax.scatter(viz_points[i,0].item(),viz_points[i, 1].item(), viz_points[i,2].item(),color='r')
+
+    for i in range(original_points.shape[0]):
+        ax.scatter(original_points[i,0].item(),original_points[i, 1].item(), original_points[i,2].item(),color='g')
 
     for i in range(viz_points.shape[0]):
         for j in range(viz_points.shape[0]):

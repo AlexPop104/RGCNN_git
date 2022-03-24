@@ -86,7 +86,7 @@ class cls_model(nn.Module):
         self.regularization = []
 
 
-    def forward(self, x,k,batch_size,num_points):
+    def forward(self, x,k,batch_size,num_points,nr_points_fps):
         self.regularizers = []
         with torch.no_grad():
             L = conv.pairwise_distance(x) # W - weight matrix
@@ -104,14 +104,18 @@ class cls_model(nn.Module):
 
             with torch.no_grad():
 
-                nr_points_fps=55
+                # nr_points_fps=55
+
+                x2=x
+                x2=torch.reshape(x2,(batch_size*num_points,x2.shape[2]))
+
                 nr_points_batch=int(num_points)
                 out_2=torch.reshape(out,(batch_size*num_points,out.shape[2]))
-                sccs_batch=conv.get_fps_matrix_2(point_cloud=out_2,batch_size=batch_size,nr_points=num_points,nr_points_fps=nr_points_fps)
+                sccs_batch, pcd_fps_points=conv.get_fps_matrix_2(point_cloud=out_2,original_cloud=x2,batch_size=batch_size,nr_points=num_points,nr_points_fps=nr_points_fps)
                 sccs_batch=sccs_batch.long()
                 sccs_batch=torch.reshape(sccs_batch,(batch_size,nr_points_fps,nr_points_batch))
                 Vertices_final_FPS=torch.zeros([batch_size,sccs_batch.shape[1], out_2.shape[1]], dtype=torch.float32,device='cuda')
-
+                
                 for batch_iter in range(batch_size):   
                     for i in range(sccs_batch.shape[1]):
                         Vertices_pool_FPS=torch.zeros([sccs_batch[batch_iter,i].shape[0],out_2.shape[1]], dtype=torch.float32,device='cuda')
@@ -120,6 +124,16 @@ class cls_model(nn.Module):
 
                 L = conv.pairwise_distance(out) # W - weight matrix
                 #L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+
+                # for it_pcd in range(1):
+                #     viz_points_fps=pcd_fps_points[it_pcd,:,:]
+                #     original_points_pcd=x[it_pcd,:,:]
+                #     distances=L[it_pcd,:,:]
+                #     threshold=0.
+                # conv.view_graph_with_original_pcd(viz_points=viz_points_fps,original_points=original_points_pcd,distances=distances,threshold=threshold,nr=2)
+
+                # plt.show()
+
                 L = conv.get_laplacian(L)
 
             out = self.conv2(out, L)
@@ -173,7 +187,7 @@ class cls_model(nn.Module):
 
 criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 
-def train(model, optimizer, loader,k,num_points, regularization):
+def train(model, optimizer, loader,k,num_points, regularization,nr_points_fps):
     model.train()
     total_loss = 0
     for i, data in enumerate(loader):
@@ -183,7 +197,7 @@ def train(model, optimizer, loader,k,num_points, regularization):
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
         
 
-        logits, regularizers  = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points)
+        logits, regularizers  = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points,nr_points_fps=nr_points_fps)
         loss    = criterion(logits, data.y.to(device))
         s = t.sum(t.as_tensor(regularizers))
         loss = loss + regularization * s
@@ -197,7 +211,7 @@ def train(model, optimizer, loader,k,num_points, regularization):
     return total_loss / len(loader.dataset)
 
 @torch.no_grad()
-def test(model, loader,k,num_points):
+def test(model, loader,k,num_points,nr_points_fps):
     model.eval()
 
     total_correct = 0
@@ -207,7 +221,7 @@ def test(model, loader,k,num_points):
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
         
 
-        logits, regularizers  = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points)
+        logits, regularizers  = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points,nr_points_fps=nr_points_fps)
         
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == data.y.to(device)).sum())
@@ -254,12 +268,13 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 1024
+    num_points = 150
     batch_size = 32
     num_epochs = 260
     learning_rate = 1e-3
     modelnet_num = 40
-    k_KNN=30
+    k_KNN=5
+    nr_points_fps=30
 
     F = [128, 512, 1024]  # Outputs size of convolutional filter.
     K = [6, 5, 3]         # Polynomial orders.
@@ -309,14 +324,14 @@ if __name__ == '__main__':
     regularization = 1e-9
     for epoch in range(1, num_epochs+1):
         train_start_time = time.time()
-        loss = train(model, optimizer,loader=train_loader,k=k_KNN,num_points=num_points,regularization=regularization)
+        loss = train(model, optimizer,loader=train_loader,k=k_KNN,num_points=num_points,regularization=regularization,nr_points_fps=nr_points_fps)
         
         train_stop_time = time.time()
 
         writer.add_scalar("Loss/train", loss, epoch)
         
         test_start_time = time.time()
-        test_acc = test(model, loader=test_loader,k=k_KNN,num_points=num_points)
+        test_acc = test(model, loader=test_loader,k=k_KNN,num_points=num_points,nr_points_fps=nr_points_fps)
         test_stop_time = time.time()
 
 

@@ -180,7 +180,7 @@ def train(model, optimizer, loader,k,num_points, regularization):
         optimizer.zero_grad()
 
         x=data.pos
-        nr_points_fps=5
+        nr_points_fps=55
         
         nr_points_batch=int(data.batch.shape[0]/data.batch.unique().shape[0])
       
@@ -220,7 +220,7 @@ def test(model, loader,k,num_points):
     for i,data in enumerate(loader):
         
         x=data.pos
-        nr_points_fps=5
+        nr_points_fps=55
         
         nr_points_batch=int(data.batch.shape[0]/data.batch.unique().shape[0])
       
@@ -301,7 +301,7 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 16
+    num_points = 512
     batch_size = 32
     num_epochs = 260
     learning_rate = 1e-3

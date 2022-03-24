@@ -100,6 +100,11 @@ class cls_model(nn.Module):
         with torch.no_grad():
             L = conv.pairwise_distance(x) # W - weight matrix
             # L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+            for it_pcd in range(1):
+                viz_points_2=x[it_pcd,:,:]
+                distances=L[it_pcd,:,:]
+                threshold=0.3
+                conv.view_graph(viz_points_2,distances,threshold,1)
             L = conv.get_laplacian(L)
 
         out = self.conv1(x, L)
@@ -128,7 +133,7 @@ class cls_model(nn.Module):
                 num_vertices_reeb=laplacian_Reeb.shape[1]
                 edge_dim=edges.shape[1]
 
-                for iter_pcd in range(batch_size):
+                for iter_pcd in range(1):
 
                     points_pcd=x[iter_pcd,:,:].to('cpu')
 
@@ -143,22 +148,26 @@ class cls_model(nn.Module):
                     New_edge_indices_cpu=New_edge_indices.to('cpu')
 
 
-                    fig = matplotlib.pyplot.figure()
+                    fig = matplotlib.pyplot.figure(2)
                     ax = fig.add_subplot(111, projection='3d')
                     ax.set_axis_off()
                     for test_iter in range(New_edge_indices_cpu.shape[1]):
                         ax.plot([vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][0], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][0]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][1], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][1]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][2], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][2]], color='b')
-                    ax.scatter(points_pcd[:, 0], points_pcd[:, 1], points_pcd[:, 2], s=1, color='r') 
-                    ax.scatter(vertices_batch_pcd[:,0],vertices_batch_pcd[:,1],vertices_batch_pcd[:,2],s=1,color='g')  
-                    matplotlib.pyplot.show()
-
-
+                    ax.scatter(points_pcd[:, 0], points_pcd[:, 1], points_pcd[:, 2], s=1, color='g') 
+                    ax.scatter(vertices_batch_pcd[:,0],vertices_batch_pcd[:,1],vertices_batch_pcd[:,2],s=1,color='r')  
+                    
 
 
                 L = conv.pairwise_distance(out) # W - weight matrix
                 # L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+                for it_pcd in range(1):
+                    viz_points_2=x[it_pcd,:,:]
+                    distances=L[it_pcd,:,:]
+                    threshold=0.3
+                    conv.view_graph(viz_points_2,distances,threshold,3)
                 L = conv.get_laplacian(L)
             
+            matplotlib.pyplot.show()
             out = self.conv2(out, L)
             out = self.relu2(out)
             if self.reg_prior:
