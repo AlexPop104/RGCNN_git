@@ -2,6 +2,8 @@ from typing import Optional
 
 from time import time
 import torch
+torch.manual_seed(0)
+
 import torch as t
 import torch_geometric as tg
 from torch import Tensor, nn
