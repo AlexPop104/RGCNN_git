@@ -5,6 +5,7 @@ writer = SummaryWriter()
 
 from torch import nn
 import torch
+torch.manual_seed(0)
 from torch.nn import Parameter
 
 

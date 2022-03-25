@@ -5,6 +5,7 @@ import time
 
 from torch import nn
 import torch
+torch.manual_seed(0)
 from torch.nn import Parameter
 
 
@@ -45,10 +46,13 @@ from mpl_toolkits.mplot3d import Axes3D
 import torch_geometric.utils 
 
 #from ChebConv_loader_indices import Modelnet_with_indices
+np.random.seed(0)
 
 
 def Test_reeb(loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
     for i, (pos, y, normal, idx) in enumerate(loader):
+
+        torch.manual_seed(0)
 
         Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points)
 
@@ -130,7 +134,7 @@ def Test_reeb(loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
 
 def Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
     
-
+    torch.manual_seed(0)
     batch_size=pos[1].shape[0]
     ground_truth_labels=y[1].squeeze(1)
     num_vertices_reeb=all_Reeb_laplacian.shape[1]
@@ -200,11 +204,12 @@ def Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges
         fig = matplotlib.pyplot.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.set_axis_off()
-        for e in edges_aux:
-            ax.plot([vertices_aux[e[0]][0], vertices_aux[e[1]][0]], [vertices_aux[e[0]][1], vertices_aux[e[1]][1]], [vertices_aux[e[0]][2], vertices_aux[e[1]][2]], color='g')
-        for test_iter in range(New_edge_indices_cpu.shape[1]):
-            ax.plot([vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][0], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][0]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][1], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][1]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][2], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][2]], color='b')
-        ax.scatter(points_pcd[:, 0], points_pcd[:, 1], points_pcd[:, 2], s=1, color='r')   
+        # for e in edges_aux:
+        #     ax.plot([vertices_aux[e[0]][0], vertices_aux[e[1]][0]], [vertices_aux[e[0]][1], vertices_aux[e[1]][1]], [vertices_aux[e[0]][2], vertices_aux[e[1]][2]], color='g')
+        # for test_iter in range(New_edge_indices_cpu.shape[1]):
+        #     ax.plot([vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][0], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][0]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][1], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][1]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][2], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][2]], color='b')
+        ax.scatter(points_pcd[:, 0], points_pcd[:, 1], points_pcd[:, 2], s=1, color='r')
+        #ax.scatter(vertices_batch_pcd[:, 0], vertices_batch_pcd[:, 1], vertices_batch_pcd[:, 2], s=1, color='r')
         matplotlib.pyplot.show()
 
         

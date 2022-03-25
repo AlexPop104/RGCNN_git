@@ -50,7 +50,7 @@ def get_laplacian(adj_matrix, normalize=True):
 
     else:
         D = t.sum(adj_matrix, dim=1)
-        D = t.diag(D)
+        D = t.diag_embed(D)
         L = D - adj_matrix
 
     return L
@@ -75,16 +75,27 @@ def pairwise_distance(point_cloud):
     point_cloud_square_tranpose = point_cloud_square.permute(0, 2, 1)
     adj_matrix = point_cloud_square + point_cloud_inner + point_cloud_square_tranpose
 
-    maximum_values=torch.max(adj_matrix,dim=2)
-    minimum_values=torch.min(adj_matrix,dim=2)
+    # maximum_values=torch.max(adj_matrix,dim=2)
+    # minimum_values=torch.min(adj_matrix,dim=2)
 
-    interval=torch.subtract(maximum_values[0],minimum_values[0])
+    # interval=torch.subtract(maximum_values[0],minimum_values[0])
 
-    interval=torch.tile(interval,[nr_points])
+    # interval=torch.tile(interval,[nr_points])
 
-    interval=torch.reshape(interval,(point_cloud.shape[0],point_cloud.shape[1],point_cloud.shape[1]))
+    # interval=torch.reshape(interval,(point_cloud.shape[0],point_cloud.shape[1],point_cloud.shape[1]))
 
-    adj_matrix=torch.div(adj_matrix,interval)
+    # adj_matrix=torch.div(adj_matrix,interval)
+
+    #####
+    #Version 2
+
+    maximum_value=torch.max(adj_matrix)
+    minimum_value=torch.min(adj_matrix)
+
+    interval=maximum_value-minimum_value
+
+    adj_matrix=adj_matrix/interval
+
     adj_matrix = torch.exp(-adj_matrix)
 
     return adj_matrix
