@@ -54,10 +54,7 @@ import torch_geometric.utils
 
 #from ChebConv_loader_indices import Modelnet_with_indices
 
-import sys
-sys.path.append("/home/alex/Alex_documents/RGCNN_git/")
-from tsne import get_colored_point_cloud_feature
-import open3d as o3d
+
 
 np.random.seed(0)
 
@@ -93,9 +90,9 @@ class cls_model(nn.Module):
         self.conv2 = conv.DenseChebConv(128, 512, 3)
         self.conv_Reeb = conv.DenseChebConv(128, 512,3)
         
-        self.fc1 = nn.Linear(1024, 300, bias=True)
-        #self.fc2 = nn.Linear(256, 128, bias=True)
-        self.fc3 = nn.Linear(300, class_num, bias=True)
+        self.fc1 = nn.Linear(1024, 512, bias=True)
+        self.fc2 = nn.Linear(512, 128, bias=True)
+        self.fc3 = nn.Linear(128, class_num, bias=True)
         
         self.fc_t = nn.Linear(128, class_num)
 
@@ -126,19 +123,12 @@ class cls_model(nn.Module):
         if self.reg_prior:
             self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
-        for iter_pcd in range(batch_size):
-            points_pcd=x[iter_pcd][:,0:3].detach().cpu().numpy()
-            features_pcd=out[iter_pcd].detach().cpu().numpy()
+        #conv.tsne_features(x=x,out=out,batch_size=batch_size)
 
-
-            pcd = o3d.geometry.PointCloud()
-            pcd.points = o3d.utility.Vector3dVector(x[iter_pcd][:,0:3].detach().cpu().numpy())
-            vis_pcd = get_colored_point_cloud_feature(pcd, features_pcd, 0.02)
-            o3d.visualization.draw_geometries([vis_pcd])
-
+        
 
             
-            print("Hello")
+            
         
         if self.one_layer == False:
 
@@ -222,12 +212,12 @@ class cls_model(nn.Module):
             out = self.relu4(out)
             #out = self.dropout(out)
 
-            # out = self.fc2(out)
-            # if self.reg_prior:
-            #     self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
-            #     self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
-            # out = self.relu5(out)
-            # out = self.dropout(out)
+            out = self.fc2(out)
+            if self.reg_prior:
+                self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
+                self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
+            out = self.relu5(out)
+            out = self.dropout(out)
 
             out = self.fc3(out)
             if self.reg_prior:
@@ -414,7 +404,7 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 512
+    num_points = 1024
     batch_size = 16
     num_epochs = 260
     learning_rate = 1e-3
@@ -458,8 +448,8 @@ if __name__ == '__main__':
     
     
     model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False, reg_prior=True)
-    # # path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/28_02_22_10:10:19/model50.pt"
-    # # model.load_state_dict(torch.load(path_saved_model))
+    # path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Modele_selectate/Reeb/model55.pt"
+    # model.load_state_dict(torch.load(path_saved_model))
     model = model.to(device)
 
     print(model.parameters)
@@ -506,45 +496,31 @@ if __name__ == '__main__':
     #############################################################
     ##########Load Reeb_graphs from file
 
-
-
-    #path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/5_points/_512_train_reeb_laplacian.npy"
-    path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/5_points/_512_test_reeb_laplacian.npy"
-
-    #path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_train_sccs.npy"
-    path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_test_sccs.npy"
-
-    #path_vertices_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_train_vertices.npy"
-    path_vertices_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_test_vertices.npy"
-
-    #path_edges_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_train_edge_matrix.npy"
-    path_edges_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_test_edge_matrix.npy"
-
     ###################3
-#     path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_test_reeb_laplacian.npy"
-    path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_test_reeb_laplacian.npy"
+    path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/1024/train_reeb_laplacian.npy"
+    path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/1024/test_reeb_laplacian.npy"
 
-#     path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_test_sccs.npy"
-    path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_test_sccs.npy"
+    path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/1024/train_sccs.npy"
+    path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/1024/test_sccs.npy"
 
-#     path_vertices_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_test_vertices.npy"
-    path_vertices_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_test_vertices.npy"
+    path_vertices_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/1024/train_vertices.npy"
+    path_vertices_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/1024/test_vertices.npy"
 
-#     path_edges_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_test_edge_matrix.npy"
-    path_edges_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_test_edge_matrix.npy"
+    path_edges_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/1024/train_edge_matrix.npy"
+    path_edges_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/1024/test_edge_matrix.npy"
 
 #     #############33
 
-    # all_sccs_train=np.load(path_sccs_train)
+    all_sccs_train=np.load(path_sccs_train)
     all_sccs_test=np.load(path_sccs_test)
 
-    # all_reeb_laplacian_train=np.load(path_Reeb_laplacian_train)
+    all_reeb_laplacian_train=np.load(path_Reeb_laplacian_train)
     all_reeb_laplacian_test=np.load(path_Reeb_laplacian_test)
 
-    # vertices_train=np.load(path_vertices_train)
+    vertices_train=np.load(path_vertices_train)
     vertices_test=np.load(path_vertices_test)
 
-    # edges_train=np.load(path_edges_train)
+    edges_train=np.load(path_edges_train)
     edges_test=np.load(path_edges_test)
 
    
@@ -553,7 +529,7 @@ if __name__ == '__main__':
     regularization = 1e-9
     for epoch in range(1, num_epochs+1):
         train_start_time = time.time()
-        #train_loss,train_acc = train(model, optimizer,loader=train_loader,all_sccs=all_sccs_train,all_Reeb_laplacian=all_reeb_laplacian_train,edges=edges_train,vertices=vertices_train,k=k_KNN,num_points=num_points,regularization=regularization)
+        train_loss,train_acc = train(model, optimizer,loader=train_loader,all_sccs=all_sccs_train,all_Reeb_laplacian=all_reeb_laplacian_train,edges=edges_train,vertices=vertices_train,k=k_KNN,num_points=num_points,regularization=regularization)
         
         train_stop_time = time.time()
 

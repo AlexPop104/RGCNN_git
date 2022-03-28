@@ -19,6 +19,11 @@ import matplotlib.pyplot as plt
 
 from mpl_toolkits.mplot3d import Axes3D
 
+import sys
+sys.path.append("/home/alex/Alex_documents/RGCNN_git/")
+from tsne import get_colored_point_cloud_feature
+import open3d as o3d
+
 
 
 
@@ -89,14 +94,14 @@ def pairwise_distance(point_cloud):
     #####
     #Version 2
 
-    maximum_value=torch.max(adj_matrix)
-    minimum_value=torch.min(adj_matrix)
+    # maximum_value=torch.max(adj_matrix)
+    # minimum_value=torch.min(adj_matrix)
 
-    interval=maximum_value-minimum_value
+    # interval=maximum_value-minimum_value
 
-    adj_matrix=adj_matrix/interval
+    # adj_matrix=adj_matrix/interval
 
-    adj_matrix = torch.exp(-adj_matrix)
+    # adj_matrix = torch.exp(-adj_matrix)
 
     return adj_matrix
 
@@ -953,6 +958,18 @@ class DenseChebConv_theta_nosum(nn.Module):
         return (f'{self.__class__.__name__}({self.in_channels}, '
                 f'{self.out_channels}, K={self.K}, '
                 f'normalization={self.normalization})')
+
+def tsne_features(x,out,batch_size):
+    for iter_pcd in range(batch_size):
+        points_pcd=x[iter_pcd][:,0:3].detach().cpu().numpy()
+        features_pcd=out[iter_pcd].detach().cpu().numpy()
+
+
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(x[iter_pcd][:,0:3].detach().cpu().numpy())
+        vis_pcd = get_colored_point_cloud_feature(pcd, features_pcd, 0.02)
+        o3d.visualization.draw_geometries([vis_pcd])
+
 
 
 if __name__ == "__main__":

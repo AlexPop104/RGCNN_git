@@ -89,11 +89,11 @@ class cls_model(nn.Module):
             L = conv.pairwise_distance(x) # W - weight matrix
             #L = conv.get_laplacian(L)
 
-            for it_pcd in range(1):
-                viz_points_2=x[it_pcd,:,:]
-                distances=L[it_pcd,:,:]
-                threshold=0.3
-                conv.view_graph(viz_points_2,distances,threshold,1)
+            # for it_pcd in range(1):
+            #     viz_points_2=x[it_pcd,:,:]
+            #     distances=L[it_pcd,:,:]
+            #     threshold=0.3
+            #     conv.view_graph(viz_points_2,distances,threshold,1)
                 
 
 
@@ -110,11 +110,11 @@ class cls_model(nn.Module):
         with torch.no_grad():
             L = conv.pairwise_distance(out) # W - weight matrix
             #L = conv.get_laplacian(L)
-            for it_pcd in range(1):
-                viz_points_2=x[it_pcd,:,:]
-                distances=L[it_pcd,:,:]
-                threshold=0.3
-                conv.view_graph(viz_points_2,distances,threshold,2)
+            # for it_pcd in range(1):
+            #     viz_points_2=x[it_pcd,:,:]
+            #     distances=L[it_pcd,:,:]
+            #     threshold=0.3
+            #     conv.view_graph(viz_points_2,distances,threshold,2)
             L = conv.get_laplacian(L)
         
         out = self.conv2(out, L)
@@ -125,18 +125,22 @@ class cls_model(nn.Module):
         with torch.no_grad():
             L = conv.pairwise_distance(out) # W - weight matrix
             #L = conv.get_laplacian(L)
-            for it_pcd in range(1):
-                viz_points_2=x[it_pcd,:,:]
-                distances=L[it_pcd,:,:]
-                threshold=0.3
-                conv.view_graph(viz_points_2,distances,threshold,3)
+            # for it_pcd in range(1):
+            #     viz_points_2=x[it_pcd,:,:]
+            #     distances=L[it_pcd,:,:]
+            #     threshold=0.3
+            #     conv.view_graph(viz_points_2,distances,threshold,3)
             L = conv.get_laplacian(L)
         
-        plt.show()
+        # plt.show()
+
+        
 
 
         out = self.conv3(out, L)
         out = self.relu3(out)
+
+        conv.tsne_features(x=x,out=out,batch_size=batch_size)
         
         if self.reg_prior:
             self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
@@ -246,8 +250,8 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 100
-    batch_size = 1
+    num_points = 512
+    batch_size = 16
     num_epochs = 250
     learning_rate = 1e-3
     modelnet_num = 40
