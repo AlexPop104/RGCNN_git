@@ -101,7 +101,7 @@ def pairwise_distance(point_cloud):
 
     # adj_matrix=adj_matrix/interval
 
-    # adj_matrix = torch.exp(-adj_matrix)
+    adj_matrix = torch.exp(-adj_matrix)
 
     return adj_matrix
 

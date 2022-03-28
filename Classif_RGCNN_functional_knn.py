@@ -56,7 +56,6 @@ class cls_model(nn.Module):
         self.dropout = dropout
         self.regularizers = []
 
-        # self.get_laplacian = GetLaplacian(normalize=True)
         self.relu1 = nn.ReLU()
         self.relu2 = nn.ReLU()
         self.relu3 = nn.ReLU()
@@ -89,11 +88,6 @@ class cls_model(nn.Module):
         with torch.no_grad():
             L = conv.pairwise_distance(x) # W - weight matrix
             L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
-            # for it_pcd in range(1):
-            #     viz_points_2=x[it_pcd,:,:]
-            #     distances=L[it_pcd,:,:]
-            #     threshold=0.3
-            #     conv.view_graph(viz_points_2,distances,threshold,1)
             L = conv.get_laplacian(L)
 
         out = self.conv1(x, L)
@@ -106,11 +100,6 @@ class cls_model(nn.Module):
             with torch.no_grad():
                 L = conv.pairwise_distance(out) # W - weight matrix
                 L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
-                # for it_pcd in range(1):
-                #     viz_points_2=x[it_pcd,:,:]
-                #     distances=L[it_pcd,:,:]
-                #     threshold=0.3
-                #     conv.view_graph(viz_points_2,distances,threshold,2)
                 L = conv.get_laplacian(L)
             
             out = self.conv2(out, L)
@@ -121,11 +110,6 @@ class cls_model(nn.Module):
             with torch.no_grad():
                 L = conv.pairwise_distance(out) # W - weight matrix
                 L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
-                # for it_pcd in range(1):
-                #     viz_points_2=x[it_pcd,:,:]
-                #     distances=L[it_pcd,:,:]
-                #     threshold=0.3
-                #     conv.view_graph(viz_points_2,distances,threshold,3)
                 L = conv.get_laplacian(L)
             
             plt.show()
@@ -217,9 +201,6 @@ def createConfusionMatrix(model,loader,k,num_points):
         labels = data.y.cpu().numpy()
         y_true.extend(labels)  # save ground truth
 
-    # constant for classes
-    # classes = ('T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
-    #            'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle Boot')
 
     # Build confusion matrix
     cf_matrix = confusion_matrix(y_true, y_pred,normalize='true')
