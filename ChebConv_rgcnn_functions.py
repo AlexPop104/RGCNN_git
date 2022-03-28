@@ -24,6 +24,8 @@ sys.path.append("/home/alex/Alex_documents/RGCNN_git/")
 from tsne import get_colored_point_cloud_feature
 import open3d as o3d
 
+from torch_cluster import knn_graph
+
 
 
 
@@ -80,32 +82,52 @@ def pairwise_distance(point_cloud):
     point_cloud_square_tranpose = point_cloud_square.permute(0, 2, 1)
     adj_matrix = point_cloud_square + point_cloud_inner + point_cloud_square_tranpose
 
-    # maximum_values=torch.max(adj_matrix,dim=2)
-    # minimum_values=torch.min(adj_matrix,dim=2)
+    maximum_values=torch.max(adj_matrix,dim=2)
+    minimum_values=torch.min(adj_matrix,dim=2)
 
-    # interval=torch.subtract(maximum_values[0],minimum_values[0])
+    interval=torch.subtract(maximum_values[0],minimum_values[0])
 
-    # interval=torch.tile(interval,[nr_points])
+    interval=torch.tile(interval,[nr_points])
 
-    # interval=torch.reshape(interval,(point_cloud.shape[0],point_cloud.shape[1],point_cloud.shape[1]))
+    interval=torch.reshape(interval,(point_cloud.shape[0],point_cloud.shape[1],point_cloud.shape[1]))
 
-    # adj_matrix=torch.div(adj_matrix,interval)
+    adj_matrix=torch.div(adj_matrix,interval)
 
     #####
     #Version 2
 
-    maximum_value=torch.max(adj_matrix)
-    minimum_value=torch.min(adj_matrix)
+    # maximum_value=torch.max(adj_matrix)
+    # minimum_value=torch.min(adj_matrix)
 
-    interval=maximum_value-minimum_value
+    # interval=maximum_value-minimum_value
 
-    adj_matrix=adj_matrix/interval
+    # adj_matrix=adj_matrix/interval
 
     ##########################
 
     adj_matrix = torch.exp(-adj_matrix)
 
     return adj_matrix
+
+def get_knn_adj_matrix_pytorch(x,batch,k):
+
+    edge_index = knn_graph(x, k=k, batch=batch, loop=True)
+
+    pcd1=x[edge_index[0]]
+    pcd2=x[edge_index[1]]
+
+    point_cloud_inner = torch.sum(torch.mul(pcd1, pcd2),dim=1, keepdim=True)
+    point_cloud_inner = -2 * point_cloud_inner
+    point_cloud_square_1 = torch.sum(torch.mul(pcd1, pcd1), dim=1, keepdim=True)
+    point_cloud_square_2 = torch.sum(torch.mul(pcd2, pcd2), dim=1, keepdim=True)
+    distances = point_cloud_square_1 + point_cloud_inner + point_cloud_square_2
+    distances=distances.squeeze(1)
+
+    distances=torch.exp(-distances)
+
+    adj_matrix_2=tg.utils.to_dense_adj(edge_index=edge_index,edge_attr= distances,batch=batch)
+
+    return adj_matrix_2
 
 def get_one_matrix_knn(matrix, k,batch_size,nr_points):
 

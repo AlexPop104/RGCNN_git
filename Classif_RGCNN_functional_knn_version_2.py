@@ -37,6 +37,8 @@ import seaborn as sn
 import pandas as pd
 import numpy as np
 
+from torch_cluster import knn_graph
+
 
 
 class cls_model(nn.Module):
@@ -83,11 +85,18 @@ class cls_model(nn.Module):
         self.regularization = []
 
 
-    def forward(self, x,k,batch_size,num_points):
+    def forward(self, x,k,batch_size,num_points,batch):
+
+        
+
         self.regularizers = []
         with torch.no_grad():
-            L = conv.pairwise_distance(x) # W - weight matrix
-            L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+
+            L=conv.get_knn_adj_matrix_pytorch(x=x,batch=batch,k=k)
+            x = x.reshape(batch_size, num_points, x.shape[1])
+
+            # L = conv.pairwise_distance(x2) # W - weight matrix
+            # L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
             L = conv.get_laplacian(L)
 
         out = self.conv1(x, L)
@@ -95,12 +104,18 @@ class cls_model(nn.Module):
 
         if self.reg_prior:
             self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+
+        
         
         if self.one_layer == False:
             with torch.no_grad():
-                L = conv.pairwise_distance(out) # W - weight matrix
-                L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+                out=out.reshape(batch_size*num_points,out.shape[2])
+                L=conv.get_knn_adj_matrix_pytorch(x=out,batch=batch,k=k)
+
+                # L = conv.pairwise_distance(out) # W - weight matrix
+                # L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
                 L = conv.get_laplacian(L)
+                out=out.reshape(batch_size,num_points,out.shape[1])
             
             out = self.conv2(out, L)
             out = self.relu2(out)
@@ -108,9 +123,13 @@ class cls_model(nn.Module):
                 self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
     
             with torch.no_grad():
-                L = conv.pairwise_distance(out) # W - weight matrix
-                L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+                out=out.reshape(batch_size*num_points,out.shape[2])
+                L=conv.get_knn_adj_matrix_pytorch(x=out,batch=batch,k=k)
+
+                # L = conv.pairwise_distance(out) # W - weight matrix
+                # L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
                 L = conv.get_laplacian(L)
+                out=out.reshape(batch_size,num_points,out.shape[1])
             
             plt.show()
             out = self.conv3(out, L)
@@ -157,8 +176,8 @@ def train(model, optimizer, loader,k,num_points, regularization):
     for i, data in enumerate(loader):
         optimizer.zero_grad()
         x = torch.cat([data.pos, data.normal], dim=1)
-        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
-        logits, regularizers  = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points)
+        #x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+        logits, regularizers  = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points,batch=data.batch.to(device))
         loss    = criterion(logits, data.y.to(device))
         s = t.sum(t.as_tensor(regularizers))
         loss = loss + regularization * s
@@ -177,8 +196,9 @@ def test(model, loader,k,num_points):
     total_correct = 0
     for data in loader:
         x = torch.cat([data.pos, data.normal], dim=1)
-        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
-        logits, _ = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points)
+        
+
+        logits, _ = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points,batch=data.batch.to(device))
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == data.y.to(device)).sum())
 
@@ -191,8 +211,8 @@ def createConfusionMatrix(model,loader,k,num_points):
     # iterate over data
     for  data in loader:
         x = torch.cat([data.pos, data.normal], dim=1)
-        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
-        logits, _ = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points)
+        #x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+        logits, _ = model(x.to(device),k=k,batch_size=data.batch.unique().shape[0],num_points=num_points,batch=data.batch.to(device))
         pred = logits.argmax(dim=-1)
         
         output = pred.cpu().numpy()
@@ -223,7 +243,7 @@ if __name__ == '__main__':
     num_epochs = 50
     learning_rate = 1e-3
     modelnet_num = 40
-    k_KNN=55
+    k_KNN=30
 
     F = [128, 512, 1024]  # Outputs size of convolutional filter.
     K = [6, 5, 3]         # Polynomial orders.
@@ -281,7 +301,7 @@ if __name__ == '__main__':
         print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
         Test Time: \t{test_stop_time - test_start_time }')
 
-        writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader,k=k_KNN,num_points=num_points), epoch)
+        #writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader,k=k_KNN,num_points=num_points), epoch)
 
         if(epoch%5==0):
             torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')

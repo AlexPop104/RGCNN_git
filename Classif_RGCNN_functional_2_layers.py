@@ -6,8 +6,8 @@ import torch_geometric as tg
 
 import time
 
-# from torch.utils.tensorboard import SummaryWriter
-# writer = SummaryWriter()
+from torch.utils.tensorboard import SummaryWriter
+writer = SummaryWriter()
 
 from torch.nn import Parameter
 
@@ -40,6 +40,9 @@ import seaborn as sn
 import pandas as pd
 import numpy as np
 
+import matplotlib.pyplot
+from mpl_toolkits.mplot3d import Axes3D
+
 
 
 class cls_model(nn.Module):
@@ -66,15 +69,43 @@ class cls_model(nn.Module):
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
-        #self.conv1 = conv.DenseChebConv(3, 128, 6)
-        #self.conv1 = conv.DenseChebConv(6, 128, 6)
 
-        self.conv1 = conv.DenseChebConv(6, 128, 6)
-        self.conv2 = conv.DenseChebConv(128, 512, 5)
-        # self.conv3 = conv.DenseChebConv(512, 1024, 3)
-        
-        self.fc1 = nn.Linear(512, 128, bias=True)
-        #self.fc2 = nn.Linear(128, 128, bias=True)
+
+        # self.fc_test_1 = nn.Linear(7, 64, bias=True)
+        # self.fc_test_2 = nn.Linear(64, 128, bias=True)
+        # self.fc_test_3 = nn.Linear(128,256,bias=True)
+        # self.relu_test_1 = nn.ReLU()
+        # self.relu_test_2 = nn.ReLU()
+        # self.relu_test_3 = nn.ReLU()
+
+
+
+
+        # self.conv1 = conv.DenseChebConv(3, 128, 6)
+        # self.conv1 = conv.DenseChebConv(6, 128, 6)
+
+        # self.conv1 = conv.DenseChebConvV2(6, 128, 3)
+        # self.conv2 = conv.DenseChebConvV2(128,512, 3)
+        # self.conv3 = conv.DenseChebConvV2(512,1024, 3)
+
+        # self.conv1 = conv.DenseChebConv_small_linear(6, 128, 3)
+        # self.conv2 = conv.DenseChebConv_small_linear(128,512, 3)
+        # self.conv3 = conv.DenseChebConv_small_linear(512,1024, 3)
+
+
+        # self.conv1 = conv.DenseChebConv_theta_and_sum(6, 128, 3)
+        # self.conv2 = conv.DenseChebConv_theta_and_sum(128,512, 3)
+        # self.conv3 = conv.DenseChebConv_theta_and_sum(512,1024, 3)
+
+        # self.conv1 = conv.DenseChebConv_theta_nosum(6, 128, 3)
+        # self.conv2 = conv.DenseChebConv_theta_nosum(128,512, 3)
+        # self.conv3 = conv.DenseChebConv_theta_nosum(512,1024, 3)
+
+
+        self.conv1 = conv.DenseChebConv(6, 128, 3)
+        self.conv2 = conv.DenseChebConv(128,512, 3)
+           
+        self.fc2 = nn.Linear(512, 128, bias=True)
         self.fc3 = nn.Linear(128, class_num, bias=True)
         
         self.max_pool = nn.MaxPool1d(self.vertice)
@@ -82,6 +113,7 @@ class cls_model(nn.Module):
         self.regularizer = 0
         self.regularization = []
 
+        
 
     def forward(self, x):
     #def forward(self, x,x2):
@@ -106,34 +138,46 @@ class cls_model(nn.Module):
         if self.reg_prior:
             self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
-        with torch.no_grad():
-            L = conv.pairwise_distance(out) # W - weight matrix
-            L = conv.get_laplacian(L)
         
-        # out = self.conv3(out, L)
-        # out = self.relu3(out)
-        
-        # if self.reg_prior:
-        #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
         out, _ = t.max(out, 1)
+        #################################################################################
+        #Test fully connected
+        
+
+        
+
+        # out = self.fc_test_1(x)
+
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc_test_1.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc_test_1.bias.data[0]) ** 2)
+
+        # out = self.relu_test_1(out)
+        # #out = self.dropout(out)
+
+        # out = self.fc_test_2(out)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc_test_2.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc_test_2.bias.data[0]) ** 2)
+        # out = self.relu_test_2(out)
+        # #out = self.dropout(out)
+
+        # out = self.fc_test_3(out)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc_test_3.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc_test_3.bias.data[0]) ** 2)
+        
+        # out, _ = t.max(out, 1)
 
         # ~~~~ Fully Connected ~~~~
         
-        out = self.fc1(out)
 
+        out = self.fc2(out)
         if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
-            self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
-
-        out = self.relu4(out)
-        #out = self.dropout(out)
-
-        # out = self.fc2(out)
-        # if self.reg_prior:
-        #     self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
-        #     self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
-        # out = self.relu5(out)
+            self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
+            self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
+        out = self.relu5(out)
         #out = self.dropout(out)
 
         out = self.fc3(out)
@@ -159,14 +203,13 @@ def train(model, optimizer, loader, regularization):
         x = torch.cat([data.pos, data.normal], dim=1)   
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
-        
-
+        #x2= conv.get_RotationInvariantFeatures(point_cloud=x,num_points=num_points)
 
         # x=torch.cat([x,x2],dim=2)
         # logits, regularizers  = model(x.to(device))
 
-        logits, regularizers  = model(x.to(device))
         #logits, regularizers  = model(x=x.to(device),x2=x2.to(device))
+        logits, regularizers  = model(x=x.to(device))
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == data.y.to(device)).sum())
         
@@ -185,6 +228,9 @@ def train(model, optimizer, loader, regularization):
 def test(model, loader):
     model.eval()
 
+    # Dict from labels to names
+
+
     total_loss = 0
     total_correct = 0
     for data in loader:
@@ -201,11 +247,17 @@ def test(model, loader):
         x = torch.cat([data.pos, data.normal], dim=1)   
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
-        # x=torch.cat([x,x2],dim=2)
+        #x2= conv.get_RotationInvariantFeatures(point_cloud=x,num_points=num_points)
+
+        #x=torch.cat([x,x2],dim=2)
         
-        logits, regularizers  = model(x=x.to(device))
+
         #logits, regularizers  = model(x=x.to(device),x2=x2.to(device))
+        logits, regularizers  = model(x=x.to(device))
         loss    = criterion(logits, data.y.to(device))
+
+        
+
         # s = t.sum(t.as_tensor(regularizers))
         # loss = loss + regularization * s
         total_loss += loss.item() * data.num_graphs
@@ -241,10 +293,7 @@ def createConfusionMatrix(model,loader):
         labels = data.y.cpu().numpy()
         y_true.extend(labels)  # save ground truth
 
-    # constant for classes
-    # classes = ('T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
-    #            'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle Boot')
-
+   
     # Build confusion matrix
     cf_matrix = confusion_matrix(y_true, y_pred,normalize='true')
     df_cm = pd.DataFrame(cf_matrix, index=[i for i in range(40)],
@@ -262,7 +311,7 @@ if __name__ == '__main__':
     os.mkdir(path)
 
     num_points = 512
-    batch_size = 32
+    batch_size = 16
     num_epochs = 250
     learning_rate = 1e-3
     modelnet_num = 40
@@ -279,15 +328,15 @@ if __name__ == '__main__':
     transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
     
     random_rotate_train = Compose([
-    RandomRotate(degrees=(0,45), axis=0),
-    RandomRotate(degrees=(0,45), axis=1),
-    RandomRotate(degrees=(0,45), axis=2),
+    RandomRotate(degrees=15, axis=0),
+    RandomRotate(degrees=15, axis=1),
+    RandomRotate(degrees=15, axis=2),
 ])
 
     random_rotate_test = Compose([
-    RandomRotate(degrees=(89,90), axis=0),
-    RandomRotate(degrees=(89,90), axis=1),
-    RandomRotate(degrees=(89,90), axis=2),
+    RandomRotate(degrees=45, axis=0),
+    RandomRotate(degrees=45, axis=1),
+    RandomRotate(degrees=45, axis=2),
 ])
 
     train_transform = Compose([
@@ -337,17 +386,16 @@ if __name__ == '__main__':
         train_loss,train_acc = train(model, optimizer, train_loader, regularization=regularization)
         train_stop_time = time.time()
 
-    
         test_start_time = time.time()
         test_loss,test_acc = test(model, test_loader)
         test_stop_time = time.time()
 
+        #conv.test_pcd_pred(model=model,loader=train_loader,num_points=num_points,device=device)
 
-        # writer.add_scalar("Loss/train", train_loss, epoch)
-        # writer.add_scalar("Loss/test", test_loss, epoch)
-        # writer.add_scalar("Acc/train", train_acc, epoch)
-        # writer.add_scalar("Acc/test", test_acc, epoch)
-
+        writer.add_scalar("Loss/train", train_loss, epoch)
+        writer.add_scalar("Loss/test", test_loss, epoch)
+        writer.add_scalar("Acc/train", train_acc, epoch)
+        writer.add_scalar("Acc/test", test_acc, epoch)
 
         print(f'Epoch: {epoch:02d}, Loss: {train_loss:.4f}, Test Accuracy: {test_acc:.4f}')
         print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
