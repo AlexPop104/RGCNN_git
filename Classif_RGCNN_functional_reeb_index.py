@@ -52,16 +52,10 @@ from mpl_toolkits.mplot3d import Axes3D
 
 import torch_geometric.utils 
 
-#from ChebConv_loader_indices import Modelnet_with_indices
-
-
-
 np.random.seed(0)
 
-
-
 class cls_model(nn.Module):
-    def __init__(self, vertice ,F, K, M, class_num, regularization=0, one_layer=True, dropout=0, reg_prior:bool=True):
+    def __init__(self, vertice ,F, K, M, class_num, regularization=0, dropout=0, reg_prior:bool=True):
         assert len(F) == len(K)
         super(cls_model, self).__init__()
 
@@ -69,7 +63,7 @@ class cls_model(nn.Module):
         self.K = K
         self.M = M
 
-        self.one_layer = one_layer
+        
 
         self.reg_prior = reg_prior
         self.vertice = vertice
@@ -86,9 +80,9 @@ class cls_model(nn.Module):
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
-        self.conv1 = conv.DenseChebConv(6, 128, 3)
-        self.conv2 = conv.DenseChebConv(128, 512, 3)
-        self.conv_Reeb = conv.DenseChebConv(128, 512,3)
+        self.conv1 = conv.DenseChebConv(6, 128, 5)
+        self.conv2 = conv.DenseChebConv(128, 512, 6)
+        self.conv_Reeb = conv.DenseChebConv(128, 512,6)
         
         self.fc1 = nn.Linear(1024, 512, bias=True)
         self.fc2 = nn.Linear(512, 128, bias=True)
@@ -98,8 +92,6 @@ class cls_model(nn.Module):
 
         self.max_pool = nn.MaxPool1d(self.vertice)
 
-        if one_layer == True:
-            self.fc = nn.Linear(128, class_num)
 
         self.regularizer = 0
         self.regularization = []
@@ -127,105 +119,100 @@ class cls_model(nn.Module):
 
         
 
-            
-            
+
+        with torch.no_grad():
+            Vertices_final_Reeb=torch.zeros([batch_size,laplacian_Reeb.shape[2], out.shape[2]], dtype=torch.float32,device='cuda')
+
+            for batch_iter in range(batch_size):   
+                for i in range(laplacian_Reeb.shape[1]):
+                    Vertices_pool_Reeb=torch.zeros([sccs[batch_iter,i].shape[0],out.shape[2]], dtype=torch.float32,device='cuda')
+                    
+                    Vertices_pool_Reeb=out[batch_iter,sccs[batch_iter,i]]
+
+                    Vertices_final_Reeb[batch_iter,i],_ =t.max(Vertices_pool_Reeb, 0)
+                    
+                
+            laplacian_Reeb_final= torch.tensor(laplacian_Reeb, dtype=torch.float32,device='cuda')
+
+            num_vertices_reeb=laplacian_Reeb.shape[1]
+            edge_dim=edges.shape[1]
+
+            # for iter_pcd in range(1):
+
+            #     points_pcd=x[iter_pcd,:,:].to('cpu')
+
+            #     sccs_pcd=sccs[iter_pcd*num_vertices_reeb:(iter_pcd+1)*num_vertices_reeb]
+            #     reeb_laplace_pcd=laplacian_Reeb_final[iter_pcd*num_vertices_reeb:(iter_pcd+1)*num_vertices_reeb,0:num_vertices_reeb]
+            #     vertices_batch_pcd=vertices[iter_pcd*num_vertices_reeb:(iter_pcd+1)*num_vertices_reeb]
+            #     matrix_edges_batch_pcd=edges[iter_pcd*laplacian_Reeb_final.shape[1]:(iter_pcd+1)*edge_dim]
+
+            #     t_matrix_edges_batch=torch.tensor(matrix_edges_batch_pcd)
+            #     t_matrix_edges_2=t_matrix_edges_batch.unsqueeze(0)
+            #     New_edge_indices, New_edge_values=torch_geometric.utils.dense_to_sparse(t_matrix_edges_2)
+            #     New_edge_indices_cpu=New_edge_indices.to('cpu')
+
+
+            #     fig = matplotlib.pyplot.figure(2)
+            #     ax = fig.add_subplot(111, projection='3d')
+            #     ax.set_axis_off()
+            #     for test_iter in range(New_edge_indices_cpu.shape[1]):
+            #         ax.plot([vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][0], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][0]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][1], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][1]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][2], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][2]], color='b')
+            #     ax.scatter(points_pcd[:, 0], points_pcd[:, 1], points_pcd[:, 2], s=1, color='g') 
+            #     ax.scatter(vertices_batch_pcd[:,0],vertices_batch_pcd[:,1],vertices_batch_pcd[:,2],s=1,color='r')  
+                
+
+
+            L = conv.pairwise_distance(out) # W - weight matrix
+            #L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+            # for it_pcd in range(1):
+            #     viz_points_2=x[it_pcd,:,:]
+            #     distances=L[it_pcd,:,:]
+            #     threshold=0.3
+            #     conv.view_graph(viz_points_2,distances,threshold,3)
+            L = conv.get_laplacian(L)
         
-        if self.one_layer == False:
+        #matplotlib.pyplot.show()
+        out = self.conv2(out, L)
+        out = self.relu2(out)
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
+        # out_Reeb=self.conv_Reeb(Vertices_final_Reeb,laplacian_Reeb_final)
+        # out_Reeb=self.relu_Reeb(out_Reeb)
 
-            with torch.no_grad():
-                Vertices_final_Reeb=torch.zeros([batch_size,laplacian_Reeb.shape[2], out.shape[2]], dtype=torch.float32,device='cuda')
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out_Reeb, (0, 2, 1)), laplacian_Reeb_final), out_Reeb))**2)
 
-                for batch_iter in range(batch_size):   
-                    for i in range(laplacian_Reeb.shape[1]):
-                        Vertices_pool_Reeb=torch.zeros([sccs[batch_iter,i].shape[0],out.shape[2]], dtype=torch.float32,device='cuda')
-                        
-                        Vertices_pool_Reeb=out[batch_iter,sccs[batch_iter,i]]
+        # out_Reeb, _ = t.max(out_Reeb, 1)
 
-                        Vertices_final_Reeb[batch_iter,i],_ =t.max(Vertices_pool_Reeb, 0)
-                        
-                    
-                laplacian_Reeb_final= torch.tensor(laplacian_Reeb, dtype=torch.float32,device='cuda')
+        out, _ = t.max(out, 1)
+        
 
-                num_vertices_reeb=laplacian_Reeb.shape[1]
-                edge_dim=edges.shape[1]
+        # out=torch.cat((out_Reeb,out),1)
 
-                # for iter_pcd in range(1):
+        # ~~~~ Fully Connected ~~~~
+        
+        # out = self.fc1(out)
 
-                #     points_pcd=x[iter_pcd,:,:].to('cpu')
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
 
-                #     sccs_pcd=sccs[iter_pcd*num_vertices_reeb:(iter_pcd+1)*num_vertices_reeb]
-                #     reeb_laplace_pcd=laplacian_Reeb_final[iter_pcd*num_vertices_reeb:(iter_pcd+1)*num_vertices_reeb,0:num_vertices_reeb]
-                #     vertices_batch_pcd=vertices[iter_pcd*num_vertices_reeb:(iter_pcd+1)*num_vertices_reeb]
-                #     matrix_edges_batch_pcd=edges[iter_pcd*laplacian_Reeb_final.shape[1]:(iter_pcd+1)*edge_dim]
+        # out = self.relu4(out)
+        #out = self.dropout(out)
 
-                #     t_matrix_edges_batch=torch.tensor(matrix_edges_batch_pcd)
-                #     t_matrix_edges_2=t_matrix_edges_batch.unsqueeze(0)
-                #     New_edge_indices, New_edge_values=torch_geometric.utils.dense_to_sparse(t_matrix_edges_2)
-                #     New_edge_indices_cpu=New_edge_indices.to('cpu')
+        out = self.fc2(out)
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
+            self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
+        out = self.relu5(out)
+        out = self.dropout(out)
 
-
-                #     fig = matplotlib.pyplot.figure(2)
-                #     ax = fig.add_subplot(111, projection='3d')
-                #     ax.set_axis_off()
-                #     for test_iter in range(New_edge_indices_cpu.shape[1]):
-                #         ax.plot([vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][0], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][0]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][1], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][1]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][2], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][2]], color='b')
-                #     ax.scatter(points_pcd[:, 0], points_pcd[:, 1], points_pcd[:, 2], s=1, color='g') 
-                #     ax.scatter(vertices_batch_pcd[:,0],vertices_batch_pcd[:,1],vertices_batch_pcd[:,2],s=1,color='r')  
-                    
-
-
-                L = conv.pairwise_distance(out) # W - weight matrix
-                #L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
-                # for it_pcd in range(1):
-                #     viz_points_2=x[it_pcd,:,:]
-                #     distances=L[it_pcd,:,:]
-                #     threshold=0.3
-                #     conv.view_graph(viz_points_2,distances,threshold,3)
-                L = conv.get_laplacian(L)
-            
-            #matplotlib.pyplot.show()
-            out = self.conv2(out, L)
-            out = self.relu2(out)
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
-
-            out_Reeb=self.conv_Reeb(Vertices_final_Reeb,laplacian_Reeb_final)
-            out_Reeb=self.relu_Reeb(out_Reeb)
+        out = self.fc3(out)
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(self.fc3.weight.data[0]) ** 2)
+            self.regularizers.append(t.linalg.norm(self.fc3.bias.data[0]) ** 2)
     
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out_Reeb, (0, 2, 1)), laplacian_Reeb_final), out_Reeb))**2)
-    
-            out, _ = t.max(out, 1)
-            out_Reeb, _ = t.max(out_Reeb, 1)
-
-            out=torch.cat((out_Reeb,out),1)
-
-            # ~~~~ Fully Connected ~~~~
-            
-            out = self.fc1(out)
-
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
-
-            out = self.relu4(out)
-            #out = self.dropout(out)
-
-            out = self.fc2(out)
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
-            out = self.relu5(out)
-            out = self.dropout(out)
-
-            out = self.fc3(out)
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc3.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc3.bias.data[0]) ** 2)
-        else:
-            out, _ = t.max(out, 1)
-            out = self.fc(out)
 
         return out, self.regularizers
 
@@ -447,7 +434,7 @@ if __name__ == '__main__':
     # print(f"Test dataset shape:  {dataset_test}")
     
     
-    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False, reg_prior=True)
+    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1,  reg_prior=True)
     # path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Modele_selectate/Reeb/model55.pt"
     # model.load_state_dict(torch.load(path_saved_model))
     model = model.to(device)

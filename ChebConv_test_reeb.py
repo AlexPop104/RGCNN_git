@@ -214,12 +214,12 @@ def Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges
             colour_red=random.uniform(0, 1)
             colour_green=random.uniform(0, 1)
             colour_blue=random.uniform(0, 1)
-            ax.scatter(pcd_region[:, 0], pcd_region[:, 1], pcd_region[:, 2], s=20, color=(colour_red,colour_green,colour_blue))
+            ax.scatter(pcd_region[:, 0], pcd_region[:, 1], pcd_region[:, 2], s=1, color=(colour_red,colour_green,colour_blue))
 
-        # for e in edges_aux:
-        #     ax.plot([vertices_aux[e[0]][0], vertices_aux[e[1]][0]], [vertices_aux[e[0]][1], vertices_aux[e[1]][1]], [vertices_aux[e[0]][2], vertices_aux[e[1]][2]], color='g')
-        for test_iter in range(New_edge_indices_cpu.shape[1]):
-            ax.plot([vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][0], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][0]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][1], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][1]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][2], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][2]], color='b')
+        for e in edges_aux:
+            ax.plot([vertices_aux[e[0]][0], vertices_aux[e[1]][0]], [vertices_aux[e[0]][1], vertices_aux[e[1]][1]], [vertices_aux[e[0]][2], vertices_aux[e[1]][2]], color='g')
+        # for test_iter in range(New_edge_indices_cpu.shape[1]):
+        #     ax.plot([vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][0], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][0]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][1], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][1]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][2], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][2]], color='b')
         #ax.scatter(points_pcd[:, 0], points_pcd[:, 1], points_pcd[:, 2], s=1, color='r')
         #ax.scatter(vertices_batch_pcd[:, 0], vertices_batch_pcd[:, 1], vertices_batch_pcd[:, 2], s=1, color='r')
         matplotlib.pyplot.show()
