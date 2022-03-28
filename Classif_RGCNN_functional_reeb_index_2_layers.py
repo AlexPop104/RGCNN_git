@@ -1,16 +1,11 @@
-
-
 import time
-
-import torch
-torch.manual_seed(0)
 
 from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter()
 
 from torch import nn
 import torch
-
+torch.manual_seed(0)
 from torch.nn import Parameter
 
 
@@ -52,10 +47,12 @@ from mpl_toolkits.mplot3d import Axes3D
 
 import torch_geometric.utils 
 
-np.random.seed(0)
+#from ChebConv_loader_indices import Modelnet_with_indices
+
+
 
 class cls_model(nn.Module):
-    def __init__(self, vertice ,F, K, M, class_num, regularization=0, dropout=0, reg_prior:bool=True):
+    def __init__(self, vertice ,F, K, M, class_num, regularization=0,  dropout=0, reg_prior:bool=True):
         assert len(F) == len(K)
         super(cls_model, self).__init__()
 
@@ -74,6 +71,7 @@ class cls_model(nn.Module):
         # self.get_laplacian = GetLaplacian(normalize=True)
         self.relu1 = nn.ReLU()
         self.relu2 = nn.ReLU()
+        self.relu3 = nn.ReLU()
         self.relu_Reeb = nn.ReLU()
         self.relu4 = nn.ReLU()
         self.relu5 = nn.ReLU()
@@ -92,16 +90,16 @@ class cls_model(nn.Module):
 
         self.max_pool = nn.MaxPool1d(self.vertice)
 
-
         self.regularizer = 0
         self.regularization = []
 
 
-    def forward(self, x,k,batch_size,num_points,laplacian_Reeb,sccs,edges,vertices):
+    def forward(self, x,k,batch_size,num_points,laplacian_Reeb,sccs,vertices_reeb,edges_reeb):
         self.regularizers = []
         with torch.no_grad():
             L = conv.pairwise_distance(x) # W - weight matrix
-            #L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+            L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+
             # for it_pcd in range(1):
             #     viz_points_2=x[it_pcd,:,:]
             #     distances=L[it_pcd,:,:]
@@ -109,16 +107,14 @@ class cls_model(nn.Module):
             #     conv.view_graph(viz_points_2,distances,threshold,1)
             L = conv.get_laplacian(L)
 
+
         out = self.conv1(x, L)
         out = self.relu1(out)
 
         if self.reg_prior:
             self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
-        #conv.tsne_features(x=x,out=out,batch_size=batch_size)
-
         
-
 
         with torch.no_grad():
             Vertices_final_Reeb=torch.zeros([batch_size,laplacian_Reeb.shape[2], out.shape[2]], dtype=torch.float32,device='cuda')
@@ -126,93 +122,69 @@ class cls_model(nn.Module):
             for batch_iter in range(batch_size):   
                 for i in range(laplacian_Reeb.shape[1]):
                     Vertices_pool_Reeb=torch.zeros([sccs[batch_iter,i].shape[0],out.shape[2]], dtype=torch.float32,device='cuda')
-                    
                     Vertices_pool_Reeb=out[batch_iter,sccs[batch_iter,i]]
-
                     Vertices_final_Reeb[batch_iter,i],_ =t.max(Vertices_pool_Reeb, 0)
-                    
-                
+
             laplacian_Reeb_final= torch.tensor(laplacian_Reeb, dtype=torch.float32,device='cuda')
 
-            num_vertices_reeb=laplacian_Reeb.shape[1]
-            edge_dim=edges.shape[1]
-
-            # for iter_pcd in range(1):
-
-            #     points_pcd=x[iter_pcd,:,:].to('cpu')
-
-            #     sccs_pcd=sccs[iter_pcd*num_vertices_reeb:(iter_pcd+1)*num_vertices_reeb]
-            #     reeb_laplace_pcd=laplacian_Reeb_final[iter_pcd*num_vertices_reeb:(iter_pcd+1)*num_vertices_reeb,0:num_vertices_reeb]
-            #     vertices_batch_pcd=vertices[iter_pcd*num_vertices_reeb:(iter_pcd+1)*num_vertices_reeb]
-            #     matrix_edges_batch_pcd=edges[iter_pcd*laplacian_Reeb_final.shape[1]:(iter_pcd+1)*edge_dim]
-
-            #     t_matrix_edges_batch=torch.tensor(matrix_edges_batch_pcd)
-            #     t_matrix_edges_2=t_matrix_edges_batch.unsqueeze(0)
-            #     New_edge_indices, New_edge_values=torch_geometric.utils.dense_to_sparse(t_matrix_edges_2)
-            #     New_edge_indices_cpu=New_edge_indices.to('cpu')
-
-
-            #     fig = matplotlib.pyplot.figure(2)
-            #     ax = fig.add_subplot(111, projection='3d')
-            #     ax.set_axis_off()
-            #     for test_iter in range(New_edge_indices_cpu.shape[1]):
-            #         ax.plot([vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][0], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][0]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][1], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][1]], [vertices_batch_pcd[New_edge_indices_cpu[0][test_iter]][2], vertices_batch_pcd[New_edge_indices_cpu[1][test_iter]][2]], color='b')
-            #     ax.scatter(points_pcd[:, 0], points_pcd[:, 1], points_pcd[:, 2], s=1, color='g') 
-            #     ax.scatter(vertices_batch_pcd[:,0],vertices_batch_pcd[:,1],vertices_batch_pcd[:,2],s=1,color='r')  
-                
-
-
+           
+            
+            
+            
+        with torch.no_grad():         
             L = conv.pairwise_distance(out) # W - weight matrix
-            #L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+            L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
             # for it_pcd in range(1):
             #     viz_points_2=x[it_pcd,:,:]
             #     distances=L[it_pcd,:,:]
             #     threshold=0.3
-            #     conv.view_graph(viz_points_2,distances,threshold,3)
+            #     conv.view_graph(viz_points_2,distances,threshold,4)
             L = conv.get_laplacian(L)
+
+        #plt.show()
         
-        #matplotlib.pyplot.show()
         out = self.conv2(out, L)
-        out = self.relu2(out)
+        out = self.relu3(out)
         if self.reg_prior:
             self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
-        # out_Reeb=self.conv_Reeb(Vertices_final_Reeb,laplacian_Reeb_final)
-        # out_Reeb=self.relu_Reeb(out_Reeb)
 
-        # if self.reg_prior:
-        #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out_Reeb, (0, 2, 1)), laplacian_Reeb_final), out_Reeb))**2)
+        #conv.tsne_features(x=x,out=out,batch_size=batch_size)
 
-        # out_Reeb, _ = t.max(out_Reeb, 1)
+        out_Reeb=self.conv_Reeb(Vertices_final_Reeb,laplacian_Reeb_final)
+        out_Reeb=self.relu_Reeb(out_Reeb)
+
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out_Reeb, (0, 2, 1)), laplacian_Reeb_final), out_Reeb))**2)
 
         out, _ = t.max(out, 1)
-        
+        out_Reeb, _ = t.max(out_Reeb, 1)
 
-        # out=torch.cat((out_Reeb,out),1)
+        out=torch.cat((out_Reeb,out),1)
 
         # ~~~~ Fully Connected ~~~~
         
-        # out = self.fc1(out)
+        out = self.fc1(out)
 
-        # if self.reg_prior:
-        #     self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
-        #     self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
+            self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
 
-        # out = self.relu4(out)
-        #out = self.dropout(out)
+        out = self.relu4(out)
+        ######out = self.dropout(out)
 
         out = self.fc2(out)
         if self.reg_prior:
             self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
             self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
         out = self.relu5(out)
-        out = self.dropout(out)
+        #######out = self.dropout(out)
 
         out = self.fc3(out)
         if self.reg_prior:
             self.regularizers.append(t.linalg.norm(self.fc3.weight.data[0]) ** 2)
             self.regularizers.append(t.linalg.norm(self.fc3.bias.data[0]) ** 2)
-    
+        
 
         return out, self.regularizers
 
@@ -230,7 +202,10 @@ def train(model, optimizer, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,
         num_vertices_reeb=all_Reeb_laplacian.shape[1]
         edge_dim=edges.shape[1]
 
+        position=2
         #test_reeb.Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points)
+
+        test_reeb.Test_reeb_iteration_labels(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points,position=position)
 
         ceva=torch.tile(idx.unsqueeze(1).to(device)*num_vertices_reeb,(1,num_vertices_reeb))
         ceva=torch.reshape(ceva,[idx.shape[0]*num_vertices_reeb])
@@ -257,7 +232,7 @@ def train(model, optimizer, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,
         x = torch.cat([pos[1], normal[1]], dim=2)
         #x=pos[1]
 
-        logits, regularizers  = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch,edges=edges_batch,vertices=vertices_batch)
+        logits, regularizers  = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch,vertices_reeb=vertices_batch,edges_reeb=edges_batch)
 
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == ground_truth_labels.to(device)).sum())
@@ -286,7 +261,10 @@ def test(model, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
         num_vertices_reeb=all_Reeb_laplacian.shape[1]
         edge_dim=edges.shape[1]
 
+        position=0
         #test_reeb.Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points)
+
+        test_reeb.Test_reeb_iteration_labels(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points,position=position)
 
         ceva=torch.tile(idx.unsqueeze(1).to(device)*num_vertices_reeb,(1,num_vertices_reeb))
         ceva=torch.reshape(ceva,[idx.shape[0]*num_vertices_reeb])
@@ -313,7 +291,7 @@ def test(model, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
         x = torch.cat([pos[1], normal[1]], dim=2)
         #x=pos[1]
 
-        logits, regularizers = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch,edges=edges_batch,vertices=vertices_batch)
+        logits, regularizers = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch,vertices_reeb=vertices_batch,edges_reeb=edges_batch)
         
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == ground_truth_labels.to(device)).sum())
@@ -362,7 +340,7 @@ def createConfusionMatrix(model, loader,all_sccs,all_Reeb_laplacian,edges,vertic
 
         x = torch.cat([pos[1], normal[1]], dim=2)
 
-        logits, _  = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch)
+        logits, _  = model(x.to(device),k=k,batch_size=batch_size,num_points=num_points,laplacian_Reeb=reeb_laplace_batch,sccs=sccs_batch,labels=y[1])
         pred = logits.argmax(dim=-1)
         
         output = pred.cpu().numpy()
@@ -391,12 +369,12 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 1024
+    num_points = 512
     batch_size = 16
     num_epochs = 260
     learning_rate = 1e-3
     modelnet_num = 40
-    k_KNN=3
+    k_KNN=5
 
     F = [128, 512, 1024]  # Outputs size of convolutional filter.
     K = [6, 5, 3]         # Polynomial orders.
@@ -435,8 +413,8 @@ if __name__ == '__main__':
     
     
     model = cls_model(num_points, F, K, M, modelnet_num, dropout=1,  reg_prior=True)
-    # path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Modele_selectate/Reeb/model55.pt"
-    # model.load_state_dict(torch.load(path_saved_model))
+    # # path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/28_02_22_10:10:19/model50.pt"
+    # # model.load_state_dict(torch.load(path_saved_model))
     model = model.to(device)
 
     print(model.parameters)
@@ -444,15 +422,15 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
 
-    train_loader = DataLoader(dataset_train,batch_size=batch_size,shuffle=True, pin_memory=True)
+    train_loader = DataLoader(dataset_train,batch_size=batch_size, shuffle=True, pin_memory=True)
     test_loader= DataLoader(dataset_test,batch_size=batch_size)
 
     ############################################################################33
-    ######Creating Reeb graphs
+    #######Creating Reeb graphs
 
     # path_logs="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/"
 
-    # label="_"+str(num_points)+"_"
+    # label="_2048_"
 
     # sccs_path_train=path_logs+label+"train_sccs.npy"
     # reeb_laplacian_path_train=path_logs+label+"train_reeb_laplacian.npy"
@@ -470,7 +448,7 @@ if __name__ == '__main__':
     # knn_REEB = 20
     # ns = 20
     # tau = 2
-    # reeb_nodes_num=5
+    # reeb_nodes_num=20
     # reeb_sim_margin=20
     # pointNumber=200
 
@@ -481,22 +459,21 @@ if __name__ == '__main__':
     # all_sccs_train, all_reeb_laplacian_train,edges_train,vertices_train=conv_reeb.Create_Reeb_custom_loader_batched(loader=train_loader,sccs_path=sccs_path_train,reeb_laplacian_path=reeb_laplacian_path_train,edge_matrix_path=edge_matrix_path_train,vertices_path=vertices_path_train,time_execution=timp_train,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
 
     #############################################################
-    ##########Load Reeb_graphs from file
+    #Load Reeb_graphs from file
 
-    ###################3
-    path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/1024/train_reeb_laplacian.npy"
-    path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/1024/test_reeb_laplacian.npy"
 
-    path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/1024/train_sccs.npy"
-    path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/1024/test_sccs.npy"
 
-    path_vertices_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/1024/train_vertices.npy"
-    path_vertices_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/1024/test_vertices.npy"
+    path_Reeb_laplacian_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_train_reeb_laplacian.npy"
+    path_Reeb_laplacian_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_test_reeb_laplacian.npy"
 
-    path_edges_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/1024/train_edge_matrix.npy"
-    path_edges_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/1024/test_edge_matrix.npy"
+    path_sccs_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_train_sccs.npy"
+    path_sccs_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_test_sccs.npy"
 
-#     #############33
+    path_vertices_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_train_vertices.npy"
+    path_vertices_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_test_vertices.npy"
+
+    path_edges_train="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_train_edge_matrix.npy"
+    path_edges_test="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/Rb_data/Modelnet40_unshuffled/512/_512_test_edge_matrix.npy"
 
     all_sccs_train=np.load(path_sccs_train)
     all_sccs_test=np.load(path_sccs_test)
@@ -511,8 +488,8 @@ if __name__ == '__main__':
     edges_test=np.load(path_edges_test)
 
    
-# #     #conv.test_pcd_with_index(model=model,loader=train_loader,num_points=num_points,device=device)
-# # #     ################################
+    #conv.test_pcd_with_index(model=model,loader=train_loader,num_points=num_points,device=device)
+#     ################################
     regularization = 1e-9
     for epoch in range(1, num_epochs+1):
         train_start_time = time.time()
@@ -586,7 +563,7 @@ if __name__ == '__main__':
 # #     all_sccs_test, all_reeb_laplacian_test= conv_reeb.Create_Reeb_from_Dataset_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
     
     
-# #     model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False, reg_prior=True)
+# #     model = cls_model(num_points, F, K, M, modelnet_num, dropout=1,  reg_prior=True)
 # #     path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/28_02_22_21:52:37/model260.pt"
 # #     model.load_state_dict(torch.load(path_saved_model))
 # #     model = model.to(device)

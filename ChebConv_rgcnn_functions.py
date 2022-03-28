@@ -94,12 +94,14 @@ def pairwise_distance(point_cloud):
     #####
     #Version 2
 
-    # maximum_value=torch.max(adj_matrix)
-    # minimum_value=torch.min(adj_matrix)
+    maximum_value=torch.max(adj_matrix)
+    minimum_value=torch.min(adj_matrix)
 
-    # interval=maximum_value-minimum_value
+    interval=maximum_value-minimum_value
 
-    # adj_matrix=adj_matrix/interval
+    adj_matrix=adj_matrix/interval
+
+    ##########################
 
     adj_matrix = torch.exp(-adj_matrix)
 
