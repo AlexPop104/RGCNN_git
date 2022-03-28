@@ -83,7 +83,7 @@ class cls_model(nn.Module):
         self.conv3 = conv.DenseChebConv(512, 1024, 3)
         self.conv_Reeb = conv.DenseChebConv(512, 1024,3)
         
-        self.fc1 = nn.Linear(1024, 512, bias=True)
+        self.fc1 = nn.Linear(2048, 512, bias=True)
         self.fc2 = nn.Linear(512, 128, bias=True)
         self.fc3 = nn.Linear(128, class_num, bias=True)
         
@@ -134,15 +134,15 @@ class cls_model(nn.Module):
         
        
 
-        # with torch.no_grad():
-        #     Vertices_final_Reeb=torch.zeros([batch_size,laplacian_Reeb.shape[2], out.shape[2]], dtype=torch.float32,device='cuda')
+        with torch.no_grad():
+            Vertices_final_Reeb=torch.zeros([batch_size,laplacian_Reeb.shape[2], out.shape[2]], dtype=torch.float32,device='cuda')
 
-        #     for batch_iter in range(batch_size):   
-        #         for i in range(laplacian_Reeb.shape[1]):
-        #             Vertices_pool_Reeb=torch.zeros([sccs[batch_iter,i].shape[0],out.shape[2]], dtype=torch.float32,device='cuda')
-        #             Vertices_pool_Reeb=out[batch_iter,sccs[batch_iter,i]]
-        #             Vertices_final_Reeb[batch_iter,i],_ =t.max(Vertices_pool_Reeb, 0)
-        #     laplacian_Reeb_final= torch.tensor(laplacian_Reeb, dtype=torch.float32,device='cuda')
+            for batch_iter in range(batch_size):   
+                for i in range(laplacian_Reeb.shape[1]):
+                    Vertices_pool_Reeb=torch.zeros([sccs[batch_iter,i].shape[0],out.shape[2]], dtype=torch.float32,device='cuda')
+                    Vertices_pool_Reeb=out[batch_iter,sccs[batch_iter,i]]
+                    Vertices_final_Reeb[batch_iter,i],_ =t.max(Vertices_pool_Reeb, 0)
+            laplacian_Reeb_final= torch.tensor(laplacian_Reeb, dtype=torch.float32,device='cuda')
             
             
             
@@ -163,16 +163,16 @@ class cls_model(nn.Module):
         if self.reg_prior:
             self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
-        # out_Reeb=self.conv_Reeb(Vertices_final_Reeb,laplacian_Reeb_final)
-        # out_Reeb=self.relu_Reeb(out_Reeb)
+        out_Reeb=self.conv_Reeb(Vertices_final_Reeb,laplacian_Reeb_final)
+        out_Reeb=self.relu_Reeb(out_Reeb)
 
-        # if self.reg_prior:
-        #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out_Reeb, (0, 2, 1)), laplacian_Reeb_final), out_Reeb))**2)
+        if self.reg_prior:
+            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out_Reeb, (0, 2, 1)), laplacian_Reeb_final), out_Reeb))**2)
 
         out, _ = t.max(out, 1)
-        # out_Reeb, _ = t.max(out_Reeb, 1)
+        out_Reeb, _ = t.max(out_Reeb, 1)
 
-        # out=torch.cat((out_Reeb,out),1)
+        out=torch.cat((out_Reeb,out),1)
 
         # ~~~~ Fully Connected ~~~~
         
