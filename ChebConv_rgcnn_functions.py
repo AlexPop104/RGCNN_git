@@ -557,7 +557,48 @@ def test_pcd_with_index(model,loader,num_points,device):
                         plt.show()
 
 
-
+def get_label_Modelnet(position):
+    label_to_names = {0: 'airplane',
+                                1: 'bathtub',
+                                2: 'bed',
+                                3: 'bench',
+                                4: 'bookshelf',
+                                5: 'bottle',
+                                6: 'bowl',
+                                7: 'car',
+                                8: 'chair',
+                                9: 'cone',
+                                10: 'cup',
+                                11: 'curtain',
+                                12: 'desk',
+                                13: 'door',
+                                14: 'dresser',
+                                15: 'flower_pot',
+                                16: 'glass_box',
+                                17: 'guitar',
+                                18: 'keyboard',
+                                19: 'lamp',
+                                20: 'laptop',
+                                21: 'mantel',
+                                22: 'monitor',
+                                23: 'night_stand',
+                                24: 'person',
+                                25: 'piano',
+                                26: 'plant',
+                                27: 'radio',
+                                28: 'range_hood',
+                                29: 'sink',
+                                30: 'sofa',
+                                31: 'stairs',
+                                32: 'stool',
+                                33: 'table',
+                                34: 'tent',
+                                35: 'toilet',
+                                36: 'tv_stand',
+                                37: 'vase',
+                                38: 'wardrobe',
+                                39: 'xbox'}
+    return(label_to_names[position])
 
 class DenseChebConv(nn.Module):
     def __init__(self, in_channels: int, out_channels: int, K: int, normalization: Optional[bool]=True, bias: bool=False, **kwargs):
@@ -983,16 +1024,17 @@ class DenseChebConv_theta_nosum(nn.Module):
                 f'{self.out_channels}, K={self.K}, '
                 f'normalization={self.normalization})')
 
-def tsne_features(x,out,batch_size):
+def tsne_features(x,out,batch_size,labels,position):
     for iter_pcd in range(batch_size):
-        points_pcd=x[iter_pcd][:,0:3].detach().cpu().numpy()
-        features_pcd=out[iter_pcd].detach().cpu().numpy()
+        if(labels[iter_pcd].item()==position):
+            points_pcd=x[iter_pcd][:,0:3].detach().cpu().numpy()
+            features_pcd=out[iter_pcd].detach().cpu().numpy()
 
 
-        pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(x[iter_pcd][:,0:3].detach().cpu().numpy())
-        vis_pcd = get_colored_point_cloud_feature(pcd, features_pcd, 0.02)
-        o3d.visualization.draw_geometries([vis_pcd])
+            pcd = o3d.geometry.PointCloud()
+            pcd.points = o3d.utility.Vector3dVector(x[iter_pcd][:,0:3].detach().cpu().numpy())
+            vis_pcd = get_colored_point_cloud_feature(pcd, features_pcd, 0.02)
+            o3d.visualization.draw_geometries([vis_pcd], window_name=get_label_Modelnet(position))
 
 
 

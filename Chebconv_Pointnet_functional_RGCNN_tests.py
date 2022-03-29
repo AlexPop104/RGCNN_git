@@ -1,8 +1,5 @@
 import time
 
-from torch.utils.tensorboard import SummaryWriter
-writer = SummaryWriter()
-
 import torch
 from torch_geometric.nn import MessagePassing
 import torch.nn as nn
@@ -21,8 +18,6 @@ from torch_geometric.transforms import SamplePoints
 from torch_geometric.transforms import RandomRotate
 from torch_geometric.transforms import NormalizeScale
 from torch_geometric.loader import DataLoader
-
-from torch.optim import lr_scheduler
 
 import ChebConv_rgcnn_functions as conv
 
@@ -77,12 +72,12 @@ class Transform(nn.Module):
         self.conv1 = nn.Conv1d(k_transform,64,1)
 
         self.conv2 = nn.Conv1d(64,128,1)
-        self.conv3 = nn.Conv1d(128,256,1) # 1024 initial
+        self.conv3 = nn.Conv1d(128,1024,1)
 
 
         self.bn1 = nn.BatchNorm1d(64)
         self.bn2 = nn.BatchNorm1d(128)
-        self.bn3 = nn.BatchNorm1d(256) #1024 initial
+        self.bn3 = nn.BatchNorm1d(1024)
 
     def forward(self, input):
         matrix3x3 = self.input_transform(input)
@@ -112,11 +107,9 @@ class PointNet(nn.Module):
         self.fc2 = nn.Linear(512, 256)
         self.fc3 = nn.Linear(256, num_classes)
 
-        self.RGCNN_conv=conv.DenseChebConv(256,512,3)
+        self.RGCNN_conv=conv.DenseChebConv(1024,1024,3)
+        
         self.relu_rgcnn=torch.nn.ReLU()
-
-        self.RGCNN_conv_2=conv.DenseChebConv(512,1024,3)
-        self.relu_rgcnn_2=torch.nn.ReLU()
 
         self.bn1 = nn.BatchNorm1d(512)
         self.bn2 = nn.BatchNorm1d(256)
@@ -142,23 +135,6 @@ class PointNet(nn.Module):
         xb = self.RGCNN_conv(xb, L)
         xb = self.relu_rgcnn(xb)
 
-        ###########3
-        #Third layer RGCNN
-        with torch.no_grad():
-            L = conv.pairwise_distance(xb) # W - weight matrix
-            # for it_pcd in range(1):
-            #     viz_points_2=input[it_pcd,:,:]
-            #     viz_points_2=torch.permute(viz_points_2,(1,0))
-            #     distances=L[it_pcd,:,:]
-            #     threshold=0.3
-            #     conv.view_graph(viz_points_2,distances,threshold,1)
-            # plt.show()
-            L = conv.get_laplacian(L)
-
-        xb = self.RGCNN_conv_2(xb, L)
-        xb = self.relu_rgcnn_2(xb)
-        ###########33
-
         xb=torch.permute(xb,(0,2,1))
 
         xb = nn.MaxPool1d(xb.size(-1))(xb)
@@ -183,38 +159,6 @@ def pointnetloss(outputs, labels, m3x3, m64x64,k, alpha = 0.0001,):
     return criterion(outputs, labels) + alpha * (torch.norm(diff3x3)+torch.norm(diff64x64)) / float(bs)      
         
 criterion = torch.nn.CrossEntropyLoss()  
-
-def train(model, optimizer, loader,nr_points):
-    model.train()
-    
-    total_loss = 0
-    #for data in loader:
-    for i, data in enumerate(loader, 0):
-        optimizer.zero_grad()
-        
-        batch_size=int(data.y.shape[0])
-
-        x = torch.cat([data.pos, data.normal], dim=1)   
-        x=torch.reshape(x,(batch_size,nr_points,x.shape[1]))
-
-        #x=torch.reshape(data.pos,(batch_size,nr_points,data.pos.shape[1]))
-
-        k=x.shape[2]
-        
-
-        x=x.to(device)
-        labels=data.y.to(device)
-       
-        outputs, m3x3, m64x64 = model(x.transpose(1,2))
-        #logits = model(data.pos.to(device).transpose(1,2))  # Forward pass.
-
-        loss = criterion(outputs, labels)  # Loss computation.
-        #loss = pointnetloss(outputs, labels, m3x3, m64x64,k=k)
-        loss.backward()  # Backward pass.
-        optimizer.step()  # Update model parameters.
-        total_loss += loss.item() * data.num_graphs
-
-    return total_loss / len(train_loader.dataset)
 
 
 @torch.no_grad()
@@ -281,48 +225,40 @@ transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeS
 # test_dataset = GeometricShapes(root=root, train=False,
 #                                transform=transforms)
 
-train_dataset = ModelNet(root=root, train=True,
-                                transform=transforms)
+
 test_dataset = ModelNet(root=root, train=False,
                                transform=transforms)
 
 
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
 test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
 model = PointNet(num_classes=modelnet_num,nr_features=nr_features)
+path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Modele_selectate/Pointnet/model95.pt"
+model.load_state_dict(torch.load(path_saved_model))
 print(model)
 
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 
-my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
-
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 model = model.to(device)
 
-for epoch in range(1, (num_epochs+1)):
-    train_start_time = time.time()
-    loss = train(model, optimizer, train_loader,nr_points=num_points)
-    train_stop_time = time.time()
 
-    writer.add_scalar("Loss/train", loss, epoch)
-
-    test_start_time = time.time()
-    test_acc = test(model, test_loader,nr_points=num_points)
-    test_stop_time = time.time()
-
-    writer.add_scalar("Acc/test", test_acc, epoch)
-
-    print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
-        Test Time: \t{test_stop_time - test_start_time }')
-
-
-    if(epoch%5==0):
-            torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
     
-    print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
+test_start_time = time.time()
+test_acc = test(model, test_loader,nr_points=num_points)
+test_stop_time = time.time()
 
-    my_lr_scheduler.step()
+
+
+print(f' \n \Test Time: \t{test_stop_time - test_start_time }')
+
+
+    
+    
+    
+
+
 

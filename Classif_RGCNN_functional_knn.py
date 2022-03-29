@@ -281,7 +281,7 @@ if __name__ == '__main__':
         print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
         Test Time: \t{test_stop_time - test_start_time }')
 
-        writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader,k=k_KNN,num_points=num_points), epoch)
+        #writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader,k=k_KNN,num_points=num_points), epoch)
 
         if(epoch%5==0):
             torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
