@@ -202,10 +202,10 @@ def train(model, optimizer, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,
         num_vertices_reeb=all_Reeb_laplacian.shape[1]
         edge_dim=edges.shape[1]
 
-        position=2
+        #position=2
         #test_reeb.Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points)
 
-        test_reeb.Test_reeb_iteration_labels(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points,position=position)
+        #test_reeb.Test_reeb_iteration_labels(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points,position=position)
 
         ceva=torch.tile(idx.unsqueeze(1).to(device)*num_vertices_reeb,(1,num_vertices_reeb))
         ceva=torch.reshape(ceva,[idx.shape[0]*num_vertices_reeb])
@@ -261,10 +261,10 @@ def test(model, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
         num_vertices_reeb=all_Reeb_laplacian.shape[1]
         edge_dim=edges.shape[1]
 
-        position=0
+        #position=0
         #test_reeb.Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points)
 
-        test_reeb.Test_reeb_iteration_labels(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points,position=position)
+        #test_reeb.Test_reeb_iteration_labels(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points,position=position)
 
         ceva=torch.tile(idx.unsqueeze(1).to(device)*num_vertices_reeb,(1,num_vertices_reeb))
         ceva=torch.reshape(ceva,[idx.shape[0]*num_vertices_reeb])
