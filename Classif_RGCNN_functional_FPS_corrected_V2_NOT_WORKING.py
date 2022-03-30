@@ -114,32 +114,15 @@ class cls_model(nn.Module):
                 sccs_batch, pcd_fps_points=conv.get_fps_matrix_2(point_cloud=out_2,original_cloud=x2,batch_size=batch_size,nr_points=num_points,nr_points_fps=nr_points_fps)
                 sccs_batch=sccs_batch.long()
                 sccs_batch=torch.reshape(sccs_batch,(batch_size,nr_points_fps,nr_points_batch))
-                Vertices_final_FPS=torch.zeros([batch_size,sccs_batch.shape[1], out_2.shape[1]], dtype=torch.float32,device='cuda')
+                Vertices_final_FPS=torch.zeros([batch_size,sccs_batch.shape[1],nr_points_batch, out_2.shape[1]], dtype=torch.float32,device='cuda')
                 
                 for batch_iter in range(batch_size):   
                     for i in range(sccs_batch.shape[1]):
                         Vertices_pool_FPS=torch.zeros([sccs_batch[batch_iter,i].shape[0],out_2.shape[1]], dtype=torch.float32,device='cuda')
                         Vertices_pool_FPS=out[batch_iter,sccs_batch[batch_iter,i]]
-                        Vertices_final_FPS[batch_iter,i],_ =t.max(Vertices_pool_FPS, 0)
+                        Vertices_final_FPS[batch_iter,i]=Vertices_pool_FPS
 
-                L = conv.pairwise_distance(out) # W - weight matrix
-                #L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
-
-                # for it_pcd in range(1):
-                #     viz_points_fps=pcd_fps_points[it_pcd,:,:]
-                #     original_points_pcd=x[it_pcd,:,:]
-                #     distances=L[it_pcd,:,:]
-                #     threshold=0.
-                # conv.view_graph_with_original_pcd(viz_points=viz_points_fps,original_points=original_points_pcd,distances=distances,threshold=threshold,nr=2)
-
-                # plt.show()
-
-                L = conv.get_laplacian(L)
-
-            out = self.conv2(out, L)
-            out = self.relu2(out)
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+                Vertices_final_FPS=Vertices_final_FPS.reshape([batch_size*sccs_batch.shape[1],nr_points_batch, out_2.shape[1]])        
 
             with torch.no_grad():
                 L = conv.pairwise_distance(Vertices_final_FPS) # W - weight matrix
@@ -148,9 +131,31 @@ class cls_model(nn.Module):
 
             out_FPS=self.conv_Reeb(Vertices_final_FPS,L)
             out_FPS=self.relu_Reeb(out_FPS)
-    
+
             if self.reg_prior:
                 self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out_FPS, (0, 2, 1)), L), out_FPS))**2)
+
+            out_final_FPS=torch.zeros([batch_size,sccs_batch.shape[1], out_FPS.shape[2]], dtype=torch.float32,device='cuda')  
+
+            for batch_iter in range(batch_size):   
+                    for i in range(sccs_batch.shape[1]):
+                        out_final_FPS[batch_iter,i],_ =t.max(out_FPS, 0)
+      
+
+            with torch.no_grad():
+                L = conv.pairwise_distance(out) # W - weight matrix
+                #L = conv.get_one_matrix_knn(L, 40,batch_size,L.shape[2])
+                L = conv.get_laplacian(out)
+
+
+            out = self.conv2(out, L)
+            out = self.relu2(out)
+            if self.reg_prior:
+                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+
+            
+            
+            
     
             out, _ = t.max(out, 1)
             out_FPS, _ = t.max(out_FPS, 1)
