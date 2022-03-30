@@ -31,6 +31,8 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import os
 
+torch.manual_seed(0)
+
 
 class Tnet(nn.Module):
     def __init__(self, k):
@@ -194,7 +196,7 @@ num_epochs=250
 nr_features=6
 
 
-torch.manual_seed(42)
+
 
 
 root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)

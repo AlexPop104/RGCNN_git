@@ -23,10 +23,10 @@ class GaussianNoiseTransform(BaseTransform):
             pcd_o3d.normalize_normals()
             if hasattr(data, 'normal'):
                 data.normal = np.asarray(pcd_o3d.normals)
-                data.normal = torch.tensor(data.normal, dtype=torch.float64)
+                data.normal = torch.tensor(data.normal, dtype=torch.float32)
             else:
-                data.x = np.asarray(pcd_o3d.normals)
-                data.x = torch.tensor(data.x, dtype=torch.float64)
+                data.normal = np.asarray(pcd_o3d.normals)
+                data.normal = torch.tensor(data.normal, dtype=torch.float32)
         return data
 
     def __repr__(self) -> str:

@@ -31,6 +31,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import os
 
+from noise_transform import GaussianNoiseTransform
 
 class Tnet(nn.Module):
     def __init__(self, k):
@@ -266,10 +267,20 @@ transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeS
 # test_dataset = GeometricShapes(root=root, train=False,
 #                                transform=transforms)
 
+# train_dataset = ModelNet(root=root, train=True,
+#                                 transform=transforms)
+# test_dataset = ModelNet(root=root, train=False,
+#                                transform=transforms)
+
+mu=0
+sigma=0
+
+transforms_noisy = Compose([SamplePoints(num_points), GaussianNoiseTransform(mu, sigma,recompute_normals=True),NormalizeScale()])
+
 train_dataset = ModelNet(root=root, train=True,
-                                transform=transforms)
+                                transform=transforms_noisy)
 test_dataset = ModelNet(root=root, train=False,
-                               transform=transforms)
+                            transform=transforms_noisy)
 
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)

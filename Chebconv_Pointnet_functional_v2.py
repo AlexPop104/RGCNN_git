@@ -22,6 +22,9 @@ from torch_geometric.transforms import RandomRotate
 from torch_geometric.transforms import NormalizeScale
 from torch_geometric.loader import DataLoader
 
+
+torch.manual_seed(0)
+
 from torch.optim import lr_scheduler
 
 import ChebConv_rgcnn_functions as conv
@@ -30,6 +33,8 @@ import matplotlib.pyplot as plt
 
 from datetime import datetime
 import os
+
+from noise_transform import GaussianNoiseTransform
 
 
 class Tnet(nn.Module):
@@ -182,7 +187,7 @@ def test(model, loader,nr_points):
 
     correct = total = 0
     total_correct=0
-    for i, data in enumerate(loader, 0):
+    for i, data in enumerate(loader):
 
         batch_size=int(data.y.shape[0])
 
@@ -225,25 +230,28 @@ num_epochs=250
 nr_features=6
 
 
-torch.manual_seed(42)
 
 
 root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
 
 #root="/media/rambo/ssd2/Alex_data/RGCNN/GeometricShapes"
 
-transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
+# transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
-    
-# train_dataset = GeometricShapes(root=root, train=True,
+# train_dataset = ModelNet(root=root, train=True,
 #                                 transform=transforms)
-# test_dataset = GeometricShapes(root=root, train=False,
+# test_dataset = ModelNet(root=root, train=False,
 #                                transform=transforms)
 
+mu=0
+sigma=0
+
+transforms_noisy = Compose([SamplePoints(num_points), GaussianNoiseTransform(mu, sigma,recompute_normals=True),NormalizeScale()])
+
 train_dataset = ModelNet(root=root, train=True,
-                                transform=transforms)
+                                transform=transforms_noisy)
 test_dataset = ModelNet(root=root, train=False,
-                               transform=transforms)
+                               transform=transforms_noisy)
 
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)

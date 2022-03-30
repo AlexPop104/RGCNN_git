@@ -25,6 +25,8 @@ from torch_geometric.utils import (add_self_loops, get_laplacian,
 
 from torch_geometric.utils import get_laplacian as get_laplacian_pyg
 
+from noise_transform import GaussianNoiseTransform
+
 
 import ChebConv_rgcnn_functions as conv
 import os
@@ -371,12 +373,20 @@ if __name__ == '__main__':
     root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
     print(root)
 
+    mu=0
+    sigma=0
+
+    transforms_noisy = Compose([SamplePoints(num_points), GaussianNoiseTransform(mu, sigma,recompute_normals=True),NormalizeScale()])
+
+    train_dataset = ModelNet(root=root, train=True,
+                                    transform=transforms_noisy)
+    test_dataset = ModelNet(root=root, train=False,
+                                transform=transforms_noisy)
 
 
 
-
-    dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
-    dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms)
+    dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms_noisy)
+    dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms_noisy)
 
 
     # Verification...

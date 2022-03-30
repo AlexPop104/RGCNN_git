@@ -21,6 +21,7 @@ from torch_geometric.transforms import RandomRotate
 from torch_geometric.transforms import NormalizeScale
 from torch_geometric.loader import DataLoader
 
+
 from torch.optim import lr_scheduler
 
 import ChebConv_rgcnn_functions as conv
@@ -29,6 +30,8 @@ import matplotlib.pyplot as plt
 
 from datetime import datetime
 import os
+
+from noise_transform import GaussianNoiseTransform
 
 
 class Tnet(nn.Module):
@@ -253,28 +256,38 @@ rot_x=0
 rot_y=0
 rot_z=0
 
-for rot_y in range(0,4):
+mu=0
+sigma=0
 
-    random_rotate = Compose([
-    RandomRotate(degrees=rot_x*10, axis=0),
-    RandomRotate(degrees=rot_y*10, axis=1),
-    RandomRotate(degrees=rot_z*10, axis=2),
-    ])
+for ceva in range(0,1):
 
-    test_transform = Compose([
-    random_rotate,
-    SamplePoints(num_points, include_normals=True),
-    NormalizeScale()
-    ])
+    # random_rotate = Compose([
+    # RandomRotate(degrees=rot_x*10, axis=0),
+    # RandomRotate(degrees=rot_y*10, axis=1),
+    # RandomRotate(degrees=rot_z*10, axis=2),
+    # ])
+
+    # test_transform = Compose([
+    # random_rotate,
+    # SamplePoints(num_points, include_normals=True),
+    # NormalizeScale()
+    # ])
+
+    # test_dataset = ModelNet(root=root, train=False,
+    #                         transform=test_transform)
+
+    mu=0
+    sigma=0
+
+    transforms_noisy = Compose([SamplePoints(num_points), GaussianNoiseTransform(mu, sigma,recompute_normals=True),NormalizeScale()])
+   
 
     test_dataset = ModelNet(root=root, train=False,
-                            transform=test_transform)
+                            transform=transforms_noisy)
 
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
         
-
-
     test_start_time = time.time()
     test_acc = test(model, test_loader,nr_points=num_points)
     test_stop_time = time.time()
