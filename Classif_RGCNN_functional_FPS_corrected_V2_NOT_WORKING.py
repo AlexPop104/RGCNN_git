@@ -119,12 +119,24 @@ class cls_model(nn.Module):
                 for batch_iter in range(batch_size):   
                     for i in range(sccs_batch.shape[1]):
                         Vertices_pool_FPS=torch.zeros([sccs_batch[batch_iter,i].shape[0],out_2.shape[1]], dtype=torch.float32,device='cuda')
+                        
+                        ceva=torch.unique(sccs_batch[batch_iter,i],dim=0)
+                        
                         Vertices_pool_FPS=out[batch_iter,sccs_batch[batch_iter,i]]
+
+                        vertices_ceva=out[batch_iter,ceva]
+
+                        vertices_test=torch.cat((Vertices_pool_FPS,vertices_ceva),dim=0)
+
+                        Vertices_noi=torch.cat(())
                         Vertices_final_FPS[batch_iter,i]=Vertices_pool_FPS
 
-                Vertices_final_FPS=Vertices_final_FPS.reshape([batch_size*sccs_batch.shape[1],nr_points_batch, out_2.shape[1]])        
+                Vertices_final_FPS=Vertices_final_FPS.reshape([batch_size*sccs_batch.shape[1],nr_points_batch, out_2.shape[1]])   
+
+            Vertices_final_FPS=torch.unique(Vertices_final_FPS,dim=2)     
 
             with torch.no_grad():
+
                 L = conv.pairwise_distance(Vertices_final_FPS) # W - weight matrix
                 #L = conv.get_one_matrix_knn(L, 40,batch_size,L.shape[2])
                 L = conv.get_laplacian(L)
