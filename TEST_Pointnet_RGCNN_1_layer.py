@@ -198,7 +198,7 @@ def test(model, loader,nr_points):
     val_acc = 1. *correct / total
     
 
-    print(val_acc)
+    #print(val_acc)
    
     #return total_correct / len(loader.dataset)
     return val_acc
@@ -225,17 +225,6 @@ root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
 #root="/media/rambo/ssd2/Alex_data/RGCNN/GeometricShapes"
 
 
-random_rotate = Compose([
-RandomRotate(degrees=30, axis=0),
-RandomRotate(degrees=30, axis=1),
-RandomRotate(degrees=30, axis=2),
-])
-
-test_transform = Compose([
-random_rotate,
-SamplePoints(num_points, include_normals=True),
-NormalizeScale()
-])
 
 
 
@@ -250,37 +239,49 @@ transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeS
 # test_dataset = ModelNet(root=root, train=False,
 #                                transform=transforms)
 
-test_dataset = ModelNet(root=root, train=False,
-                               transform=test_transform)
 
-
-
-test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
 model = PointNet(num_classes=modelnet_num,nr_features=nr_features)
 path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Modele_selectate/Pointnet_RGCNN/model75.pt"
 model.load_state_dict(torch.load(path_saved_model))
-print(model)
-
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
-
-my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
+#print(model)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
 model = model.to(device)
 
+rot_x=0
+rot_y=0
+rot_z=0
 
-test_start_time = time.time()
-test_acc = test(model, test_loader,nr_points=num_points)
-test_stop_time = time.time()
+for rot_y in range(0,4):
+
+    random_rotate = Compose([
+    RandomRotate(degrees=rot_x*10, axis=0),
+    RandomRotate(degrees=rot_y*10, axis=1),
+    RandomRotate(degrees=rot_z*10, axis=2),
+    ])
+
+    test_transform = Compose([
+    random_rotate,
+    SamplePoints(num_points, include_normals=True),
+    NormalizeScale()
+    ])
+
+    test_dataset = ModelNet(root=root, train=False,
+                            transform=test_transform)
+
+    test_loader = DataLoader(test_dataset, batch_size=batch_size)
+
+        
 
 
-print(f'\Test Time: \t{test_stop_time - test_start_time }')
+    test_start_time = time.time()
+    test_acc = test(model, test_loader,nr_points=num_points)
+    test_stop_time = time.time()
 
+    print(f'{test_acc:.4f}')
 
-
-print(f' Test Accuracy: {test_acc:.4f}')
+    #print(f'\Test Time: \t{test_stop_time - test_start_time }')
+    #print(f' Test Accuracy: {test_acc:.4f}')
 
     

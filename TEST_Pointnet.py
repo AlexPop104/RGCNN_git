@@ -217,9 +217,9 @@ model = model.to(device)
 
 rot_x=0
 rot_y=0
-rot_z=0
+rot_z=3
 
-for rot_z in range(1,4):
+for ceva in range(0,1):
 
     random_rotate = Compose([
     RandomRotate(degrees=rot_x*10, axis=0),

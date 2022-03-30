@@ -6,6 +6,8 @@ import torch_geometric as tg
 
 import time
 
+from GaussianNoiseTransform import GaussianNoiseTransform
+
 # from torch.utils.tensorboard import SummaryWriter
 # writer = SummaryWriter()
 
@@ -266,38 +268,48 @@ if __name__ == '__main__':
     
     root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
     print(root)
-    transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
-
-    random_rotate = Compose([
-    RandomRotate(degrees=0, axis=0),
-    RandomRotate(degrees=0, axis=1),
-    RandomRotate(degrees=30, axis=2),
-    ])
-
-    test_transform = Compose([
-    random_rotate,
-    SamplePoints(num_points, include_normals=True),
-    NormalizeScale()
-    ])
 
 
-    
-    dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform)
-    test_loader  = DataLoader(dataset_test, batch_size=batch_size)
-    
     model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, reg_prior=True)
     path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Modele_selectate/RGCNN_3_layers/model140.pt"
     model.load_state_dict(torch.load(path_saved_model))
     print(model.parameters)
     model = model.to(device)
 
-    test_start_time = time.time()
-    test_acc,confidence = test(model, test_loader)
-    test_stop_time = time.time()
-    # conv.test_pcd_pred(model, test_loader,num_points,device)
-    print(f'Test loss: {test_acc:.4f}')
-    print(f'Test accuracy: {confidence:.4f}')
-    print(f'Time for test: {test_stop_time-test_start_time:.4f}')
+
+    rot_x=0
+    rot_y=0
+    rot_z=0
+
+    for rot_y in range(0,4):
+
+        random_rotate = Compose([
+        RandomRotate(degrees=rot_x*10, axis=0),
+        RandomRotate(degrees=rot_y*10, axis=1),
+        RandomRotate(degrees=rot_z*10, axis=2),
+        ])
+
+        test_transform = Compose([
+        random_rotate,
+        SamplePoints(num_points, include_normals=True),
+        NormalizeScale()
+        ])
+
+    
+        dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform)
+        test_loader  = DataLoader(dataset_test, batch_size=batch_size)
+    
+    
+
+        test_start_time = time.time()
+        test_acc,confidence = test(model, test_loader)
+        test_stop_time = time.time()
+    
+        print(f'{confidence:.4f}')
+    
+        # print(f'Test loss: {test_acc:.4f}')
+        # print(f'Test accuracy: {confidence:.4f}')
+        # print(f'Time for test: {test_stop_time-test_start_time:.4f}')
    
 
     
