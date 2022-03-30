@@ -128,7 +128,7 @@ class cls_model(nn.Module):
 
                         vertices_test=torch.cat((Vertices_pool_FPS,vertices_ceva),dim=0)
 
-                        Vertices_noi=torch.cat(())
+                        
                         Vertices_final_FPS[batch_iter,i]=Vertices_pool_FPS
 
                 Vertices_final_FPS=Vertices_final_FPS.reshape([batch_size*sccs_batch.shape[1],nr_points_batch, out_2.shape[1]])   

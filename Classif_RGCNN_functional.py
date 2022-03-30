@@ -106,10 +106,6 @@ class cls_model(nn.Module):
         self.conv2 = conv.DenseChebConv(128,512, 3)
         self.conv3 = conv.DenseChebConv(512,1024, 3)
 
-
-        
-
-        
         self.fc1 = nn.Linear(1024, 512, bias=True)
         self.fc2 = nn.Linear(512, 128, bias=True)
         self.fc3 = nn.Linear(128, class_num, bias=True)
@@ -158,9 +154,6 @@ class cls_model(nn.Module):
         #################################################################################
         #Test fully connected
         
-
-        
-
         # out = self.fc_test_1(x)
 
         # if self.reg_prior:

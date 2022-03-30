@@ -82,16 +82,16 @@ def pairwise_distance(point_cloud):
     point_cloud_square_tranpose = point_cloud_square.permute(0, 2, 1)
     adj_matrix = point_cloud_square + point_cloud_inner + point_cloud_square_tranpose
 
-    maximum_values=torch.max(adj_matrix,dim=2)
-    minimum_values=torch.min(adj_matrix,dim=2)
+    # maximum_values=torch.max(adj_matrix,dim=2)
+    # minimum_values=torch.min(adj_matrix,dim=2)
 
-    interval=torch.subtract(maximum_values[0],minimum_values[0])
+    # interval=torch.subtract(maximum_values[0],minimum_values[0])
 
-    interval=torch.tile(interval,[nr_points])
+    # interval=torch.tile(interval,[nr_points])
 
-    interval=torch.reshape(interval,(point_cloud.shape[0],point_cloud.shape[1],point_cloud.shape[1]))
+    # interval=torch.reshape(interval,(point_cloud.shape[0],point_cloud.shape[1],point_cloud.shape[1]))
 
-    adj_matrix=torch.div(adj_matrix,interval)
+    # adj_matrix=torch.div(adj_matrix,interval)
 
     #####
     #Version 2
