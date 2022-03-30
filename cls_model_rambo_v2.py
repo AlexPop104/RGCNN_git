@@ -3,7 +3,7 @@ from site import addpackage
 import time
 
 from torch.utils.tensorboard import SummaryWriter
-writer = SummaryWriter(log_dir='/runs/ModelNet40')
+writer = SummaryWriter()
 
 from torch import nn
 import torch

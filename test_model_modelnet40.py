@@ -46,8 +46,8 @@ root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet" + str(modelnet_num)
 dataset_original = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms_original)
 dataset_noisy    = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms_noisy)
 
-loader_original  = DenseDataLoader(dataset_original, batch_size=batch_size, shuffle=True, pin_memory=True)
-loader_noisy     = DenseDataLoader(dataset_noisy, batch_size=batch_size, shuffle=True, pin_memory=True)
+loader_original  = DenseDataLoader(dataset_original, batch_size=batch_size, shuffle=False, pin_memory=True)
+loader_noisy     = DenseDataLoader(dataset_noisy, batch_size=batch_size, shuffle=False, pin_memory=True)
 
 F = [128, 512, 1024]  # Outputs size of convolutional filter.
 K = [6, 5, 3]         # Polynomial orders.
@@ -78,8 +78,8 @@ def test_model(loader, model, noisy=True):
 
     return total_correct / len(loader.dataset)
 
-# accuracy_original   = test_model(loader=loader_original, model=model)
+accuracy_original   = test_model(loader=loader_original, model=model)
 accuracy_noisy      = test_model(loader=loader_noisy, model=model)
 
-# print(f"Original:   {accuracy_original * 100}%")
+print(f"Original:   {accuracy_original * 100}%")
 print(f"Noisy:      {accuracy_noisy * 100}%")

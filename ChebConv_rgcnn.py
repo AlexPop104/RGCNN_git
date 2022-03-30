@@ -134,7 +134,7 @@ class DenseChebConvV2(nn.Module):
 
         self.lin = Linear(in_channels * K, out_channels, bias=bias)
         self.lins = t.nn.ModuleList([
-            Linear(in_channels, out_channels, bias=False, 
+            Linear(in_channels, out_channels, bias=True, 
                 weight_initializer='glorot') for _ in range(K)
         ])
 
@@ -148,8 +148,8 @@ class DenseChebConvV2(nn.Module):
 
     def reset_parameters(self):        
         for lin in self.lins:
-            lin.weight = t.nn.init.trunc_normal_(lin.weight, 0, 0.1)
-        
+            lin.weight = t.nn.init.trunc_normal_(lin.weight, mean=0, std=0.2)
+            lin.bias      = t.nn.init.normal_(lin.bias, mean=0, std=0.2)
         # self.lin.weight = torch.nn.init.trunc_normal_(self.lin.weight, 0, 0.1)
         # self.lin.reset_parameters()
 

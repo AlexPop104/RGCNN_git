@@ -1,9 +1,5 @@
-import open3d as o3d
-
 from collections import defaultdict
-
-from open3d.visualization.tensorboard_plugin import summary
-from open3d.visualization.tensorboard_plugin.util import to_dict_batch
+from unittest import loader
 
 from cls_model_rambo import cls_model
 from seg_model_rambo_v2 import seg_model
@@ -21,7 +17,7 @@ from torch_geometric.transforms import SamplePoints
 from torch_geometric.transforms import FixedPoints
 
 from torch_geometric.transforms import NormalizeScale
-
+t.manual_seed(0)
 
 seg_classes = {'Earphone': [16, 17, 18], 'Motorbike': [30, 31, 32, 33, 34, 35], 'Rocket': [41, 42, 43],
                     'Car': [8, 9, 10, 11], 'Laptop': [28, 29], 'Cap': [6, 7], 'Skateboard': [44, 45, 46],
@@ -40,6 +36,17 @@ for key in seg_classes.keys():
 # PATH = "/home/victor/workspace/thesis_ws/github/RGCNN_git/models/17_03_22_22:00:42/2048p_normal_model50.pt"
 # PATH = "/home/victor/workspace/thesis_ws/github/RGCNN_git/models/ModelNet/18_03_22_11:50:40/1024_40_chebconv_model50.pt"
         
+
+position_global_original = np.zeros((1, 2048, 3))
+label_original_original = np.zeros((1, 2048))
+label_predicted_original = np.zeros((1, 2048))
+
+
+position_global_noisy = np.zeros((1, 2048, 3))
+label_original_noisy = np.zeros((1, 2048))
+label_predicted_noisy = np.zeros((1, 2048))
+
+
 def test_modelnet_model(PATH, num_points=1024, batch_size=2, modelnet_num=40, dropout=1, one_layer=False, reg_prior=True, mu=0, sigma=0.01):
 
     device = t.device('cuda' if t.cuda.is_available() else 'cpu')
@@ -67,24 +74,7 @@ def test_modelnet_model(PATH, num_points=1024, batch_size=2, modelnet_num=40, dr
         total_correct = 0
         
         first = False
-        for data in loader:
-            
-            if first:
-                first = False
-                '''
-                if noisy:
-                    
-                    writer.add_3d('noisy_pcd', 
-                    {
-                        'vertex_positions': data.pos[0]
-                    }, 0)
-                else:
-                    writer.add_3d('original_pcd', 
-                    {
-                        'vertex_positions': data.pos[0]
-                    }, 0)
-                '''
-            
+        for data in loader:         
             x = t.cat([data.pos, data.normal], dim=2)
             x = x.to(device)
             print(x.shape)
@@ -100,19 +90,19 @@ def test_modelnet_model(PATH, num_points=1024, batch_size=2, modelnet_num=40, dr
     print(f"Original:   {accuracy_original}%")
     # print(f"Noisy:      {accuracy_noisy}%")
 
-def test_shapenet_model(PATH, num_points=2048, batch_size=2, input_dim=22, dropout=1, one_layer=False, reg_prior=False):
+def test_shapenet_model(PATH, num_points=2048, batch_size=2, input_dim=22, dropout=1, one_layer=False, reg_prior=False, mu=0, sigma=0.1):
     device = 'cuda' if t.cuda.is_available() else 'cpu'
 
     root = "/media/rambo/ssd2/Alex_data/RGCNN/ShapeNet/"
     
-    transforms_original = FixedPoints(num_points)
-    transforms_noisy = Compose([FixedPoints(num_points),  GaussianNoiseTransform(0, 0.01)])
+    transforms_original = Compose([FixedPoints(num_points), GaussianNoiseTransform(0, 0,    recompute_normals=True)])
+    transforms_noisy    = Compose([FixedPoints(num_points), GaussianNoiseTransform(mu, sigma,  recompute_normals=True)])
 
     dataset_original = ShapeNet(root=root, split="test", transform=transforms_original)
     dataset_noisy    = ShapeNet(root=root, split="test", transform=transforms_noisy)
 
-    loader_original  = DenseDataLoader(dataset_original, batch_size=batch_size, shuffle=True, pin_memory=True)
-    loader_noisy     = DenseDataLoader(dataset_noisy, batch_size=batch_size, shuffle=True, pin_memory=True)
+    loader_original  = DenseDataLoader(dataset_original,    batch_size=batch_size, shuffle=False, pin_memory=True)
+    loader_noisy     = DenseDataLoader(dataset_noisy,       batch_size=batch_size, shuffle=False, pin_memory=True)
 
     model = seg_model(num_points, [0,0], [0,0], [0,0], input_dim, dropout=1, reg_prior=True)
     model.load_state_dict(t.load(PATH))
@@ -126,17 +116,29 @@ def test_shapenet_model(PATH, num_points=2048, batch_size=2, input_dim=22, dropo
         predictions = np.empty((size, num_points))
         labels = np.empty((size, num_points))
         total_correct = 0
-        
+        indexes = [3, 100, 1000]
         for i, data in enumerate(loader):
+            
             cat = data.category
-            x = t.cat([data.pos, data.x], dim=2)  ### Pass this to the model
+            x = t.cat([data.pos.type(t.float32), data.x.type(t.float32)], dim=2)  ### Pass this to the model
             y = data.y
             logits, _, _ = model(x.to(device), cat.to(device))
             logits = logits.to('cpu')
             pred = logits.argmax(dim=2)
             # print(pred)
             # print(f"TEST: {int((pred == data.y.to(device)).sum())}")
-
+            if i in indexes:
+                if noisy == False:
+                    global position_global_original, label_original_original, label_predicted_original 
+                    position_global_original = np.append(position_global_original, data.pos, axis=0)
+                    label_original_original = np.append(label_original_original, y, axis = 0)
+                    label_predicted_original = np.append(label_predicted_original, pred, axis=0)
+                else:
+                    global position_global_noisy, label_original_noisy, label_predicted_noisy 
+                    position_global_noisy= np.append(position_global_noisy, data.pos, axis=0)
+                    label_original_noisy = np.append(label_original_noisy, y, axis = 0)
+                    label_predicted_noisy = np.append(label_predicted_noisy, pred, axis=0)            
+            
             total_correct += int((pred == y).sum())
             start = i * batch_size
             stop  = start + batch_size
@@ -169,11 +171,32 @@ def test_shapenet_model(PATH, num_points=2048, batch_size=2, input_dim=22, dropo
     acc_o, cat_iou_o, tot_iou_o, ncorrects_o = test_model(loader_original, model, False)
     acc_n, cat_iou_n, tot_iou_n, ncorrects_n = test_model(loader_noisy, model, True)
     
+    print(f"Original acc:   {acc_o}% - ncorrect: {ncorrects_o} : {len(loader_original.dataset) * num_points}")
+    for key, value in cat_iou_o.items():
+                print(key + ': {:.4f}, total: {:d}'.format(np.mean(value), len(value)))
+    print(f"Total IoU: { np.mean(tot_iou_o) * 100}")
+    
+    print("~~~" *20)
 
+    print(f"Noisy acc:      {acc_n}% - ncorrect: {ncorrects_n} : {len(loader_noisy.dataset) * num_points}")
+    for key, value in cat_iou_n.items():
+                print(key + ': {:.4f}, total: {:d}'.format(np.mean(value), len(value)))
+    print(f"Total IoU: { np.mean(tot_iou_n) * 100}")
+    
 
 if __name__ == '__main__':
     # PATH = '/home/victor/workspace/thesis_ws/github/RGCNN_git/models/ModelNet/18_03_22_19:04:50/1024_40_chebconv_model50.pt'
     # test_modelnet_model(PATH, mu=0, sigma=0.01)
     
-    PATH = '/home/victor/workspace/thesis_ws/github/RGCNN_git/models/21_03_22_21:06:30/2048p_model_v2200.pt'
-    test_shapenet_model(PATH, num_points=2048)
+    PATH = '/home/victor/workspace/thesis_ws/github/RGCNN_git/models/24_03_22_11:38:21/2048p_model_v280.pt'
+    test_shapenet_model(PATH, num_points=2048, mu=0, sigma=0.005)
+    
+    root = '/home/victor/workspace/thesis_ws/github/RGCNN_git/'
+    np.save(root + "positions_noisy.npy", position_global_noisy)
+    np.save(root + "label_original_noisy.npy", label_original_noisy)
+    np.save(root + "label_predicted_noisy.npy", label_predicted_noisy)
+
+    np.save(root + "positions_original.npy", position_global_original)
+    np.save(root + "label_original_original.npy", label_original_original)
+    np.save(root + "label_predicted_original.npy", label_predicted_original)
+    

@@ -9,18 +9,46 @@ import torch as t
 from torch_geometric.transforms import FixedPoints
 from torch_geometric.datasets import ShapeNet
 import torch
-from torch import nn
+from torch import float32, nn
 import time
 from torch.nn.functional import one_hot
 from torch.nn.functional import relu
 
+from sklearn.utils import class_weight
+
+torch.manual_seed(0)
+
+from torch_geometric.transforms import Compose
+
+from GaussianNoiseTransform import GaussianNoiseTransform
+
 from Classif_RGCNN_n_DenseConv_functions import DenseChebConv as DenseChebConvPyG
 from torch.utils.tensorboard import SummaryWriter
-writer = SummaryWriter(filename_suffix='_no_reg')
+writer = SummaryWriter(comment='_sn_ww_025_drop_weight_decay', filename_suffix='_no_reg')
 import numpy as np
 from torch.optim import lr_scheduler
 
 import numpy as np
+
+
+def get_weights(dataset, sk=True):
+    weights = torch.zeros(50)
+    if sk:
+        y = np.empty(len(dataset)*dataset[0].y.shape[0])
+        print(y.shape)
+        i = 0
+        for data in dataset:
+            y[i:2048+i] = data.y
+            i+=2048
+        weights = class_weight.compute_class_weight(
+            'balanced', np.unique(y), y)
+    else:
+        for data in dataset:
+            for l in torch.unique(data.y):
+                weights[l] += torch.sum(data.y == l.item())
+        weights = 1 - weights / len(dataset)
+    print(weights)
+    return weights
 
 
 
@@ -73,7 +101,7 @@ def create_batched_dataset(class_num, dataset, batch_size):
 
 
 class seg_model(nn.Module):
-    def __init__(self, vertice, F, K, M, input_dim=22 , one_layer=False, dropout=1, reg_prior: bool = True):
+    def __init__(self, vertice, F, K, M, input_dim=22 , one_layer=False, dropout=1, reg_prior: bool = True, b2relu=False, relus=[128, 512, 1024, 512, 128, 50], recompute_L = False):
         assert len(F) == len(K)
         super(seg_model, self).__init__()
 
@@ -91,12 +119,16 @@ class seg_model(nn.Module):
         # self.get_laplacian = GetLaplacian(normalize=True)
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
-        self.relus = [128, 512, 1024, 512, 128, 50]
-        aux = [i for i in self.relus]
-        print(aux)
-        self.bias_relus = nn.ParameterList([
-            torch.nn.parameter.Parameter(torch.zeros((1, 1, i))) for i in self.relus
+        self.relus = relus
+
+        if b2relu:
+            self.bias_relus = nn.ParameterList([
+                torch.nn.parameter.Parameter(torch.zeros((1, num_points, i))) for i in self.relus
             ])
+        else:
+            self.bias_relus = nn.ParameterList([
+                torch.nn.parameter.Parameter(torch.zeros((1, 1, i))) for i in self.relus
+                ])
         
         '''
         self.bias_relu1 = nn.Parameter(torch.zeros((1, 1, 128)), requires_grad=True)
@@ -116,7 +148,7 @@ class seg_model(nn.Module):
         self.conv5 = conv.DenseChebConv(512, 128, 1)
         self.conv6 = conv.DenseChebConv(128, 50, 1)
         '''
-        self.recompute_L = False
+        self.recompute_L = recompute_L
 
         bias=True
         self.fc1 = t.nn.Linear(1024, 512, bias=bias)
@@ -153,17 +185,21 @@ class seg_model(nn.Module):
         x1 = 0  # cache for layer 1
 
         L = self.get_laplacian(x)
+
         cat = one_hot(cat, num_classes=16)
         cat = torch.tile(cat, [1, self.vertice, 1]) 
         x = torch.cat([x, cat], dim=2)  ### Pass this to the model
         out = self.conv1(x, L)
         self.append_regularization_terms(out, L)
+        out = self.dropout(out)
         out = self.b1relu(out, self.bias_relus[0])
         
         if self.recompute_L:
             L = self.get_laplacian(out)
         out = self.conv2(out, L)
         self.append_regularization_terms(out, L)
+        out = self.dropout(out)
+
         out = self.b1relu(out, self.bias_relus[1])
         x1 = out
 
@@ -171,30 +207,41 @@ class seg_model(nn.Module):
             L = self.get_laplacian(out)
         out = self.conv3(out, L)
         self.append_regularization_terms(out, L)
+        out = self.dropout(out)
         out = self.b1relu(out, self.bias_relus[2])
 
         out = self.fc1(out)
         self.append_regularization_terms(out, L)
+        out = self.dropout(out)
         out = self.b1relu(out, self.bias_relus[3])
 
         out = t.concat([out, x1], dim=2)
 
         out = self.fc2(out)
-
         self.append_regularization_terms(out, L)
+        out = self.dropout(out)
 
         out = self.b1relu(out, self.bias_relus[4])
 
         out = self.fc3(out)
 
         self.append_regularization_terms(out, L)
-        
+        out = self.dropout(out)
         out = self.b1relu(out, self.bias_relus[5])
 
         return out, self.x, self.L
 
+    
+num_points = 2048
+root = "/media/rambo/ssd2/Alex_data/RGCNN/ShapeNet/"
 
-criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
+transforms = Compose([FixedPoints(num_points), GaussianNoiseTransform(mu=0, sigma=0, recompute_normals=False)])
+dataset_train = ShapeNet(root=root, split="train", transform=transforms)
+dataset_test = ShapeNet(root=root, split="test", transform=transforms)
+
+weights = get_weights(dataset_train)
+
+criterion = torch.nn.CrossEntropyLoss(weight=torch.tensor(weights, dtype=float32).to('cuda'))  # Define loss criterion.
 
 def compute_loss(logits, y, x, L, s=1e-9):
     if not logits.device == y.device:
@@ -216,7 +263,7 @@ def train(model, optimizer, loader, regularization):
         optimizer.zero_grad()
         cat = data.category
         y = data.y.type(torch.LongTensor)
-        x = t.cat([data.pos, data.x], dim=2)
+        x = t.cat([data.pos.type(torch.float32), data.x.type(torch.float32)], dim=2)
         logits, out, L = model(x.to(device), cat.to(device)) # out, L are for regularization
         logits = logits.permute([0, 2, 1])
 
@@ -240,7 +287,7 @@ def test(model, loader):
     
     for i, data in enumerate(loader):
         cat = data.category
-        x = t.cat([data.pos, data.x], dim=2)
+        x = t.cat([data.pos.type(torch.float32), data.x.type(torch.float32)], dim=2)
         y = data.y
         logits, _, _= model(x.to(device), cat.to(device))
         logits = logits.to('cpu')
@@ -254,6 +301,7 @@ def test(model, loader):
         predictions[start:stop] = pred
         lab = data.y
         labels[start:stop] = lab.reshape([-1, num_points])
+        
     tot_iou = []
     cat_iou = defaultdict(list)
     for i in range(predictions.shape[0]):
@@ -353,14 +401,14 @@ if __name__ == '__main__':
 
     root = "/media/rambo/ssd2/Alex_data/RGCNN/ShapeNet/"
     print(root)
-    dataset_train = ShapeNet(root=root, split="train", transform=FixedPoints(num_points))
-    dataset_test = ShapeNet(root=root, split="test", transform=FixedPoints(num_points))
 
-    batch_size = 2
-    num_epochs = 200
+    batch_size = 3
+    num_epochs = 100
     learning_rate = 1e-3
-    decay_rate = 0.95
+    decay_rate = 0.8
     decay_steps = len(dataset_train) / batch_size
+    weight_decay = 1e-9
+
 
     F = [128, 512, 1024]  # Outputs size of convolutional filter.
     K = [6, 5, 3]         # Polynomial orders.
@@ -371,13 +419,13 @@ if __name__ == '__main__':
     print(f"Test dataset shape:  {dataset_test}")
 
     train_loader = DenseDataLoader(
-        dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
-    test_loader = DenseDataLoader(dataset_test, batch_size=batch_size, shuffle=False)
+        dataset_train, batch_size=batch_size, shuffle=False, pin_memory=True)
+    test_loader = DenseDataLoader(
+        dataset_test, batch_size=batch_size, shuffle=True)
 
     model = seg_model(num_points, F, K, M,
-                      dropout=1, one_layer=False, reg_prior=True)
+                      dropout=0.25, one_layer=False, reg_prior=True, recompute_L=False, relus=[128, 512, 1024, 512, 128, 50], b2relu=True)
     model = model.to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     
-
     start_training(model, train_loader, test_loader, optimizer, epochs=num_epochs)
