@@ -6,7 +6,11 @@ from torch_geometric.data import Data, HeteroData
 from torch_geometric.transforms import BaseTransform
 import torch
 
+np.random.seed(0)
+
+
 class GaussianNoiseTransform(BaseTransform):
+
     def __init__(self, mu: Optional[float] = 0, sigma: Optional[float] = 0.1, recompute_normals : bool = True):
         self.mu = mu
         self.sigma = sigma

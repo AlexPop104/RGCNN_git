@@ -47,6 +47,8 @@ import numpy as np
 import matplotlib.pyplot
 from mpl_toolkits.mplot3d import Axes3D
 
+from noise_transform import GaussianNoiseTransform
+
 import random
 random.seed(0)
 
@@ -281,42 +283,74 @@ model.load_state_dict(torch.load(path_saved_model))
 print(model.parameters)
 model = model.to(device)
 
-torch.manual_seed(0)
-
-rot_x=3
+rot_x=0
 rot_y=0
 rot_z=0
 
-for rot_y in range(0,1):
+mu=0
+sigma=0
 
-    random_rotate = Compose([
-    RandomRotate(degrees=rot_x*10, axis=0),
-    RandomRotate(degrees=rot_y*10, axis=1),
-    RandomRotate(degrees=rot_z*10, axis=2),
-    ])
+torch.manual_seed(0)
 
-    test_transform = Compose([
-    random_rotate,
-    SamplePoints(num_points, include_normals=True),
-    NormalizeScale()
-    ])
+for ceva in range(0,1):
+    
+    # random_rotate = Compose([
+    # RandomRotate(degrees=rot_x*10, axis=0),
+    # RandomRotate(degrees=rot_y*10, axis=1),
+    # RandomRotate(degrees=rot_z*10, axis=2),
+    # ])
+
+    # test_transform = Compose([
+    # random_rotate,
+    # SamplePoints(num_points, include_normals=True),
+    # NormalizeScale()
+    # ])
+
+    # test_dataset = ModelNet(root=root, train=False,
+    #                         transform=test_transform)
+
+# program_name="RGCNN_rot_x"+str(10*rot_x)+"_rot_y"+str(10*rot_y)+"_rot_z"+str(10*rot_z)
 
 
-    dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform)
-    test_loader  = DataLoader(dataset_test, batch_size=batch_size)
+######################################################################33
 
-    program_name="RGCNN_rot_x"+str(10*rot_x)+"_rot_y"+str(10*rot_y)+"_rot_z"+str(10*rot_z)
+    transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
+
+    test_dataset = ModelNet(root=root, train=False,
+                                   transform=transforms)
+
+    program_name="RGCNN"
+
+################################################################33
+
+    mu=0
+    sigma=0.05
+
+    # transforms_noisy = Compose([SamplePoints(num_points),NormalizeScale(),GaussianNoiseTransform(mu, sigma,recompute_normals=True)])
+   
+
+    # test_dataset = ModelNet(root=root, train=False,
+    #                         transform=transforms_noisy)
+
+    #program_name="RGCNN_noise_mu"+str(mu)+"_sigma_"+str(sigma)
+    
+
+    
+
+    test_loader = DataLoader(test_dataset, batch_size=batch_size)
+
     conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
 
+
+    #conv.test_pcd_pred(model=model,loader=test_loader,num_points=num_points,device=device)
+        
     test_start_time = time.time()
-    test_acc,confidence = test(model, test_loader)
+    test_acc = test(model, test_loader,nr_points=num_points)
     test_stop_time = time.time()
 
-    print(f'{confidence:.4f}')
+    print(f'{test_acc:.4f}')
 
-    # print(f'Test loss: {test_acc:.4f}')
-    # print(f'Test accuracy: {confidence:.4f}')
-    # print(f'Time for test: {test_stop_time-test_start_time:.4f}')
-
+    #print(f'\Test Time: \t{test_stop_time - test_start_time }')
+    #print(f' Test Accuracy: {test_acc:.4f}')
 
     

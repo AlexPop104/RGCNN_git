@@ -579,10 +579,10 @@ def view_pcd(model,loader,num_points,device,program_name):
                         o3d.geometry.PointCloud.estimate_normals(pcd)
                         #pcd.color=o3d.utility.Vector3dVector(viz_points[it_pcd,:,3:6])
                         
-                        pcd.normals=o3d.utility.Vector3dVector(viz_normals[it_pcd,:,:])
+                        #pcd.normals=o3d.utility.Vector3dVector(viz_normals[it_pcd,:,:])
 
                         pcd.paint_uniform_color([0, 0.651, 0.929])
-                        o3d.visualization.draw_geometries([pcd],window_name=program_name, width=500, height=500,point_show_normal=True)
+                        o3d.visualization.draw_geometries([pcd],window_name=program_name, width=500, height=500)
                          
 
                         # fig = plt.figure(program_name)

@@ -31,6 +31,8 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import os
 
+from noise_transform import GaussianNoiseTransform
+
 import random
 random.seed(0)
 
@@ -206,7 +208,6 @@ root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
 
 #root="/media/rambo/ssd2/Alex_data/RGCNN/GeometricShapes"
 
-transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
     
 
@@ -220,41 +221,73 @@ print(model)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = model.to(device)
 
-rot_x=3
+rot_x=0
 rot_y=0
 rot_z=0
+
+mu=0
+sigma=0
 
 torch.manual_seed(0)
 
 for ceva in range(0,1):
+    
+    # random_rotate = Compose([
+    # RandomRotate(degrees=rot_x*10, axis=0),
+    # RandomRotate(degrees=rot_y*10, axis=1),
+    # RandomRotate(degrees=rot_z*10, axis=2),
+    # ])
 
-    random_rotate = Compose([
-    RandomRotate(degrees=rot_x*10, axis=0),
-    RandomRotate(degrees=rot_y*10, axis=1),
-    RandomRotate(degrees=rot_z*10, axis=2),
-    ])
+    # test_transform = Compose([
+    # random_rotate,
+    # SamplePoints(num_points, include_normals=True),
+    # NormalizeScale()
+    # ])
 
-    test_transform = Compose([
-    random_rotate,
-    SamplePoints(num_points, include_normals=True),
-    NormalizeScale()
-    ])
+    # test_dataset = ModelNet(root=root, train=False,
+    #                         transform=test_transform)
 
-    #test_dataset = ModelNet(root=root, train=False,transform=transforms)
+# program_name="Pointnet_rot_x"+str(10*rot_x)+"_rot_y"+str(10*rot_y)+"_rot_z"+str(10*rot_z)
 
-    test_dataset = ModelNet(root=root, train=False,transform=test_transform)
+
+######################################################################33
+
+    transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
+
+    test_dataset = ModelNet(root=root, train=False,
+                                   transform=transforms)
+
+    program_name="Pointnet"
+
+################################################################33
+
+    mu=0
+    sigma=0.05
+
+    # transforms_noisy = Compose([SamplePoints(num_points),NormalizeScale(),GaussianNoiseTransform(mu, sigma,recompute_normals=True)])
+   
+
+    # test_dataset = ModelNet(root=root, train=False,
+    #                         transform=transforms_noisy)
+
+    #program_name="Pointnet_noise_mu"+str(mu)+"_sigma_"+str(sigma)
+    
+
+    
 
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
-   
-    program_name="Pointnet_rot_x"+str(10*rot_x)+"_rot_y"+str(10*rot_y)+"_rot_z"+str(10*rot_z)
+
     conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
 
+
+    #conv.test_pcd_pred(model=model,loader=test_loader,num_points=num_points,device=device)
+        
     test_start_time = time.time()
     test_acc = test(model, test_loader,nr_points=num_points)
     test_stop_time = time.time()
 
+    print(f'{test_acc:.4f}')
 
     #print(f'\Test Time: \t{test_stop_time - test_start_time }')
-
-    print(f'{test_acc:.4f}')
     #print(f' Test Accuracy: {test_acc:.4f}')
+

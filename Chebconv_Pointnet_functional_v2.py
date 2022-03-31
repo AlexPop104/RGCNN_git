@@ -23,8 +23,6 @@ from torch_geometric.transforms import NormalizeScale
 from torch_geometric.loader import DataLoader
 
 
-torch.manual_seed(0)
-
 from torch.optim import lr_scheduler
 
 import ChebConv_rgcnn_functions as conv
@@ -35,6 +33,9 @@ from datetime import datetime
 import os
 
 from noise_transform import GaussianNoiseTransform
+
+import random
+random.seed(0)
 
 
 class Tnet(nn.Module):
@@ -229,19 +230,26 @@ batch_size=16
 num_epochs=250
 nr_features=6
 
+torch.manual_seed(0)
 
+F = [128, 512, 1024]  # Outputs size of convolutional filter.
+K = [6, 5, 3]         # Polynomial orders.
+M = [512, 128, modelnet_num]
 
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+print(f"Training on {device}")
 
 root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
 
-#root="/media/rambo/ssd2/Alex_data/RGCNN/GeometricShapes"
+
 
 transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
-# train_dataset = ModelNet(root=root, train=True,
-#                                 transform=transforms)
-# test_dataset = ModelNet(root=root, train=False,
-#                                transform=transforms)
+train_dataset = ModelNet(root=root, train=True,
+                                transform=transforms)
+test_dataset = ModelNet(root=root, train=False,
+                               transform=transforms)
 
 random_rotate = Compose([
             RandomRotate(degrees=30, axis=0),
@@ -255,10 +263,10 @@ test_transform = Compose([
         NormalizeScale()
         ])
  
-train_dataset = ModelNet(root=root, train=True,
-                                transform=test_transform)
-test_dataset = ModelNet(root=root, train=False,
-                            transform=transforms)
+# train_dataset = ModelNet(root=root, train=True,
+#                                 transform=test_transform)
+# test_dataset = ModelNet(root=root, train=False,
+#                             transform=transforms)
 
 # mu=0
 # sigma=0
@@ -282,11 +290,14 @@ criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 
 my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
 model = model.to(device)
 
 for epoch in range(1, (num_epochs+1)):
+
+    program_name="Pointnet"
+    conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
+
+
     train_start_time = time.time()
     loss = train(model, optimizer, train_loader,nr_points=num_points)
     train_stop_time = time.time()

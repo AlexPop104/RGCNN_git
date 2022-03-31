@@ -45,6 +45,9 @@ import numpy as np
 import matplotlib.pyplot
 from mpl_toolkits.mplot3d import Axes3D
 
+import random
+random.seed(0)
+
 
 
 class cls_model(nn.Module):
@@ -319,135 +322,87 @@ def createConfusionMatrix(model,loader):
     return sn.heatmap(df_cm, annot=True).get_figure()
 
 
+now = datetime.now()
+directory = now.strftime("%d_%m_%y_%H:%M:%S")
+parent_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models"
+path = os.path.join(parent_directory, directory)
+os.mkdir(path)
 
-if __name__ == '__main__':
-    now = datetime.now()
-    directory = now.strftime("%d_%m_%y_%H:%M:%S")
-    parent_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models"
-    path = os.path.join(parent_directory, directory)
-    os.mkdir(path)
+num_points = 512
+batch_size = 16
+num_epochs = 250
+learning_rate = 1e-3
+modelnet_num = 40
 
-    num_points = 512
-    batch_size = 16
-    num_epochs = 250
-    learning_rate = 1e-3
-    modelnet_num = 40
-
-    F = [128, 512, 1024]  # Outputs size of convolutional filter.
-    K = [6, 5, 3]         # Polynomial orders.
-    M = [512, 128, modelnet_num]
-
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-    print(f"Training on {device}")
-
-        
-    transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
-    
-    random_rotate_train = Compose([
-    RandomRotate(degrees=15, axis=0),
-    RandomRotate(degrees=15, axis=1),
-    RandomRotate(degrees=15, axis=2),
-])
-
-    random_rotate_test = Compose([
-    RandomRotate(degrees=45, axis=0),
-    RandomRotate(degrees=45, axis=1),
-    RandomRotate(degrees=45, axis=2),
-])
-
-    train_transform = Compose([
-    random_rotate_train,
-    SamplePoints(num_points, include_normals=True),
-    NormalizeScale()
-])
-
-    test_transform = Compose([
-    random_rotate_test,
-    SamplePoints(num_points, include_normals=True),
-    NormalizeScale()
-])
-
-    random_rotate = Compose([
-            RandomRotate(degrees=30, axis=0),
-            RandomRotate(degrees=30, axis=1),
-            RandomRotate(degrees=30, axis=2),
-            ])
-
-    test_transform = Compose([
-            random_rotate,
-            SamplePoints(num_points, include_normals=True),
-            NormalizeScale()
-            ])
- 
-
-    root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
-    print(root)
-
-    mu=0
-    sigma=0
-
-    transforms_noisy = Compose([SamplePoints(num_points), GaussianNoiseTransform(mu, sigma,recompute_normals=True),NormalizeScale()])
-
-    # train_dataset = ModelNet(root=root, train=True,
-    #                                 transform=transforms_noisy)
-    # test_dataset = ModelNet(root=root, train=False,
-    #                             transform=transforms_noisy)
+F = [128, 512, 1024]  # Outputs size of convolutional filter.
+K = [6, 5, 3]         # Polynomial orders.
+M = [512, 128, modelnet_num]
 
 
 
-    dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform)
-    dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms)
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+print(f"Training on {device}")
+
+root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+#print(root)
+
+model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, reg_prior=True)
+
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+model = model.to(device)
+
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
+my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
+regularization = 1e-9
+
+torch.manual_seed(0)
+
+transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
+
+train_dataset = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
+test_dataset = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms)
+
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
 
-    # Verification...
-    print(f"Train dataset shape: {dataset_train}")
-    print(f"Test dataset shape:  {dataset_test}")
+for epoch in range(1, num_epochs+1):
+
+    program_name="RGCNN"
+    conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
+
+    train_start_time = time.time()
+    train_loss,train_acc = train(model, optimizer, train_loader, regularization=regularization)
+    train_stop_time = time.time()
+
+    test_start_time = time.time()
+    test_loss,test_acc = test(model, test_loader)
+    test_stop_time = time.time()
+
+    #conv.test_pcd_pred(model=model,loader=train_loader,num_points=num_points,device=device)
+
+    writer.add_scalar("Loss/train", train_loss, epoch)
+    writer.add_scalar("Loss/test", test_loss, epoch)
+    writer.add_scalar("Acc/train", train_acc, epoch)
+    writer.add_scalar("Acc/test", test_acc, epoch)
+
+    print(f'Epoch: {epoch:02d}, Loss: {train_loss:.4f}, Test Accuracy: {test_acc:.4f}')
+    print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
+    Test Time: \t{test_stop_time - test_start_time }')
+
+    # writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader), epoch)
+
+    if(epoch%5==0):
+        torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+
+    my_lr_scheduler.step()
 
 
-    train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
-    test_loader  = DataLoader(dataset_test, batch_size=batch_size)
-    
-    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, reg_prior=True)
-    model = model.to(device)
+torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
 
-    print(model.parameters)
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
-
-    regularization = 1e-9
-    for epoch in range(1, num_epochs+1):
-        train_start_time = time.time()
-        train_loss,train_acc = train(model, optimizer, train_loader, regularization=regularization)
-        train_stop_time = time.time()
-
-        test_start_time = time.time()
-        test_loss,test_acc = test(model, test_loader)
-        test_stop_time = time.time()
-
-        #conv.test_pcd_pred(model=model,loader=train_loader,num_points=num_points,device=device)
-
-        writer.add_scalar("Loss/train", train_loss, epoch)
-        writer.add_scalar("Loss/test", test_loss, epoch)
-        writer.add_scalar("Acc/train", train_acc, epoch)
-        writer.add_scalar("Acc/test", test_acc, epoch)
-
-        print(f'Epoch: {epoch:02d}, Loss: {train_loss:.4f}, Test Accuracy: {test_acc:.4f}')
-        print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
-        Test Time: \t{test_stop_time - test_start_time }')
-
-        # writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader), epoch)
-
-        if(epoch%5==0):
-            torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
-
-        my_lr_scheduler.step()
-
-    
-    torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
-
-    ##################################################################################################3
+##################################################################################################3
 #     #Testing the model
 
 #     random_rotate = Compose([
@@ -466,8 +421,8 @@ if __name__ == '__main__':
 
 #     train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
 #     test_loader  = DataLoader(dataset_test, batch_size=batch_size)
-    
-    
+
+
 #     model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, reg_prior=True)
 #     path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/02_03_22_11:43:08_2_Layers_Points/model100.pt"
 #     model.load_state_dict(torch.load(path_saved_model))
@@ -478,6 +433,5 @@ if __name__ == '__main__':
 #     test_stop_time = time.time()
 #     print(f'Test Accuracy: {test_acc:.4f}')
 #     print(f'Test Average_confidence: {confidence:.4f}')
-   
 
-    
+
