@@ -358,19 +358,31 @@ my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
 regularization = 1e-9
 
 torch.manual_seed(0)
+#################################################################33
 
-transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
+# transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
-train_dataset = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
-test_dataset = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms)
+# train_dataset = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
+# test_dataset = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms)
+
+###################################################################
+
+mu=0
+sigma=0
+transforms_noisy = Compose([SamplePoints(num_points),NormalizeScale(),GaussianNoiseTransform(mu, sigma,recompute_normals=True)])
+
+train_dataset = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms_noisy)
+test_dataset = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms_noisy)
+
+###############################################################################
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
 test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
 for epoch in range(1, num_epochs+1):
 
-    program_name="RGCNN"
-    conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
+    # program_name="RGCNN-recomputed-normals"
+    # conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
 
     train_start_time = time.time()
     train_loss,train_acc = train(model, optimizer, train_loader, regularization=regularization)

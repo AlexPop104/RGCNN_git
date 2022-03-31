@@ -248,11 +248,7 @@ parent_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models
 path = os.path.join(parent_directory, directory)
 os.mkdir(path)
 
-modelnet_num = 40
-num_points= 512
-batch_size=16
-num_epochs=250
-nr_features=6
+
 
 
 modelnet_num = 40
@@ -280,20 +276,30 @@ criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
 
 torch.manual_seed(0)
+#################################################################33
 
-transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
+# transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
-train_dataset = ModelNet(root=root, train=True,
-                                transform=transforms)
-test_dataset = ModelNet(root=root, train=False,
-                               transform=transforms)
+# train_dataset = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
+# test_dataset = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms)
 
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=batch_size)
+###################################################################
+
+mu=0
+sigma=0
+transforms_noisy = Compose([SamplePoints(num_points),NormalizeScale(),GaussianNoiseTransform(mu, sigma,recompute_normals=True)])
+
+train_dataset = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms_noisy)
+test_dataset = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms_noisy)
+
+###############################################################################
+
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
 for epoch in range(1, (num_epochs+1)):
-    program_name="Pointnet-RGCNN"
-    conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
+    # program_name="Pointnet-RGCNN-recalculated normals"
+    # conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
 
     train_start_time = time.time()
     loss = train(model, optimizer, train_loader,nr_points=num_points)
