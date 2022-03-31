@@ -31,6 +31,8 @@ from torch_cluster import knn_graph
 
 
 
+
+
 def get_laplacian(adj_matrix, normalize=True):
     if normalize:
         D = t.sum(adj_matrix, dim=1)
@@ -440,6 +442,8 @@ def test_pcd_pred(model, loader,num_points,device):
 
                 plt.show()
 
+
+
 def view_graph(viz_points,distances,threshold,nr):
 
     distances=torch.where(distances<1,distances,torch.tensor(1., dtype=distances.dtype,device='cuda'))
@@ -551,6 +555,22 @@ def test_pcd_with_index(model,loader,num_points,device):
                         print("PCD label")
                         print(label_to_names[y[1][it_pcd].item()])
                         fig = plt.figure()
+                        ax = fig.add_subplot(111, projection='3d')
+                        ax.set_axis_off()
+                        ax.scatter(viz_points[it_pcd,:,0], viz_points[it_pcd,:, 1], viz_points[it_pcd,:,2], s=1, color='r')   
+                        plt.show()
+
+def view_pcd(model,loader,num_points,device,program_name):
+    with torch.no_grad():
+        for i,data in enumerate(loader):
+               
+                viz_points=data.pos
+                viz_points=viz_points.reshape(data.batch.unique().shape[0], num_points, 3)
+
+                
+                for it_pcd in range(data.pos.shape[0]):
+
+                        fig = plt.figure(program_name)
                         ax = fig.add_subplot(111, projection='3d')
                         ax.set_axis_off()
                         ax.scatter(viz_points[it_pcd,:,0], viz_points[it_pcd,:, 1], viz_points[it_pcd,:,2], s=1, color='r')   

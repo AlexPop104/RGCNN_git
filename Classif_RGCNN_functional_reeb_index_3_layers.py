@@ -504,7 +504,7 @@ if __name__ == '__main__':
     edges_test=np.load(path_edges_test)
 
    
-    #conv.test_pcd_with_index(model=model,loader=train_loader,num_points=num_points,device=device)
+    conv.test_pcd_with_index(model=model,loader=train_loader,num_points=num_points,device=device)
 #     ################################
     regularization = 1e-9
     for epoch in range(1, num_epochs+1):

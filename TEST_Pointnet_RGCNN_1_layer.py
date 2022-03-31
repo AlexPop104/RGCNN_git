@@ -33,6 +33,12 @@ import os
 
 from noise_transform import GaussianNoiseTransform
 
+import random
+random.seed(0)
+
+
+
+
 
 class Tnet(nn.Module):
     def __init__(self, k):
@@ -220,7 +226,7 @@ num_epochs=250
 nr_features=6
 
 
-torch.manual_seed(42)
+
 
 
 root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
@@ -252,41 +258,48 @@ model.load_state_dict(torch.load(path_saved_model))
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = model.to(device)
 
-rot_x=0
+rot_x=3
 rot_y=0
 rot_z=0
 
 mu=0
 sigma=0
 
+torch.manual_seed(0)
+
 for ceva in range(0,1):
 
-    # random_rotate = Compose([
-    # RandomRotate(degrees=rot_x*10, axis=0),
-    # RandomRotate(degrees=rot_y*10, axis=1),
-    # RandomRotate(degrees=rot_z*10, axis=2),
-    # ])
 
-    # test_transform = Compose([
-    # random_rotate,
-    # SamplePoints(num_points, include_normals=True),
-    # NormalizeScale()
-    # ])
+    
+    random_rotate = Compose([
+    RandomRotate(degrees=rot_x*10, axis=0),
+    RandomRotate(degrees=rot_y*10, axis=1),
+    RandomRotate(degrees=rot_z*10, axis=2),
+    ])
 
-    # test_dataset = ModelNet(root=root, train=False,
-    #                         transform=test_transform)
-
-    mu=0
-    sigma=0
-
-    transforms_noisy = Compose([SamplePoints(num_points), GaussianNoiseTransform(mu, sigma,recompute_normals=True),NormalizeScale()])
-   
+    test_transform = Compose([
+    random_rotate,
+    SamplePoints(num_points, include_normals=True),
+    NormalizeScale()
+    ])
 
     test_dataset = ModelNet(root=root, train=False,
-                            transform=transforms_noisy)
+                            transform=test_transform)
+
+    # mu=0
+    # sigma=0
+
+    # transforms_noisy = Compose([SamplePoints(num_points), GaussianNoiseTransform(mu, sigma,recompute_normals=True),NormalizeScale()])
+   
+
+    # test_dataset = ModelNet(root=root, train=False,
+    #                         transform=transforms_noisy)
 
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
+    program_name="Pointnet_RGCNN_rot_x"+str(10*rot_x)+"_rot_y"+str(10*rot_y)+"_rot_z"+str(10*rot_z)
+    conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
+    #conv.test_pcd_pred(model=model,loader=test_loader,num_points=num_points,device=device)
         
     test_start_time = time.time()
     test_acc = test(model, test_loader,nr_points=num_points)

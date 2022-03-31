@@ -31,7 +31,10 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import os
 
-torch.manual_seed(0)
+import random
+random.seed(0)
+
+
 
 
 class Tnet(nn.Module):
@@ -217,9 +220,11 @@ print(model)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = model.to(device)
 
-rot_x=0
+rot_x=3
 rot_y=0
-rot_z=3
+rot_z=0
+
+torch.manual_seed(0)
 
 for ceva in range(0,1):
 
@@ -240,6 +245,9 @@ for ceva in range(0,1):
     test_dataset = ModelNet(root=root, train=False,transform=test_transform)
 
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
+   
+    program_name="Pointnet_rot_x"+str(10*rot_x)+"_rot_y"+str(10*rot_y)+"_rot_z"+str(10*rot_z)
+    conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
 
     test_start_time = time.time()
     test_acc = test(model, test_loader,nr_points=num_points)

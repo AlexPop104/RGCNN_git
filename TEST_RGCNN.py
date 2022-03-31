@@ -6,7 +6,9 @@ import torch_geometric as tg
 
 import time
 
-from GaussianNoiseTransform import GaussianNoiseTransform
+from noise_transform import GaussianNoiseTransform
+
+
 
 # from torch.utils.tensorboard import SummaryWriter
 # writer = SummaryWriter()
@@ -44,6 +46,9 @@ import numpy as np
 
 import matplotlib.pyplot
 from mpl_toolkits.mplot3d import Axes3D
+
+import random
+random.seed(0)
 
 
 
@@ -245,71 +250,73 @@ def createConfusionMatrix(model,loader):
     plt.figure(figsize=(50, 50))    
     return sn.heatmap(df_cm, annot=True).get_figure()
 
-if __name__ == '__main__':
-    now = datetime.now()
-    directory = now.strftime("%d_%m_%y_%H:%M:%S")
-    parent_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models"
-    path = os.path.join(parent_directory, directory)
-    os.mkdir(path)
 
-    num_points = 512
-    batch_size = 16
-    num_epochs = 250
-    learning_rate = 1e-3
-    modelnet_num = 40
+now = datetime.now()
+directory = now.strftime("%d_%m_%y_%H:%M:%S")
+parent_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models"
+path = os.path.join(parent_directory, directory)
+os.mkdir(path)
 
-    F = [128, 512, 1024]  # Outputs size of convolutional filter.
-    K = [6, 5, 3]         # Polynomial orders.
-    M = [512, 128, modelnet_num]
+num_points = 512
+batch_size = 16
+num_epochs = 250
+learning_rate = 1e-3
+modelnet_num = 40
 
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+F = [128, 512, 1024]  # Outputs size of convolutional filter.
+K = [6, 5, 3]         # Polynomial orders.
+M = [512, 128, modelnet_num]
 
-    print(f"Training on {device}")
-    
-    root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
-    print(root)
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+print(f"Training on {device}")
 
-    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, reg_prior=True)
-    path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Modele_selectate/RGCNN_3_layers/model140.pt"
-    model.load_state_dict(torch.load(path_saved_model))
-    print(model.parameters)
-    model = model.to(device)
+root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+print(root)
 
 
-    rot_x=0
-    rot_y=0
-    rot_z=0
+model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, reg_prior=True)
+path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Modele_selectate/RGCNN_3_layers/model140.pt"
+model.load_state_dict(torch.load(path_saved_model))
+print(model.parameters)
+model = model.to(device)
 
-    for rot_y in range(0,4):
+torch.manual_seed(0)
 
-        random_rotate = Compose([
-        RandomRotate(degrees=rot_x*10, axis=0),
-        RandomRotate(degrees=rot_y*10, axis=1),
-        RandomRotate(degrees=rot_z*10, axis=2),
-        ])
+rot_x=3
+rot_y=0
+rot_z=0
 
-        test_transform = Compose([
-        random_rotate,
-        SamplePoints(num_points, include_normals=True),
-        NormalizeScale()
-        ])
+for rot_y in range(0,1):
 
-    
-        dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform)
-        test_loader  = DataLoader(dataset_test, batch_size=batch_size)
-    
-    
+    random_rotate = Compose([
+    RandomRotate(degrees=rot_x*10, axis=0),
+    RandomRotate(degrees=rot_y*10, axis=1),
+    RandomRotate(degrees=rot_z*10, axis=2),
+    ])
 
-        test_start_time = time.time()
-        test_acc,confidence = test(model, test_loader)
-        test_stop_time = time.time()
-    
-        print(f'{confidence:.4f}')
-    
-        # print(f'Test loss: {test_acc:.4f}')
-        # print(f'Test accuracy: {confidence:.4f}')
-        # print(f'Time for test: {test_stop_time-test_start_time:.4f}')
-   
+    test_transform = Compose([
+    random_rotate,
+    SamplePoints(num_points, include_normals=True),
+    NormalizeScale()
+    ])
+
+
+    dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform)
+    test_loader  = DataLoader(dataset_test, batch_size=batch_size)
+
+    program_name="RGCNN_rot_x"+str(10*rot_x)+"_rot_y"+str(10*rot_y)+"_rot_z"+str(10*rot_z)
+    conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
+
+    test_start_time = time.time()
+    test_acc,confidence = test(model, test_loader)
+    test_stop_time = time.time()
+
+    print(f'{confidence:.4f}')
+
+    # print(f'Test loss: {test_acc:.4f}')
+    # print(f'Test accuracy: {confidence:.4f}')
+    # print(f'Time for test: {test_stop_time-test_start_time:.4f}')
+
 
     

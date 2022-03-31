@@ -236,22 +236,39 @@ root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
 
 #root="/media/rambo/ssd2/Alex_data/RGCNN/GeometricShapes"
 
-# transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
+transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
 # train_dataset = ModelNet(root=root, train=True,
 #                                 transform=transforms)
 # test_dataset = ModelNet(root=root, train=False,
 #                                transform=transforms)
 
-mu=0
-sigma=0
+random_rotate = Compose([
+            RandomRotate(degrees=30, axis=0),
+            RandomRotate(degrees=30, axis=1),
+            RandomRotate(degrees=30, axis=2),
+            ])
 
-transforms_noisy = Compose([SamplePoints(num_points), GaussianNoiseTransform(mu, sigma,recompute_normals=True),NormalizeScale()])
-
+test_transform = Compose([
+        random_rotate,
+        SamplePoints(num_points, include_normals=True),
+        NormalizeScale()
+        ])
+ 
 train_dataset = ModelNet(root=root, train=True,
-                                transform=transforms_noisy)
+                                transform=test_transform)
 test_dataset = ModelNet(root=root, train=False,
-                               transform=transforms_noisy)
+                            transform=transforms)
+
+# mu=0
+# sigma=0
+
+# transforms_noisy = Compose([SamplePoints(num_points), GaussianNoiseTransform(mu, sigma,recompute_normals=True),NormalizeScale()])
+
+# train_dataset = ModelNet(root=root, train=True,
+#                                 transform=transforms_noisy)
+# test_dataset = ModelNet(root=root, train=False,
+#                                transform=transforms_noisy)
 
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
