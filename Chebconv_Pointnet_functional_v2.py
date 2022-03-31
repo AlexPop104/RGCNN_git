@@ -230,8 +230,6 @@ batch_size=16
 num_epochs=250
 nr_features=6
 
-
-
 F = [128, 512, 1024]  # Outputs size of convolutional filter.
 K = [6, 5, 3]         # Polynomial orders.
 M = [512, 128, modelnet_num]
