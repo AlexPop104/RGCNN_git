@@ -226,23 +226,9 @@ num_epochs=250
 nr_features=6
 
 
-
-
-
 root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
 
 #root="/media/rambo/ssd2/Alex_data/RGCNN/GeometricShapes"
-
-
-
-
-
-
-    
-
-
-
-
 
 model = PointNet(num_classes=modelnet_num,nr_features=nr_features)
 path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Modele_selectate/Pointnet_RGCNN/model75.pt"

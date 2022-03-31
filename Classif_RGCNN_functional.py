@@ -367,7 +367,6 @@ test_dataset = ModelNet(root=root, name=str(modelnet_num), train=False, transfor
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
 test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
-
 for epoch in range(1, num_epochs+1):
 
     program_name="RGCNN"

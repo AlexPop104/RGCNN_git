@@ -230,7 +230,7 @@ batch_size=16
 num_epochs=250
 nr_features=6
 
-torch.manual_seed(0)
+
 
 F = [128, 512, 1024]  # Outputs size of convolutional filter.
 K = [6, 5, 3]         # Polynomial orders.
@@ -242,7 +242,15 @@ print(f"Training on {device}")
 
 root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
 
+model = PointNet(num_classes=modelnet_num,nr_features=nr_features)
+model = model.to(device)
 
+optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
+
+my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
+
+torch.manual_seed(0)
 
 transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
@@ -251,52 +259,13 @@ train_dataset = ModelNet(root=root, train=True,
 test_dataset = ModelNet(root=root, train=False,
                                transform=transforms)
 
-random_rotate = Compose([
-            RandomRotate(degrees=30, axis=0),
-            RandomRotate(degrees=30, axis=1),
-            RandomRotate(degrees=30, axis=2),
-            ])
-
-test_transform = Compose([
-        random_rotate,
-        SamplePoints(num_points, include_normals=True),
-        NormalizeScale()
-        ])
- 
-# train_dataset = ModelNet(root=root, train=True,
-#                                 transform=test_transform)
-# test_dataset = ModelNet(root=root, train=False,
-#                             transform=transforms)
-
-# mu=0
-# sigma=0
-
-# transforms_noisy = Compose([SamplePoints(num_points), GaussianNoiseTransform(mu, sigma,recompute_normals=True),NormalizeScale()])
-
-# train_dataset = ModelNet(root=root, train=True,
-#                                 transform=transforms_noisy)
-# test_dataset = ModelNet(root=root, train=False,
-#                                transform=transforms_noisy)
-
-
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=batch_size)
-
-model = PointNet(num_classes=modelnet_num,nr_features=nr_features)
-print(model)
-
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
-
-my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
-
-model = model.to(device)
 
 for epoch in range(1, (num_epochs+1)):
 
     program_name="Pointnet"
     conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
-
 
     train_start_time = time.time()
     loss = train(model, optimizer, train_loader,nr_points=num_points)
