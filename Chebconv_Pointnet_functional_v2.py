@@ -1,11 +1,14 @@
 import time
 
-from torch.utils.tensorboard import SummaryWriter
-writer = SummaryWriter()
+from datetime import datetime
 
 import torch
 from torch_geometric.nn import MessagePassing
 import torch.nn as nn
+
+
+from torch.utils.tensorboard import SummaryWriter
+writer = SummaryWriter()
 
 from torch_geometric.transforms import SamplePoints
 
@@ -22,20 +25,13 @@ from torch_geometric.transforms import RandomRotate
 from torch_geometric.transforms import NormalizeScale
 from torch_geometric.loader import DataLoader
 
-
-from torch.optim import lr_scheduler
-
-import ChebConv_rgcnn_functions as conv
-
-import matplotlib.pyplot as plt
-
-from datetime import datetime
 import os
 
 from noise_transform import GaussianNoiseTransform
 
-import random
-random.seed(0)
+import ChebConv_rgcnn_functions as conv
+
+from torch.optim import lr_scheduler
 
 
 class Tnet(nn.Module):
@@ -83,12 +79,12 @@ class Transform(nn.Module):
         self.conv1 = nn.Conv1d(k_transform,64,1)
 
         self.conv2 = nn.Conv1d(64,128,1)
-        self.conv3 = nn.Conv1d(128,1024,1) 
+        self.conv3 = nn.Conv1d(128,1024,1)
 
 
         self.bn1 = nn.BatchNorm1d(64)
         self.bn2 = nn.BatchNorm1d(128)
-        self.bn3 = nn.BatchNorm1d(1024) 
+        self.bn3 = nn.BatchNorm1d(1024)
 
     def forward(self, input):
         matrix3x3 = self.input_transform(input)
@@ -104,11 +100,11 @@ class Transform(nn.Module):
         xb = self.bn3(self.conv3(xb))
 
         
-        # xb = nn.MaxPool1d(xb.size(-1))(xb)
-        # output = nn.Flatten(1)(xb)
+        xb = nn.MaxPool1d(xb.size(-1))(xb)
+        output = nn.Flatten(1)(xb)
 
-        return xb, matrix3x3, matrix64x64
-        #return output, matrix3x3, matrix64x64
+        #return xb, matrix3x3, matrix64x64
+        return output, matrix3x3, matrix64x64
 
 class PointNet(nn.Module):
     def __init__(self, num_classes ,nr_features):
@@ -117,6 +113,7 @@ class PointNet(nn.Module):
         self.fc1 = nn.Linear(1024, 512)
         self.fc2 = nn.Linear(512, 256)
         self.fc3 = nn.Linear(256, num_classes)
+        
 
         self.bn1 = nn.BatchNorm1d(512)
         self.bn2 = nn.BatchNorm1d(256)
@@ -125,10 +122,6 @@ class PointNet(nn.Module):
 
     def forward(self, input):
         xb, matrix3x3, matrix64x64 = self.transform(input)
-
-        xb = nn.MaxPool1d(xb.size(-1))(xb)
-        xb = nn.Flatten(1)(xb)
-
         xb = F.relu(self.bn1(self.fc1(xb)))
         xb = F.relu(self.bn2(self.dropout(self.fc2(xb))))
         output = self.fc3(xb)
@@ -147,7 +140,7 @@ def pointnetloss(outputs, labels, m3x3, m64x64,k, alpha = 0.0001,):
     diff64x64 = id64x64-torch.bmm(m64x64,m64x64.transpose(1,2))
     return criterion(outputs, labels) + alpha * (torch.norm(diff3x3)+torch.norm(diff64x64)) / float(bs)      
         
-criterion = torch.nn.CrossEntropyLoss()  
+   
 
 def train(model, optimizer, loader,nr_points):
     model.train()
@@ -170,16 +163,17 @@ def train(model, optimizer, loader,nr_points):
         x=x.to(device)
         labels=data.y.to(device)
        
+
         outputs, m3x3, m64x64 = model(x.transpose(1,2))
         #logits = model(data.pos.to(device).transpose(1,2))  # Forward pass.
 
-        loss = criterion(outputs, labels)  # Loss computation.
-        #loss = pointnetloss(outputs, labels, m3x3, m64x64,k=k)
+        #loss = criterion(outputs, labels)  # Loss computation.
+        loss = pointnetloss(outputs, labels, m3x3, m64x64,k=k)
         loss.backward()  # Backward pass.
         optimizer.step()  # Update model parameters.
         total_loss += loss.item() * data.num_graphs
 
-    return total_loss / len(train_loader.dataset)
+    return total_loss / len(loader.dataset)
 
 
 @torch.no_grad()
@@ -188,7 +182,7 @@ def test(model, loader,nr_points):
 
     correct = total = 0
     total_correct=0
-    for i, data in enumerate(loader):
+    for i, data in enumerate(loader, 0):
 
         batch_size=int(data.y.shape[0])
 
@@ -212,11 +206,12 @@ def test(model, loader,nr_points):
     val_acc = 1. *correct / total
     
 
-    print(val_acc)
+    #print(val_acc)
    
+        
+
     #return total_correct / len(loader.dataset)
     return val_acc
-
 
 now = datetime.now()
 directory = now.strftime("%d_%m_%y_%H:%M:%S")
@@ -227,12 +222,8 @@ os.mkdir(path)
 modelnet_num = 40
 num_points= 512
 batch_size=16
-num_epochs=250
 nr_features=6
 
-F = [128, 512, 1024]  # Outputs size of convolutional filter.
-K = [6, 5, 3]         # Polynomial orders.
-M = [512, 128, modelnet_num]
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -269,31 +260,38 @@ test_dataset = ModelNet(root=root, name=str(modelnet_num), train=False, transfor
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
 test_loader  = DataLoader(test_dataset, batch_size=batch_size)
-for epoch in range(1, (num_epochs+1)):
 
-    # program_name="Pointnet"
-    # conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
+# program_name="Pointnet"
+# conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
+
+for epoch in range(1, 251):
 
     train_start_time = time.time()
-    loss = train(model, optimizer, train_loader,nr_points=num_points)
+    train_loss = train(model, optimizer, train_loader,nr_points=num_points)
     train_stop_time = time.time()
-
-    writer.add_scalar("Loss/train", loss, epoch)
 
     test_start_time = time.time()
     test_acc = test(model, test_loader,nr_points=num_points)
     test_stop_time = time.time()
 
+
+
+    print(f'Epoch: {epoch:02d}, Loss: {train_loss:.4f}, Test Accuracy: {test_acc:.4f}')
+
+    writer.add_scalar("Loss/train", train_loss, epoch)
+    
     writer.add_scalar("Acc/test", test_acc, epoch)
 
+    print(f'Epoch: {epoch:02d}, Loss: {train_loss:.4f}, Test Accuracy: {test_acc:.4f}')
     print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
-        Test Time: \t{test_stop_time - test_start_time }')
+    Test Time: \t{test_stop_time - test_start_time }')
 
+    # writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader), epoch)
 
     if(epoch%5==0):
-            torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
-    
-    print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
+        torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
 
     my_lr_scheduler.step()
 
+
+torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
