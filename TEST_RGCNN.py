@@ -259,7 +259,7 @@ parent_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models
 path = os.path.join(parent_directory, directory)
 os.mkdir(path)
 
-num_points = 512
+num_points = 1024
 batch_size = 16
 num_epochs = 250
 learning_rate = 1e-3
@@ -278,53 +278,57 @@ print(root)
 
 
 model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, reg_prior=True)
-path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Modele_selectate/RGCNN_3_layers/model140.pt"
+path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Modele_selectate/Normals_recomputed/RGCNN_100.pt"
 model.load_state_dict(torch.load(path_saved_model))
 print(model.parameters)
 model = model.to(device)
 
-rot_x=0
-rot_y=0
-rot_z=0
+rot_x=1
+rot_y=1
+rot_z=1
 
-mu=0
-sigma=0
+sigma=[0, 0.01,0.03,0.05,0.08,0.1,0.15]
+
+ceva=0
 
 torch.manual_seed(0)
 
-for ceva in range(0,1):
+for ceva2 in range(0,len(sigma)):
+
+    mu=0
     
-    # random_rotate = Compose([
-    # RandomRotate(degrees=rot_x*10, axis=0),
-    # RandomRotate(degrees=rot_y*10, axis=1),
-    # RandomRotate(degrees=rot_z*10, axis=2),
-    # ])
+    
+    random_rotate = Compose([
+    RandomRotate(degrees=rot_x*ceva*10, axis=0),
+    RandomRotate(degrees=rot_y*ceva*10, axis=1),
+    RandomRotate(degrees=rot_z*ceva*10, axis=2),
+    ])
 
-    # test_transform = Compose([
-    # random_rotate,
-    # SamplePoints(num_points, include_normals=True),
-    # NormalizeScale()
-    # ])
+    test_transform = Compose([
+    random_rotate,
+    SamplePoints(num_points, include_normals=True),
+    NormalizeScale(),
+    GaussianNoiseTransform(mu, sigma[ceva2],recompute_normals=True)
+    ])
 
-    # test_dataset = ModelNet(root=root, train=False,
-    #                         transform=test_transform)
+    test_dataset = ModelNet(root=root, train=False,
+                            transform=test_transform)
 
-# program_name="RGCNN_rot_x"+str(10*rot_x)+"_rot_y"+str(10*rot_y)+"_rot_z"+str(10*rot_z)
+    program_name="RGCNN_rot_x"+str(10*rot_x)+"_rot_y"+str(10*rot_y)+"_rot_z"+str(10*rot_z)
 
 
 ######################################################################33
 
-    transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
+    # transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
-    test_dataset = ModelNet(root=root, train=False,
-                                   transform=transforms)
+    # test_dataset = ModelNet(root=root, train=False,
+    #                                transform=transforms)
 
-    program_name="RGCNN"
+    # program_name="RGCNN"
 
 ################################################################33
 
-    mu=0
-    sigma=0.05
+    
 
     # transforms_noisy = Compose([SamplePoints(num_points),NormalizeScale(),GaussianNoiseTransform(mu, sigma,recompute_normals=True)])
    
@@ -339,13 +343,13 @@ for ceva in range(0,1):
 
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
-    conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
+    #conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
 
 
     #conv.test_pcd_pred(model=model,loader=test_loader,num_points=num_points,device=device)
         
     test_start_time = time.time()
-    test_acc = test(model, test_loader,nr_points=num_points)
+    test_loss, test_acc = test(model, test_loader)
     test_stop_time = time.time()
 
     print(f'{test_acc:.4f}')

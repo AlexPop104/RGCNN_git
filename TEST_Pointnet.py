@@ -213,7 +213,7 @@ root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
 
 
 model = PointNet(num_classes=modelnet_num,nr_features=nr_features)
-path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Modele_selectate/Pointnet/model75.pt"
+path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Modele_selectate/Normals_recomputed/Pointnet_100.pt"
 model.load_state_dict(torch.load(path_saved_model))
 print(model)
 print(model)
@@ -221,48 +221,52 @@ print(model)
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = model.to(device)
 
-rot_x=0
-rot_y=0
-rot_z=0
+rot_x=1
+rot_y=1
+rot_z=1
 
-mu=0
-sigma=0
+sigma=[0, 0.01,0.03,0.05,0.08,0.1,0.15]
+
+ceva=0
 
 torch.manual_seed(0)
 
-for ceva in range(0,1):
+for ceva2 in range(0,len(sigma)):
+
+    mu=0
     
-    # random_rotate = Compose([
-    # RandomRotate(degrees=rot_x*10, axis=0),
-    # RandomRotate(degrees=rot_y*10, axis=1),
-    # RandomRotate(degrees=rot_z*10, axis=2),
-    # ])
+    
+    random_rotate = Compose([
+    RandomRotate(degrees=rot_x*ceva*10, axis=0),
+    RandomRotate(degrees=rot_y*ceva*10, axis=1),
+    RandomRotate(degrees=rot_z*ceva*10, axis=2),
+    ])
 
-    # test_transform = Compose([
-    # random_rotate,
-    # SamplePoints(num_points, include_normals=True),
-    # NormalizeScale()
-    # ])
+    test_transform = Compose([
+    random_rotate,
+    SamplePoints(num_points, include_normals=True),
+    NormalizeScale(),
+    GaussianNoiseTransform(mu, sigma[ceva2],recompute_normals=True)
+    ])
 
-    # test_dataset = ModelNet(root=root, train=False,
-    #                         transform=test_transform)
-
-# program_name="Pointnet_rot_x"+str(10*rot_x)+"_rot_y"+str(10*rot_y)+"_rot_z"+str(10*rot_z)
+    test_dataset = ModelNet(root=root, train=False,
+                            transform=test_transform)
+    program_name="Pointnet_rot_x"+str(10*rot_x)+"_rot_y"+str(10*rot_y)+"_rot_z"+str(10*rot_z)
 
 
 ######################################################################33
 
-    transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
+    # transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
-    test_dataset = ModelNet(root=root, train=False,
-                                   transform=transforms)
+    # test_dataset = ModelNet(root=root, train=False,
+    #                                transform=transforms)
 
-    program_name="Pointnet"
+    # program_name="Pointnet"
 
 ################################################################33
 
-    mu=0
-    sigma=0.05
+    # mu=0
+    # sigma=0.05
 
     # transforms_noisy = Compose([SamplePoints(num_points),NormalizeScale(),GaussianNoiseTransform(mu, sigma,recompute_normals=True)])
    
@@ -277,7 +281,7 @@ for ceva in range(0,1):
 
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
-    conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
+    #conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
 
 
     #conv.test_pcd_pred(model=model,loader=test_loader,num_points=num_points,device=device)

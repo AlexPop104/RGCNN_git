@@ -571,18 +571,21 @@ def view_pcd(model,loader,num_points,device,program_name):
                 viz_normals=viz_normals.reshape(data.batch.unique().shape[0], num_points, 3)
 
                 
+                
                 for it_pcd in range(data.pos.shape[0]):
 
                         pcd = o3d.geometry.PointCloud()
                         pcd.points = o3d.utility.Vector3dVector(viz_points[it_pcd,:,:])
 
+                        
                         #o3d.geometry.PointCloud.estimate_normals(pcd)
-                        #pcd.color=o3d.utility.Vector3dVector(viz_points[it_pcd,:,3:6])
+                        pcd.colors=o3d.utility.Vector3dVector(viz_normals[it_pcd,:,:])
                         
                         pcd.normals=o3d.utility.Vector3dVector(viz_normals[it_pcd,:,:])
 
-                        pcd.paint_uniform_color([0, 0.651, 0.929])
+                        # pcd.paint_uniform_color([0, 0.651, 0.929])
                         o3d.visualization.draw_geometries([pcd],window_name=program_name, width=500, height=500,point_show_normal=True)
+                        #o3d.visualization.draw_geometries([pcd],window_name=program_name, width=500, height=500)
                          
 
                         # fig = plt.figure(program_name)
