@@ -368,11 +368,29 @@ torch.manual_seed(0)
 ###################################################################
 
 mu=0
-sigma=0.05
-transforms_noisy = Compose([SamplePoints(num_points),NormalizeScale(),GaussianNoiseTransform(mu, sigma,recompute_normals=True)])
+sigma=0.
+#transforms_noisy = Compose([SamplePoints(num_points),NormalizeScale(),GaussianNoiseTransform(mu, sigma,recompute_normals=True)])
 
-train_dataset = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms_noisy)
-test_dataset = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms_noisy)
+rot_x=10
+rot_y=10
+rot_z=10
+
+random_rotate = Compose([
+    RandomRotate(degrees=rot_x, axis=0),
+    RandomRotate(degrees=rot_y, axis=1),
+    RandomRotate(degrees=rot_z, axis=2),
+    ])
+
+test_transform = Compose([
+    random_rotate,
+    SamplePoints(num_points, include_normals=True),
+    NormalizeScale(),
+    GaussianNoiseTransform(mu, sigma,recompute_normals=True)
+    ])
+
+
+train_dataset = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform)
+test_dataset = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform)
 
 ###############################################################################
 
@@ -381,8 +399,8 @@ test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
 for epoch in range(1, num_epochs+1):
 
-    # program_name="RGCNN-recomputed-normals"
-    # conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
+    program_name="RGCNN-recomputed-normals"
+    conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
 
     train_start_time = time.time()
     train_loss,train_acc = train(model, optimizer, train_loader, regularization=regularization)

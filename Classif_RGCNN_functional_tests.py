@@ -43,6 +43,9 @@ import numpy as np
 import matplotlib.pyplot
 from mpl_toolkits.mplot3d import Axes3D
 
+import random
+random.seed(0)
+
 
 
 class cls_model(nn.Module):

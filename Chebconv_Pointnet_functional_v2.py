@@ -33,6 +33,9 @@ import ChebConv_rgcnn_functions as conv
 
 from torch.optim import lr_scheduler
 
+import random
+random.seed(0)
+
 
 class Tnet(nn.Module):
     def __init__(self, k):
@@ -250,11 +253,31 @@ torch.manual_seed(0)
 ###################################################################
 
 mu=0
-sigma=0.05
-transforms_noisy = Compose([SamplePoints(num_points),NormalizeScale(),GaussianNoiseTransform(mu, sigma,recompute_normals=True)])
+sigma=0.8
+#transforms_noisy = Compose([SamplePoints(num_points),NormalizeScale(),GaussianNoiseTransform(mu, sigma,recompute_normals=True)])
 
-train_dataset = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms_noisy)
-test_dataset = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms_noisy)
+rot_x=0
+rot_y=0
+rot_z=0
+
+torch.manual_seed(0)
+
+random_rotate = Compose([
+    RandomRotate(degrees=rot_x, axis=0),
+    RandomRotate(degrees=rot_y, axis=1),
+    RandomRotate(degrees=rot_z, axis=2),
+    ])
+
+test_transform = Compose([
+    random_rotate,
+    SamplePoints(num_points, include_normals=True),
+    NormalizeScale(),
+    GaussianNoiseTransform(mu, sigma,recompute_normals=True)
+    ])
+
+
+train_dataset = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform)
+test_dataset = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform)
 
 ###############################################################################
 

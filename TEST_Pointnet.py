@@ -213,7 +213,7 @@ root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
 
 
 model = PointNet(num_classes=modelnet_num,nr_features=nr_features)
-path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Modele_selectate/Normals_recomputed/Pointnet_100.pt"
+path_saved_model="/home/alex/Alex_documents/RGCNN_git/Modele_selectate/Normals_recomputed/Rotation_20/Pointnet_512_rot_20.pt"
 model.load_state_dict(torch.load(path_saved_model))
 print(model)
 print(model)
@@ -228,10 +228,12 @@ rot_z=1
 sigma=[0, 0.01,0.03,0.05,0.08,0.1,0.15]
 
 ceva=0
+ceva2=0
 
 torch.manual_seed(0)
 
-for ceva2 in range(0,len(sigma)):
+for ceva in range(0,4):
+#for ceva2 in range(0,len(sigma)):
 
     mu=0
     

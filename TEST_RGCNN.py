@@ -259,7 +259,7 @@ parent_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models
 path = os.path.join(parent_directory, directory)
 os.mkdir(path)
 
-num_points = 1024
+num_points = 512
 batch_size = 16
 num_epochs = 250
 learning_rate = 1e-3
@@ -278,7 +278,7 @@ print(root)
 
 
 model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, reg_prior=True)
-path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Modele_selectate/Normals_recomputed/RGCNN_100.pt"
+path_saved_model="/home/alex/Alex_documents/RGCNN_git/Modele_selectate/Normals_recomputed/Noise/RGCNN_noise_005.pt"
 model.load_state_dict(torch.load(path_saved_model))
 print(model.parameters)
 model = model.to(device)
