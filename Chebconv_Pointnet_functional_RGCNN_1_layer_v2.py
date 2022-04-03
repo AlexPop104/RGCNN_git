@@ -275,7 +275,7 @@ torch.manual_seed(0)
 ###################################################################
 
 mu=0
-sigma=0
+sigma=0.05
 transforms_noisy = Compose([SamplePoints(num_points),NormalizeScale(),GaussianNoiseTransform(mu, sigma,recompute_normals=True)])
 
 train_dataset = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms_noisy)
