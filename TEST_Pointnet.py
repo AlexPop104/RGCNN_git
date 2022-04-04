@@ -200,10 +200,6 @@ batch_size=16
 num_epochs=250
 nr_features=6
 
-
-
-
-
 root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
 
 #root="/media/rambo/ssd2/Alex_data/RGCNN/GeometricShapes"

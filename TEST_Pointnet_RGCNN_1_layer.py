@@ -239,8 +239,8 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = model.to(device)
 
 rot_x=1
-rot_y=1
-rot_z=1
+rot_y=2
+rot_z=2
 
 sigma=[0, 0.01,0.03,0.05,0.08,0.1,0.15]
 
@@ -249,7 +249,7 @@ ceva2=0
 
 torch.manual_seed(0)
 
-for ceva in range(0,4):
+for ceva in range(5,6):
 #for ceva2 in range(0,len(sigma)):
 
     mu=0
@@ -270,7 +270,7 @@ for ceva in range(0,4):
     test_dataset = ModelNet(root=root, train=False,
                             transform=test_transform)
 
-    program_name="Pointnet_RGCNN_rot_x"+str(10*rot_x)+"_rot_y"+str(10*rot_y)+"_rot_z"+str(10*rot_z)
+    program_name="Pointnet_RGCNN_rot_x"+str(10*rot_x*ceva)+"_rot_y"+str(10*rot_y*ceva)+"_rot_z"+str(10*rot_z*ceva)
 
 
 ######################################################################33
@@ -297,7 +297,7 @@ for ceva in range(0,4):
     
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
-    #conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
+    conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
 
 
     #conv.test_pcd_pred(model=model,loader=test_loader,num_points=num_points,device=device)
