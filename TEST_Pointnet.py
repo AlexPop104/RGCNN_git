@@ -213,7 +213,7 @@ root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
 
 
 model = PointNet(num_classes=modelnet_num,nr_features=nr_features)
-path_saved_model="/home/alex/Alex_documents/RGCNN_git/Modele_selectate/Normals_recomputed/Rotation_20/Pointnet_512_rot_20.pt"
+path_saved_model="/home/alex/Alex_documents/RGCNN_git/Modele_selectate/Normals_recomputed/Rotation_30/Pointnet_512_rot_30.pt"
 model.load_state_dict(torch.load(path_saved_model))
 print(model)
 print(model)

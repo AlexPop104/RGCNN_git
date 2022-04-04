@@ -278,12 +278,12 @@ my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
 ###################################################################
 
 mu=0
-sigma=0.08
+sigma=0.
 #transforms_noisy = Compose([SamplePoints(num_points),NormalizeScale(),GaussianNoiseTransform(mu, sigma,recompute_normals=True)])
 
-rot_x=0
-rot_y=0
-rot_z=0
+rot_x=30
+rot_y=30
+rot_z=30
 
 torch.manual_seed(0)
 

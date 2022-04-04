@@ -231,7 +231,7 @@ root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
 #root="/media/rambo/ssd2/Alex_data/RGCNN/GeometricShapes"
 
 model = PointNet(num_classes=modelnet_num,nr_features=nr_features)
-path_saved_model="/home/alex/Alex_documents/RGCNN_git/Modele_selectate/Normals_recomputed/Rotation_20/Pointnet_RGCNN_rot_20.pt"
+path_saved_model="/home/alex/Alex_documents/RGCNN_git/Modele_selectate/Normals_recomputed/Rotation_30/Pointnet_RGCNN_512_rot_30.pt"
 model.load_state_dict(torch.load(path_saved_model))
 #print(model)
 
@@ -245,6 +245,7 @@ rot_z=1
 sigma=[0, 0.01,0.03,0.05,0.08,0.1,0.15]
 
 ceva=0
+ceva2=0
 
 torch.manual_seed(0)
 
@@ -263,7 +264,7 @@ for ceva in range(0,4):
     random_rotate,
     SamplePoints(num_points, include_normals=True),
     NormalizeScale(),
-    GaussianNoiseTransform(mu, sigma[0],recompute_normals=True)
+    GaussianNoiseTransform(mu, sigma[ceva2],recompute_normals=True)
     ])
 
     test_dataset = ModelNet(root=root, train=False,

@@ -253,12 +253,12 @@ torch.manual_seed(0)
 ###################################################################
 
 mu=0
-sigma=0.8
+sigma=0.
 #transforms_noisy = Compose([SamplePoints(num_points),NormalizeScale(),GaussianNoiseTransform(mu, sigma,recompute_normals=True)])
 
-rot_x=0
-rot_y=0
-rot_z=0
+rot_x=30
+rot_y=30
+rot_z=30
 
 torch.manual_seed(0)
 
