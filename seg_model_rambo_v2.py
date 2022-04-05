@@ -35,7 +35,6 @@ def get_weights(dataset, sk=True):
     weights = torch.zeros(50)
     if sk:
         y = np.empty(len(dataset)*dataset[0].y.shape[0])
-        print(y.shape)
         i = 0
         for data in dataset:
             y[i:2048+i] = data.y
@@ -47,7 +46,6 @@ def get_weights(dataset, sk=True):
             for l in torch.unique(data.y):
                 weights[l] += torch.sum(data.y == l.item())
         weights = 1 - weights / len(dataset)
-    print(weights)
     return weights
 
 
@@ -407,8 +405,8 @@ if __name__ == '__main__':
     learning_rate = 1e-3
     decay_rate = 0.8
     decay_steps = len(dataset_train) / batch_size
-    weight_decay = 1e-9
-
+    weight_decay = 1e-8
+    dropout=0.25
 
     F = [128, 512, 1024]  # Outputs size of convolutional filter.
     K = [6, 5, 3]         # Polynomial orders.
@@ -424,7 +422,7 @@ if __name__ == '__main__':
         dataset_test, batch_size=batch_size, shuffle=True)
 
     model = seg_model(num_points, F, K, M,
-                      dropout=0.25, one_layer=False, reg_prior=True, recompute_L=False, relus=[128, 512, 1024, 512, 128, 50], b2relu=True)
+                      dropout=dropout, one_layer=False, reg_prior=True, recompute_L=False, relus=[128, 512, 1024, 512, 128, 50], b2relu=True)
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     

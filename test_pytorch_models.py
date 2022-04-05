@@ -95,8 +95,8 @@ def test_shapenet_model(PATH, num_points=2048, batch_size=2, input_dim=22, dropo
 
     root = "/media/rambo/ssd2/Alex_data/RGCNN/ShapeNet/"
     
-    transforms_original = Compose([FixedPoints(num_points), GaussianNoiseTransform(0, 0,    recompute_normals=True)])
-    transforms_noisy    = Compose([FixedPoints(num_points), GaussianNoiseTransform(mu, sigma,  recompute_normals=True)])
+    transforms_original = Compose([FixedPoints(num_points), GaussianNoiseTransform(0, 0, recompute_normals=True)])
+    transforms_noisy    = Compose([FixedPoints(num_points), GaussianNoiseTransform(mu, sigma, recompute_normals=True)])
 
     dataset_original = ShapeNet(root=root, split="test", transform=transforms_original)
     dataset_noisy    = ShapeNet(root=root, split="test", transform=transforms_noisy)
@@ -104,7 +104,7 @@ def test_shapenet_model(PATH, num_points=2048, batch_size=2, input_dim=22, dropo
     loader_original  = DenseDataLoader(dataset_original,    batch_size=batch_size, shuffle=False, pin_memory=True)
     loader_noisy     = DenseDataLoader(dataset_noisy,       batch_size=batch_size, shuffle=False, pin_memory=True)
 
-    model = seg_model(num_points, [0,0], [0,0], [0,0], input_dim, dropout=1, reg_prior=True)
+    model = seg_model(num_points, [0,0], [0,0], [0,0], input_dim, dropout=1, reg_prior=True, relus=[128, 512, 1024, 512, 128, 50], b2relu=True)
     model.load_state_dict(t.load(PATH))
     print(model.state_dict)
     model.to(device)
@@ -117,8 +117,7 @@ def test_shapenet_model(PATH, num_points=2048, batch_size=2, input_dim=22, dropo
         labels = np.empty((size, num_points))
         total_correct = 0
         indexes = [3, 100, 1000]
-        for i, data in enumerate(loader):
-            
+        for i, data in enumerate(loader):         
             cat = data.category
             x = t.cat([data.pos.type(t.float32), data.x.type(t.float32)], dim=2)  ### Pass this to the model
             y = data.y
@@ -188,8 +187,13 @@ if __name__ == '__main__':
     # PATH = '/home/victor/workspace/thesis_ws/github/RGCNN_git/models/ModelNet/18_03_22_19:04:50/1024_40_chebconv_model50.pt'
     # test_modelnet_model(PATH, mu=0, sigma=0.01)
     
-    PATH = '/home/victor/workspace/thesis_ws/github/RGCNN_git/models/24_03_22_11:38:21/2048p_model_v280.pt'
-    test_shapenet_model(PATH, num_points=2048, mu=0, sigma=0.005)
+    PATH = '/home/victor/workspace/thesis_ws/github/RGCNN_git/models/30_03_22_10:41:18/2048p_model_v2100.pt'
+    mu = 0
+    sigma = 0.05
+    test_shapenet_model(PATH, num_points=2048, mu=mu, sigma=sigma)
+    print(f"Mu:     {mu}")
+    print(f"Sigma:  {sigma}")
+
     
     root = '/home/victor/workspace/thesis_ws/github/RGCNN_git/'
     np.save(root + "positions_noisy.npy", position_global_noisy)
