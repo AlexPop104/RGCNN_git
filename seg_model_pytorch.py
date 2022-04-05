@@ -17,7 +17,8 @@ from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter()
 import numpy as np
 from torch.optim import lr_scheduler
-
+import open3d as o3d
+from open3d.visualization.tensorboard_plugin import summary
 
 import numpy as np
 
@@ -112,6 +113,9 @@ class seg_model(nn.Module):
         self.conv5 = conv.DenseChebConv(512, 128, 1)
         self.conv6 = conv.DenseChebConv(128, 50, 1)
         '''
+        
+        self.L_first = []
+
         self.recompute_L = True
 
         bias=True
@@ -136,6 +140,8 @@ class seg_model(nn.Module):
         x1 = 0  # cache for layer1
 
         L = self.get_laplacian(x)
+
+        self.L_first = L ## Keeping it for visualization
 
         out = self.conv1(x, L)
         if self.reg_prior:
@@ -226,7 +232,7 @@ def train(model, optimizer, loader, regularization):
 
 
 @torch.no_grad()
-def test(model, loader):
+def test(model, loader, epoch):
     model.eval()
     size = len(dataset_test)
     predictions = np.empty((size, num_points))
@@ -237,6 +243,9 @@ def test(model, loader):
         cat = one_hot(data.category, num_classes=16)
         cat = torch.tile(cat, [1, num_points, 1]) 
         x = torch.cat([data.pos, data.x, cat], dim=2)  ### Pass this to the model
+        
+        batch_size_curr = data.x.shape[0]
+
         y = data.y
         logits, _ = model(x.to(device))
         logits = logits.to('cpu')
@@ -245,13 +254,15 @@ def test(model, loader):
         # print(f"TEST: {int((pred == data.y.to(device)).sum())}")
 
         total_correct += int((pred == y).sum())
-        start = i * batch_size
-        stop  = start + batch_size
+        start = i * batch_size_curr
+        stop  = start + batch_size_curr
         predictions[start:stop] = pred
         lab = data.y
         labels[start:stop] = lab.reshape([-1, num_points])
+
     tot_iou = []
     cat_iou = defaultdict(list)
+
     for i in range(predictions.shape[0]):
         segp = predictions[i, :]
         segl = labels[i, :]
@@ -270,7 +281,8 @@ def test(model, loader):
 
     print("~~~" * 50)
     for key, value in cat_iou.items():
-        print(key + ': {:.4f}, total: {:d}'.format(np.mean(value), len(value)))
+        print(key + ':    \t{:.0f}%, \ttotal: \t{:d}'.format(np.mean(value)*100, len(value)))
+
     # print(tot_iou)
     # accuracy = 100 * sklearn.metrics.accuracy_score(labels, predictions)
     # f1 = 100 * sklearn.metrics.f1_score(labels, predictions, average='weighted')
@@ -281,6 +293,29 @@ def test(model, loader):
     print("~~~" * 30)
     print(f"\tAccuracy: {accuracy}, ncorrect: {ncorrects} / {len(dataset_test) * num_points}")
     print(f"\tIoU: \t{np.mean(tot_iou)*100}")
+
+
+    cat_sample = 0
+    v_pos = np.empty((0, num_points, 3))
+    v_y = np.empty((0, num_points, 1))
+
+    for i in range(100):
+        if dataset_train[i].category == cat_sample:
+            cat_sample += 1
+            v_pos =  np.append(v_pos, dataset_train[i].pos)
+            v_y = np.append(v_y, labels[i])
+
+    writer.add_3d(
+        "semantic_segmentation",
+        {
+            "vertex_positions": v_pos,
+            "vertex_labels": v_y,
+            #"vertex_features": v_x
+        },
+        epoch
+    )
+
+
     return accuracy
 
 def start_training(model, train_loader, test_loader, optimizer, epochs=50, learning_rate=1e-3, regularization=1e-9, decay_rate=0.95):
@@ -298,11 +333,15 @@ def start_training(model, train_loader, test_loader, optimizer, epochs=50, learn
         writer.add_scalar('loss/train', loss, epoch)
 
         test_start_time = time.time()
-        test_acc = test(model, test_loader)
+        test_acc = test(model, test_loader, epoch)
         test_stop_time = time.time()
 
         writer.add_scalar("accuracy/test", test_acc, epoch)
 
+        L = model.L_first.detach().cpu()
+        L_aux = t.reshape(L, (-1, 1, num_points, num_points))
+        writer.add_images("laplacian/vis", L_aux, epoch, dataformats='NCHW')
+ 
         print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {test_acc:.4f}')
         print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
             Test Time: \t{test_stop_time - test_start_time }')
@@ -343,7 +382,7 @@ if __name__ == '__main__':
 
     print(f"Training on {device}")
 
-    root = "/home/victor/workspace/thesis_ws/datasets/S3DIS"
+    root = "/home/victor/workspace/thesis_ws/datasets/ShapeNet"
     print(root)
     dataset_train = ShapeNet(root=root, split="train", transform=FixedPoints(num_points))
     dataset_test = ShapeNet(root=root, split="test", transform=FixedPoints(num_points))
@@ -371,5 +410,4 @@ if __name__ == '__main__':
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     
-
     start_training(model, train_loader, test_loader, optimizer, epochs=50)
