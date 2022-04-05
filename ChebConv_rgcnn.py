@@ -2,19 +2,29 @@ from re import T
 from typing import Optional
 
 from time import time
-# import tensorflow as tf
+
 import torch
 import torch as t
 import torch_geometric as tg
-from torch import Tensor, nn
+from torch import nn
 from torch.nn import Parameter
-from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.nn.dense.linear import Linear
 from torch_geometric.nn.inits import zeros
 from torch_geometric.utils import get_laplacian
 
 
 def get_laplacian(adj_matrix, normalize=True):
+    """ 
+    Function to compute the Laplacian of an adjacency matrix
+
+    Args:
+        adj_matrix: tensor (batch_size, num_points, num_points)
+        normlaize:  boolean
+    Returns: 
+        L:          tensor (batch_size, num_points, num_points)
+    """
+
+
     if normalize:
         D = t.sum(adj_matrix, dim=1)
         eye = t.ones_like(D)
@@ -29,35 +39,16 @@ def get_laplacian(adj_matrix, normalize=True):
 
     return L
 
-'''
-def get_laplacian_tf(adj_matrix, normalize=True):
-    if normalize:
-        D = tf.reduce_sum(adj_matrix, axis=1)  # (batch_size,num_points)
-        eye = tf.ones_like(D)
-        eye = tf.matrix_diag(eye)
-        D = 1 / tf.sqrt(D)
-        D = tf.matrix_diag(D)
-        L = eye - tf.matmul(tf.matmul(D, adj_matrix), D)
-    else:
-        D = tf.reduce_sum(adj_matrix, axis=1)  # (batch_size,num_points)
-        # eye = tf.ones_like(D)
-        # eye = tf.matrix_diag(eye)
-        # D = 1 / tf.sqrt(D)
-        D = tf.matrix_diag(D)
-        L = D - adj_matrix
-    return L
-'''
-
 def pairwise_distance(point_cloud):
-    """Compute the pairwise distance of a point cloud.
+    """
+    Compute the pairwise distance of a point cloud.
 
     Args: 
-        point_cloud: tensof (batch_size, num_points, num_points)
+        point_cloud: tensor (batch_size, num_points, num_features)
 
     Returns: 
         pairwise distance: (batch_size, num_points, num_points)
     """
-
 
     point_cloud_transpose = point_cloud.permute(0, 2, 1)
     point_cloud_inner = t.matmul(point_cloud, point_cloud_transpose)
@@ -70,6 +61,17 @@ def pairwise_distance(point_cloud):
 
 
 class DenseChebConv(nn.Module):
+
+    '''
+    Convolutional Module implementing ChebConv. The input to the forward method needs to be
+    a tensor 'x' of size (batch_size, num_points, num_features) and a tensor 'L' of size
+    (batch_size, num_points, num_points).
+
+    !!! Warning !!!
+    This aggregates the features from each 'T' and optimizes one big Weight. Not optimal. 
+    You should use DenseChebConvV2! 
+    '''
+
     def __init__(self, in_channels: int, out_channels: int, K: int, normalization: Optional[bool]=True, bias: bool=False, **kwargs):
         assert K > 0
         super(DenseChebConv, self).__init__()
@@ -88,7 +90,7 @@ class DenseChebConv(nn.Module):
         # self.lin.reset_parameters()
 
 
-    def forward(self, x, L, mask=None):
+    def forward(self, x, L):
         x = x.unsqueeze if x.dim() == 2 else x
         L = L.unsqueeze if L.dim() == 2 else L
 
@@ -123,7 +125,13 @@ class DenseChebConv(nn.Module):
                 f'{self.out_channels}, K={self.K}, '
                 f'normalization={self.normalization})')
 
+
 class DenseChebConvV2(nn.Module):
+    '''
+    Convolutional Module implementing ChebConv. The input to the forward method needs to be
+    a tensor 'x' of size (batch_size, num_points, num_features) and a tensor 'L' of size
+    (batch_size, num_points, num_points).
+    '''
     def __init__(self, in_channels: int, out_channels: int, K: int, normalization: Optional[bool]=True, bias: bool=False, **kwargs):
         assert K > 0
         super(DenseChebConvV2, self).__init__()
@@ -150,50 +158,32 @@ class DenseChebConvV2(nn.Module):
         for lin in self.lins:
             lin.weight = t.nn.init.trunc_normal_(lin.weight, mean=0, std=0.2)
             lin.bias      = t.nn.init.normal_(lin.bias, mean=0, std=0.2)
-        # self.lin.weight = torch.nn.init.trunc_normal_(self.lin.weight, 0, 0.1)
-        # self.lin.reset_parameters()
 
 
-    def forward(self, x, L, mask=None):
-        #x = x.unsqueeze if x.dim() == 2 else x
-        #L = L.unsqueeze if L.dim() == 2 else L
-
-        #N, M, Fin = x.shape
-        #N, M, Fin = int(N), int(M), int(Fin)
-
+    def forward(self, x, L):
         x0 = x # N x M x Fin
-        # x = x0.unsqueeze(0)
         out = self.lins[0](x0)
-
-        def concat(x, x_):
-            x_ = x_.unsqueeze(0)
-            return t.cat([x, x_], dim=0)
 
         if self.K > 1:
             x1 = t.matmul(L, x0)
             out = out + self.lins[1](x1)
-            # x = concat(x, x1)
 
         for i in range(2, self.K):
             x2 = 2 * t.matmul(L, x1) - x0
             out += self.lins[i](x2)
-            # x = concat(x, x2)
             x0, x1 = x1, x2
-
-        # x = x.permute([1,2,3,0])
-        # x = x.reshape([N * M, Fin * self.K])
-
-        # x = self.lin(x)
-        # x = x.reshape([N, M, self.out_channels])
 
         if self.bias is not None:
             out += self.bias
         return out
 
+
     def __repr__(self) -> str:
         return (f'{self.__class__.__name__}({self.in_channels}, '
                 f'{self.out_channels}, K={self.K}, '
                 f'normalization={self.normalization})')
+
+
 
 
 if __name__ == "__main__":

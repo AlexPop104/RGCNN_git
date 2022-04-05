@@ -1,7 +1,5 @@
 from collections import defaultdict
 from datetime import datetime
-from typing import Optional
-from venv import create
 from torch_geometric.loader import DenseDataLoader
 import os
 import ChebConv_rgcnn as conv
@@ -22,7 +20,6 @@ from torch_geometric.transforms import Compose
 
 from GaussianNoiseTransform import GaussianNoiseTransform
 
-from Classif_RGCNN_n_DenseConv_functions import DenseChebConv as DenseChebConvPyG
 from torch.utils.tensorboard import SummaryWriter
 writer = SummaryWriter(comment='_sn_ww_025_drop_weight_decay', filename_suffix='_no_reg')
 import numpy as np
@@ -31,14 +28,49 @@ from torch.optim import lr_scheduler
 import numpy as np
 
 
-def get_weights(dataset, sk=True):
+def IoU_accuracy(pred, target, n_classes=16):
+    ious = []
+    pred = pred.view(-1)
+    target = target.view(-1)
+
+    # Ignore IoU for background class ("0")
+    for cls in range(1, n_classes):  # This goes from 1:n_classes-1 -> class "0" is ignored
+        pred_inds = pred == cls
+        target_inds = target == cls
+        intersection = (pred_inds[target_inds]).long().sum().data.cpu()[0]  # Cast to long to prevent overflows
+        union = pred_inds.long().sum().data.cpu()[0] + target_inds.long().sum().data.cpu()[0] - intersection
+        if union == 0:
+            ious.append(float('nan'))  # If there is no ground truth, do not include in evaluation
+        else:
+            ious.append(float(intersection) / float(max(union, 1)))
+    return np.array(ious)
+
+
+def compute_loss(logits, y, x, L, criterion, s=1e-9):
+    if not logits.device == y.device:
+        y = y.to(logits.device)
+
+    loss = criterion(logits, y)
+    l=0
+    for i in range(len(x)):
+        l += (1/2) * t.linalg.norm(t.matmul(t.matmul(t.permute(x[i], (0, 2, 1)), L[i]), x[i]))**2
+    l = l * s
+    loss += l
+    return loss
+
+
+def get_weights(dataset, num_points=2048, sk=True):
+    '''
+    If sk=True the weights are computed using Scikit-learn. Otherwise, a 'custom' implementation will
+    be used. It is recommended to use the sk=True.
+    '''
     weights = torch.zeros(50)
     if sk:
         y = np.empty(len(dataset)*dataset[0].y.shape[0])
         i = 0
         for data in dataset:
-            y[i:2048+i] = data.y
-            i+=2048
+            y[i:num_points+i] = data.y
+            i += num_points
         weights = class_weight.compute_class_weight(
             'balanced', np.unique(y), y)
     else:
@@ -63,103 +95,61 @@ for key in seg_classes.keys():
 
 
 
-def create_batched_dataset(class_num, dataset, batch_size):
-    data = []
-    for d in dataset:
-        if d.category == class_num:
-            data.append(d)
-
-    batched_y = []
-    batched_pos = []
-    batched_x = []
-
-    batch_y = torch.zeros((batch_size,   2048))
-    batch_pos = torch.zeros((batch_size, 2048, 3))
-    batch_x = torch.zeros((batch_size,   2048, 3))
-    i = 0
-
-    for d in data:
-        if i<batch_size:
-            batch_y[i,:] = d.y
-            batch_pos[i,:,:] = d.pos
-            batch_x[i,:,:] = d.x
-        else:
-            i = 0
-            batched_x.append(batch_x)
-            batched_y.append(batch_y)
-            batched_pos.append(batch_pos)
-
-            batch_y = torch.zeros((batch_size,   2048))
-            batch_pos = torch.zeros((batch_size, 2048, 3))
-            batch_x = torch.zeros((batch_size,   2048, 3))
-
-        i += 1
-    print(len(data))
-    return [batched_pos, batched_x, batched_y]
-
-
 class seg_model(nn.Module):
-    def __init__(self, vertice, F, K, M, input_dim=22 , one_layer=False, dropout=1, reg_prior: bool = True, b2relu=False, relus=[128, 512, 1024, 512, 128, 50], recompute_L = False):
+    def __init__(self, vertice, F, K, M, input_dim=22 , one_layer=False, dropout=1, reg_prior:bool=True, b2relu=True, recompute_L=False, fc_bias=True):
         assert len(F) == len(K)
         super(seg_model, self).__init__()
 
         self.F = F
         self.K = K
         self.M = M
-
         self.one_layer = one_layer
-
         self.reg_prior = reg_prior
         self.vertice = vertice
         self.dropout = dropout
         self.regularizers = []
-
-        # self.get_laplacian = GetLaplacian(normalize=True)
-
+        self.recompute_L = recompute_L
         self.dropout = torch.nn.Dropout(p=self.dropout)
-        self.relus = relus
-
+        self.relus = self.F + self.M
+        
         if b2relu:
             self.bias_relus = nn.ParameterList([
-                torch.nn.parameter.Parameter(torch.zeros((1, num_points, i))) for i in self.relus
+                torch.nn.parameter.Parameter(torch.zeros((1, vertice, i))) for i in self.relus
             ])
         else:
             self.bias_relus = nn.ParameterList([
                 torch.nn.parameter.Parameter(torch.zeros((1, 1, i))) for i in self.relus
                 ])
-        
-        '''
-        self.bias_relu1 = nn.Parameter(torch.zeros((1, 1, 128)), requires_grad=True)
-        self.bias_relu2 = nn.Parameter(torch.zeros((1, 1, 512)), requires_grad=True)
-        self.bias_relu3 = nn.Parameter(torch.zeros((1, 1, 1024)), requires_grad=True)
-        self.bias_relu4 = nn.Parameter(torch.zeros((1, 1, 512)), requires_grad=True)
-        self.bias_relu5 = nn.Parameter(torch.zeros((1, 1, 128)), requires_grad=True)
-        self.bias_relu6 = nn.Parameter(torch.zeros((1, 1, 50)), requires_grad=True)
-        '''
+
 
         self.conv1 = conv.DenseChebConvV2(input_dim, 128, 6)
         self.conv2 = conv.DenseChebConvV2(128, 512, 5)
         self.conv3 = conv.DenseChebConvV2(512, 1024, 3)
+        
+        self.fc1 = t.nn.Linear(1024, 512, bias=fc_bias)
+        self.fc2 = t.nn.Linear(512 + 512, 128, bias=fc_bias)
+        self.fc3 = t.nn.Linear(128, 50, bias=fc_bias)
 
         '''
-        self.conv4 = conv.DenseChebConv(1152, 512, 1)
-        self.conv5 = conv.DenseChebConv(512, 128, 1)
-        self.conv6 = conv.DenseChebConv(128, 50, 1)
+        !!! TO BE TESTED !!!
+        self.conv  = nn.ModuleList([
+            conv.DenseChebConvV2(vertice, self.F[i], self.K[i]) if i==0 else conv.DenseChebConvV2(self.F[i-1], self.F[i], self.K[i]) for i in range(len(K))
+        ])
+        
+
+        self.fc  = nn.ModuleList([
+            nn.Linear(self.F[-1], self.M[i], fc_bias) if i==0 else nn.Linear(self.M[-1], self.M[i], fc_bias) for i in range(len(M)) 
+        ])
         '''
-        self.recompute_L = recompute_L
 
-        bias=True
-        self.fc1 = t.nn.Linear(1024, 512, bias=bias)
-        self.fc2 = t.nn.Linear(512 + 512, 128, bias=bias)
-        self.fc3 = t.nn.Linear(128, 50, bias=bias)
-
-        self.regularizer = 0
-        self.regularization = []
         self.L = []
         self.x = []
 
     
     def b1relu(self, x, bias):
+        return relu(x + bias)
+    
+    def brelu(self, x, bias):
         return relu(x + bias)
 
     def get_laplacian(self, x):
@@ -171,12 +161,45 @@ class seg_model(nn.Module):
         if self.reg_prior:
             self.L.append(L)
             self.x.append(x)
-    
 
+    
+    @torch.no_grad()
     def reset_regularization_terms(self):
         self.L = []
         self.x = []
 
+
+    def forward2(self, x, cat):
+        self.reset_regularization_terms()
+
+        x1 = 0  # cache for layer 1
+
+        L = self.get_laplacian(x)
+
+        cat = one_hot(cat, num_classes=16)
+        cat = torch.tile(cat, [1, self.vertice, 1]) 
+        out = torch.cat([x, cat], dim=2)  ### Pass this to the model
+        
+        for i in range(len(self.K)):
+            out = self.conv[i](out, L)
+            self.append_regularization_terms(out, L)
+            out = self.dropout(out)
+            out = self.brelu(out, self.bias_relus[i])
+            if self.recompute_L:
+                L = self.get_laplacian(out)
+            if i == 1:
+                x1 = out
+        
+        for i in range(len(self.M)):
+            out = self.fc[i](out)
+            self.append_regularization_terms(out, L)
+            out = self.dropout(out)
+            out = self.b1relu(out, self.bias_relus[i + len(self.K)])
+            if i == 1:
+                out = t.concat([out, x1], dim=2)
+
+        return out, self.x, self.L
+    
     def forward(self, x, cat):
         self.reset_regularization_terms()
 
@@ -187,6 +210,7 @@ class seg_model(nn.Module):
         cat = one_hot(cat, num_classes=16)
         cat = torch.tile(cat, [1, self.vertice, 1]) 
         x = torch.cat([x, cat], dim=2)  ### Pass this to the model
+
         out = self.conv1(x, L)
         self.append_regularization_terms(out, L)
         out = self.dropout(out)
@@ -229,31 +253,8 @@ class seg_model(nn.Module):
 
         return out, self.x, self.L
 
-    
-num_points = 2048
-root = "/media/rambo/ssd2/Alex_data/RGCNN/ShapeNet/"
 
-transforms = Compose([FixedPoints(num_points), GaussianNoiseTransform(mu=0, sigma=0, recompute_normals=False)])
-dataset_train = ShapeNet(root=root, split="train", transform=transforms)
-dataset_test = ShapeNet(root=root, split="test", transform=transforms)
-
-weights = get_weights(dataset_train)
-
-criterion = torch.nn.CrossEntropyLoss(weight=torch.tensor(weights, dtype=float32).to('cuda'))  # Define loss criterion.
-
-def compute_loss(logits, y, x, L, s=1e-9):
-    if not logits.device == y.device:
-        y = y.to(logits.device)
-
-    loss = criterion(logits, y)
-    l=0
-    for i in range(len(x)):
-        l += (1/2) * t.linalg.norm(t.matmul(t.matmul(t.permute(x[i], (0, 2, 1)), L[i]), x[i]))**2
-    l = l * s
-    loss += l
-    return loss
-
-def train(model, optimizer, loader, regularization):
+def train(model, optimizer, loader, regularization, criterion):
     model.train()
     total_loss = 0
 
@@ -265,15 +266,15 @@ def train(model, optimizer, loader, regularization):
         logits, out, L = model(x.to(device), cat.to(device)) # out, L are for regularization
         logits = logits.permute([0, 2, 1])
 
-        loss = compute_loss(logits, y, out, L, s=regularization)
+        loss = compute_loss(logits, y, out, L, criterion, s=regularization)
 
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
         if i%100 == 0:
             print(f"{i}: curr loss: {loss}")
-            #print(f"{data.y} --- {logits.argmax(dim=1)}")
     return total_loss * batch_size / len(dataset_train)
+
 
 @torch.no_grad()
 def test(model, loader):
@@ -290,8 +291,6 @@ def test(model, loader):
         logits, _, _= model(x.to(device), cat.to(device))
         logits = logits.to('cpu')
         pred = logits.argmax(dim=2)
-        # print(pred)
-        # print(f"TEST: {int((pred == data.y.to(device)).sum())}")
 
         total_correct += int((pred == y).sum())
         start = i * batch_size
@@ -317,17 +316,13 @@ def test(model, loader):
         cat_iou[cat].append(np.mean(part_ious))
         tot_iou.append(np.mean(part_ious))
 
-    # print(tot_iou)
-    # accuracy = 100 * sklearn.metrics.accuracy_score(labels, predictions)
-    # f1 = 100 * sklearn.metrics.f1_score(labels, predictions, average='weighted')
-
     ncorrects = np.sum(predictions == labels)
     accuracy  = ncorrects * 100 / (len(dataset_test) * num_points)
-    # print(f"\tAccuracy: {accuracy}, ncorrect: {ncorrects} / {len(dataset_test) * num_points}")
-    # print(f"\tIoU: \t{np.mean(tot_iou)*100}")
+
     return accuracy, cat_iou, tot_iou, ncorrects
 
-def start_training(model, train_loader, test_loader, optimizer, epochs=50, learning_rate=1e-3, regularization=1e-9, decay_rate=0.95):
+
+def start_training(model, train_loader, test_loader, optimizer, criterion, epochs=50, learning_rate=1e-3, regularization=1e-9, decay_rate=0.95):
     print(model.parameters)
     device = 'cuda' if t.cuda.is_available() else 'cpu'
     print(f"\nTraining on {device}")
@@ -336,7 +331,7 @@ def start_training(model, train_loader, test_loader, optimizer, epochs=50, learn
 
     for epoch in range(1, epochs+1):
         train_start_time = time.time()
-        loss = train(model, optimizer, train_loader, regularization=regularization)
+        loss = train(model, optimizer, train_loader, criterion=criterion, regularization=regularization)
         train_stop_time = time.time()
 
         writer.add_scalar('loss/train', loss, epoch)
@@ -366,23 +361,6 @@ def start_training(model, train_loader, test_loader, optimizer, epochs=50, learn
     print(f"Training finished")
 
 
-def IoU_accuracy(pred, target, n_classes=16):
-    ious = []
-    pred = pred.view(-1)
-    target = target.view(-1)
-
-    # Ignore IoU for background class ("0")
-    for cls in range(1, n_classes):  # This goes from 1:n_classes-1 -> class "0" is ignored
-        pred_inds = pred == cls
-        target_inds = target == cls
-        intersection = (pred_inds[target_inds]).long().sum().data.cpu()[0]  # Cast to long to prevent overflows
-        union = pred_inds.long().sum().data.cpu()[0] + target_inds.long().sum().data.cpu()[0] - intersection
-        if union == 0:
-            ious.append(float('nan'))  # If there is no ground truth, do not include in evaluation
-        else:
-            ious.append(float(intersection) / float(max(union, 1)))
-    return np.array(ious)
-
 
 if __name__ == '__main__':
     now = datetime.now()
@@ -391,20 +369,13 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 2048
-
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    print(f"Training on {device}")
-
-    root = "/media/rambo/ssd2/Alex_data/RGCNN/ShapeNet/"
-    print(root)
-
+    num_points = 2048
     batch_size = 3
     num_epochs = 100
     learning_rate = 1e-3
     decay_rate = 0.8
-    decay_steps = len(dataset_train) / batch_size
     weight_decay = 1e-8
     dropout=0.25
 
@@ -412,18 +383,41 @@ if __name__ == '__main__':
     K = [6, 5, 3]         # Polynomial orders.
     M = [512, 128, 50]
 
+    root = "/media/rambo/ssd2/Alex_data/RGCNN/ShapeNet/"
+    print(root)
+
+    transforms = Compose([FixedPoints(num_points), GaussianNoiseTransform(mu=0, sigma=0, recompute_normals=False)])
+    dataset_train = ShapeNet(root=root, split="train", transform=transforms)
+    dataset_test = ShapeNet(root=root, split="test", transform=transforms)
+    decay_steps = len(dataset_train) / batch_size
+
+    weights = get_weights(dataset_train)
+
+    criterion = torch.nn.CrossEntropyLoss(weight=torch.tensor(weights, dtype=float32).to('cuda'))  # Define loss criterion.
+
+    print(f"Training on {device}")
+
     # Verification...
     print(f"Train dataset shape: {dataset_train}")
     print(f"Test dataset shape:  {dataset_test}")
 
     train_loader = DenseDataLoader(
-        dataset_train, batch_size=batch_size, shuffle=False, pin_memory=True)
+        dataset_train, batch_size=batch_size, 
+        shuffle=False, pin_memory=True)
+        
     test_loader = DenseDataLoader(
-        dataset_test, batch_size=batch_size, shuffle=True)
+        dataset_test, batch_size=batch_size, 
+        shuffle=True)
 
     model = seg_model(num_points, F, K, M,
-                      dropout=dropout, one_layer=False, reg_prior=True, recompute_L=False, relus=[128, 512, 1024, 512, 128, 50], b2relu=True)
+                      dropout=dropout, 
+                      one_layer=False, 
+                      reg_prior=True, 
+                      recompute_L=False, 
+                      relus=[128, 512, 1024, 512, 128, 50], 
+                      b2relu=True)
+
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     
-    start_training(model, train_loader, test_loader, optimizer, epochs=num_epochs)
+    start_training(model, train_loader, test_loader, optimizer, epochs=num_epochs, criterion=criterion)
