@@ -1,7 +1,6 @@
 import time
 
-from torch.utils.tensorboard import SummaryWriter
-writer = SummaryWriter()
+
 
 import torch
 from torch_geometric.nn import MessagePassing
@@ -188,11 +187,11 @@ def test(model, loader,nr_points):
     return val_acc
 
 
-now = datetime.now()
-directory = now.strftime("%d_%m_%y_%H:%M:%S")
-parent_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models"
-path = os.path.join(parent_directory, directory)
-os.mkdir(path)
+# now = datetime.now()
+# directory = now.strftime("%d_%m_%y_%H:%M:%S")
+# parent_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models"
+# path = os.path.join(parent_directory, directory)
+# os.mkdir(path)
 
 modelnet_num = 40
 num_points= 512
@@ -209,7 +208,7 @@ root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
 
 
 model = PointNet(num_classes=modelnet_num,nr_features=nr_features)
-path_saved_model="/home/alex/Alex_documents/RGCNN_git/Modele_selectate/Normals_recomputed/Rotation_30/Pointnet_512_rot_30.pt"
+path_saved_model="/home/alex/Alex_documents/RGCNN_git/Modele_selectate/Normals_recomputed/Augmented_rotation/Pointnet_aug_rotation.pt"
 model.load_state_dict(torch.load(path_saved_model))
 print(model)
 print(model)

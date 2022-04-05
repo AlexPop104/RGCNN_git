@@ -371,44 +371,145 @@ mu=0
 sigma=0.
 #transforms_noisy = Compose([SamplePoints(num_points),NormalizeScale(),GaussianNoiseTransform(mu, sigma,recompute_normals=True)])
 
-rot_x=10
-rot_y=10
-rot_z=10
+rot_x=30
+rot_y=30
+rot_z=30
 
-random_rotate = Compose([
-    RandomRotate(degrees=rot_x, axis=0),
-    RandomRotate(degrees=rot_y, axis=1),
-    RandomRotate(degrees=rot_z, axis=2),
+torch.manual_seed(0)
+
+#################################
+
+
+random_rotate_0 = Compose([
+    RandomRotate(degrees=0, axis=0),
+    RandomRotate(degrees=0, axis=1),
+    RandomRotate(degrees=0, axis=2),
     ])
 
-test_transform = Compose([
-    random_rotate,
+test_transform_0 = Compose([
+    random_rotate_0,
     SamplePoints(num_points, include_normals=True),
     NormalizeScale(),
-    GaussianNoiseTransform(mu, sigma,recompute_normals=True)
+    GaussianNoiseTransform(mu, 0.,recompute_normals=True)
+    ])
+
+random_rotate_10 = Compose([
+    RandomRotate(degrees=0, axis=0),
+    RandomRotate(degrees=0, axis=1),
+    RandomRotate(degrees=0, axis=2),
+    ])
+
+test_transform_10 = Compose([
+    random_rotate_10,
+    SamplePoints(num_points, include_normals=True),
+    NormalizeScale(),
+    GaussianNoiseTransform(mu, 0.05,recompute_normals=True)
+    ])
+
+random_rotate_20 = Compose([
+    RandomRotate(degrees=0, axis=0),
+    RandomRotate(degrees=0, axis=1),
+    RandomRotate(degrees=0, axis=2),
+    ])
+
+test_transform_20 = Compose([
+    random_rotate_20,
+    SamplePoints(num_points, include_normals=True),
+    NormalizeScale(),
+    GaussianNoiseTransform(mu, 0.08,recompute_normals=True)
     ])
 
 
-train_dataset = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform)
-test_dataset = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform)
+train_dataset_0 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_0)
+test_dataset_0 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_0)
+
+train_dataset_10 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_10)
+test_dataset_10 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_10)
+
+train_dataset_20 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_20)
+test_dataset_20 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_20)
+
+
 
 ###############################################################################
 
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
-test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+train_loader_0 = DataLoader(train_dataset_0, batch_size=batch_size, shuffle=True, pin_memory=True)
+test_loader_0  = DataLoader(test_dataset_0, batch_size=batch_size)
+
+train_loader_10 = DataLoader(train_dataset_10, batch_size=batch_size, shuffle=True, pin_memory=True)
+test_loader_10  = DataLoader(test_dataset_10, batch_size=batch_size)
+
+train_loader_20 = DataLoader(train_dataset_20, batch_size=batch_size, shuffle=True, pin_memory=True)
+test_loader_20  = DataLoader(test_dataset_20, batch_size=batch_size)
+
+###############################################################################
+
 
 for epoch in range(1, num_epochs+1):
 
-    program_name="RGCNN-recomputed-normals"
-    conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
+    #program_name="RGCNN-recomputed-normals"
+    # conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
+
+    loss_tr=0
+    loss_t=0
+    acc_t=0
+    acc_tr=0
 
     train_start_time = time.time()
-    train_loss,train_acc = train(model, optimizer, train_loader, regularization=regularization)
+    train_loss,train_acc = train(model, optimizer, train_loader_0, regularization=regularization)
     train_stop_time = time.time()
 
+    loss_tr=loss_tr+train_loss
+    acc_tr=train_acc
+
+    train_start_time = time.time()
+    train_loss,train_acc = train(model, optimizer, train_loader_10, regularization=regularization)
+    train_stop_time = time.time()
+
+    loss_tr=loss_tr+train_loss
+    acc_tr=train_acc
+
+    train_start_time = time.time()
+    train_loss,train_acc = train(model, optimizer, train_loader_20, regularization=regularization)
+    train_stop_time = time.time()
+
+    loss_tr=loss_tr+train_loss
+    acc_tr=train_acc
+
     test_start_time = time.time()
-    test_loss,test_acc = test(model, test_loader)
+    test_loss,test_acc = test(model, test_loader_0)
     test_stop_time = time.time()
+
+    loss_t=loss_t+test_loss
+    acc_t=acc_t+test_acc
+
+    test_start_time = time.time()
+    test_loss,test_acc = test(model, test_loader_10)
+    test_stop_time = time.time()
+
+    loss_t=loss_t+test_loss
+    acc_t=acc_t+test_acc
+
+    test_start_time = time.time()
+    test_loss,test_acc = test(model, test_loader_20)
+    test_stop_time = time.time()
+
+    loss_t=loss_t+test_loss
+    acc_t=acc_t+test_acc
+
+    train_loss=loss_tr/3
+    test_loss=loss_t/3
+    test_acc=acc_t/3
+    train_acc=acc_tr/3
+ 
+
+    # train_start_time = time.time()
+    # train_loss,train_acc = train(model, optimizer, train_loader, regularization=regularization)
+    # train_stop_time = time.time()
+
+    # test_start_time = time.time()
+    # test_loss,test_acc = test(model, test_loader)
+    # test_stop_time = time.time()
 
     #conv.test_pcd_pred(model=model,loader=train_loader,num_points=num_points,device=device)
 

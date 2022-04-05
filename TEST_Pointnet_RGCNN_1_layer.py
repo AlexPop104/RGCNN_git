@@ -231,7 +231,7 @@ root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
 #root="/media/rambo/ssd2/Alex_data/RGCNN/GeometricShapes"
 
 model = PointNet(num_classes=modelnet_num,nr_features=nr_features)
-path_saved_model="/home/alex/Alex_documents/RGCNN_git/Modele_selectate/Normals_recomputed/Rotation_30/Pointnet_RGCNN_512_rot_30.pt"
+path_saved_model="/home/alex/Alex_documents/RGCNN_git/Modele_selectate/Normals_recomputed/Augmented_rotation/Pointnet_RGCNN_aug_rotation.pt"
 model.load_state_dict(torch.load(path_saved_model))
 #print(model)
 
@@ -239,8 +239,8 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = model.to(device)
 
 rot_x=1
-rot_y=2
-rot_z=2
+rot_y=1
+rot_z=1
 
 sigma=[0, 0.01,0.03,0.05,0.08,0.1,0.15]
 
@@ -249,7 +249,7 @@ ceva2=0
 
 torch.manual_seed(0)
 
-for ceva in range(5,6):
+for ceva in range(0,4):
 #for ceva2 in range(0,len(sigma)):
 
     mu=0
@@ -297,7 +297,7 @@ for ceva in range(5,6):
     
     test_loader = DataLoader(test_dataset, batch_size=batch_size)
 
-    conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
+    #conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
 
 
     #conv.test_pcd_pred(model=model,loader=test_loader,num_points=num_points,device=device)

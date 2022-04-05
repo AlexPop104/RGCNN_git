@@ -262,6 +262,9 @@ rot_z=30
 
 torch.manual_seed(0)
 
+#################################
+
+
 random_rotate_0 = Compose([
     RandomRotate(degrees=0, axis=0),
     RandomRotate(degrees=0, axis=1),
@@ -272,7 +275,7 @@ test_transform_0 = Compose([
     random_rotate_0,
     SamplePoints(num_points, include_normals=True),
     NormalizeScale(),
-    GaussianNoiseTransform(mu, sigma,recompute_normals=True)
+    GaussianNoiseTransform(mu, 0.,recompute_normals=True)
     ])
 
 random_rotate_10 = Compose([
@@ -285,7 +288,7 @@ test_transform_10 = Compose([
     random_rotate_10,
     SamplePoints(num_points, include_normals=True),
     NormalizeScale(),
-    GaussianNoiseTransform(mu, sigma,recompute_normals=True)
+    GaussianNoiseTransform(mu, 0.,recompute_normals=True)
     ])
 
 random_rotate_20 = Compose([
@@ -298,18 +301,18 @@ test_transform_20 = Compose([
     random_rotate_20,
     SamplePoints(num_points, include_normals=True),
     NormalizeScale(),
-    GaussianNoiseTransform(mu, sigma,recompute_normals=True)
+    GaussianNoiseTransform(mu, 0.,recompute_normals=True)
     ])
 
 
 train_dataset_0 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_0)
 test_dataset_0 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_0)
 
-train_dataset_10 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_0)
-test_dataset_10 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_0)
+train_dataset_10 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_10)
+test_dataset_10 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_10)
 
-train_dataset_20 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_0)
-test_dataset_20 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_0)
+train_dataset_20 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_20)
+test_dataset_20 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_20)
 
 
 
