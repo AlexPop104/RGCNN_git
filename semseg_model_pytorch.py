@@ -34,41 +34,6 @@ for key in seg_classes.keys():
         label_to_cat[label] = key
 
 
-
-def create_batched_dataset(class_num, dataset, batch_size):
-    data = []
-    for d in dataset:
-        if d.category == class_num:
-            data.append(d)
-
-    batched_y = []
-    batched_pos = []
-    batched_x = []
-
-    batch_y = torch.zeros((batch_size,   2048))
-    batch_pos = torch.zeros((batch_size, 2048, 3))
-    batch_x = torch.zeros((batch_size,   2048, 3))
-    i = 0
-    for d in data:
-        if i<batch_size:
-            batch_y[i,:] = d.y
-            batch_pos[i,:,:] = d.pos
-            batch_x[i,:,:] = d.x
-        else:
-            i = 0
-            batched_x.append(batch_x)
-            batched_y.append(batch_y)
-            batched_pos.append(batch_pos)
-
-            batch_y = torch.zeros((batch_size,   2048))
-            batch_pos = torch.zeros((batch_size, 2048, 3))
-            batch_x = torch.zeros((batch_size,   2048, 3))
-
-        i += 1
-    print(len(data))
-    return [batched_pos, batched_x, batched_y]
-
-
 class seg_model(nn.Module):
     def __init__(self, vertice, F, K, M, input_dim=22 ,regularization=0, one_layer=True, dropout=0, reg_prior: bool = True):
         assert len(F) == len(K)
@@ -112,6 +77,7 @@ class seg_model(nn.Module):
         self.conv5 = conv.DenseChebConv(512, 128, 1)
         self.conv6 = conv.DenseChebConv(128, 50, 1)
         '''
+
         self.recompute_L = True
 
         bias=True
@@ -307,45 +273,29 @@ def start_training(model, train_loader, test_loader, optimizer, epochs=50, learn
     print(f"Training finished")
     print(model.parameters())
 
-def IoU_accuracy(pred, target, n_classes=16):
-    ious = []
-    pred = pred.view(-1)
-    target = target.view(-1)
-
-    # Ignore IoU for background class ("0")
-    for cls in range(1, n_classes):  # This goes from 1:n_classes-1 -> class "0" is ignored
-        pred_inds = pred == cls
-        target_inds = target == cls
-        intersection = (pred_inds[target_inds]).long().sum().data.cpu()[0]  # Cast to long to prevent overflows
-        union = pred_inds.long().sum().data.cpu()[0] + target_inds.long().sum().data.cpu()[0] - intersection
-        if union == 0:
-            ious.append(float('nan'))  # If there is no ground truth, do not include in evaluation
-        else:
-            ious.append(float(intersection) / float(max(union, 1)))
-    return np.array(ious)
 
 
 if __name__ == '__main__':
     now = datetime.now()
     directory = now.strftime("%d_%m_%y_%H:%M:%S")
-    parent_directory = "/home/victor/workspace/thesis_ws/models"
+    parent_directory = "/home/victor/workspace/thesis_ws/github/RGCNN_git/models/"
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 4092
+    num_points = 4096
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     print(f"Training on {device}")
 
-    root = "/home/victor/workspace/thesis_ws/datasets/S3DIS"
+    root = "/media/rambo/ssd2/Alex_data/RGCNN/S3DIS/"
+
     print(root)
     dataset_train = S3DIS(root=root, test_area=6, train=True)
     dataset_test = S3DIS(root=root, test_area=6, train=False)
    
-
-    batch_size = 2
-    num_epochs = 50
+    batch_size = 8
+    num_epochs = 15
     learning_rate = 1e-3
     decay_rate = 0.95
     decay_steps = len(dataset_train) / batch_size
@@ -353,6 +303,7 @@ if __name__ == '__main__':
     F = [128, 512, 1024]  # Outputs size of convolutional filter.
     K = [6, 5, 3]         # Polynomial orders.
     M = [512, 128, 50]
+
     # Verification...
     print(f"Train dataset shape: {dataset_train}")
     print(f"Test dataset shape:  {dataset_test}")
@@ -362,9 +313,9 @@ if __name__ == '__main__':
     test_loader = DenseDataLoader(dataset_test, batch_size=batch_size, shuffle=False)
 
     model = seg_model(num_points, F, K, M,
-                      dropout=1, one_layer=False, reg_prior=True, input_dim=9)
+                      dropout=1, one_layer=False, reg_prior=False, input_dim=9)
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     
 
-    start_training(model, train_loader, test_loader, optimizer, epochs=50)
+    start_training(model, train_loader, test_loader, optimizer, epochs=num_epochs)
