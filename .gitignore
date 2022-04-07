@@ -1,6 +1,7 @@
 data
-tests.py
 runs
+
+tests.py
 Test_Shapenet_Dataset.ipynb
 labels.npy
 model95.pt
@@ -13,3 +14,4 @@ test_alex_seg_model_pytorch.py
 other_tests.py
 seg_model_pytorch.py
 models
+
