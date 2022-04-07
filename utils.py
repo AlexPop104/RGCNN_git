@@ -49,6 +49,7 @@ def pairwise_distance(point_cloud,normalize=False):
     adj_matrix = point_cloud_square + point_cloud_inner + point_cloud_square_tranpose
 
     if(normalize):
+        nr_points=point_cloud.shape[1]
         maximum_values=torch.max(adj_matrix,dim=2)
         minimum_values=torch.min(adj_matrix,dim=2)
 
