@@ -1,10 +1,14 @@
 import torch.nn as nn
 import torch as t
-from typing import Optional
+from typing import Optional, Union
 from torch_geometric.nn.dense.linear import Linear
 from torch.nn import Parameter
 import torch
 import numpy as np
+import torch_geometric as tg
+from torch_geometric.transforms import BaseTransform
+from torch_geometric.data import Data, HeteroData
+import open3d as o3d
 
 
 def get_laplacian(adj_matrix, normalize=True):
@@ -201,7 +205,7 @@ def get_centroid(point_cloud,num_points):
     Distances=torch.unsqueeze(Distances,2)
 
     return Distances
-    
+
 
 def compute_loss(logits, y, x, L, criterion, s=1e-9):
     if not logits.device == y.device:
