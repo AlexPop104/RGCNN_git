@@ -120,20 +120,27 @@ class seg_model(nn.Module):
             self.bias_relus = nn.ParameterList([
                 torch.nn.parameter.Parameter(torch.zeros((1, 1, i))) for i in self.relus
                 ])
+
+
+        self.conv1 = conv.DenseChebConvV2(input_dim, 128, 6)
+        self.conv2 = conv.DenseChebConvV2(128, 512, 5)
+        self.conv3 = conv.DenseChebConvV2(512, 1024, 3)
         
+        self.fc1 = t.nn.Linear(1024, 512, bias=fc_bias)
+        self.fc2 = t.nn.Linear(512 + 512, 128, bias=fc_bias)
+        self.fc3 = t.nn.Linear(128, 50, bias=fc_bias)
+
+        '''
+        !!! TO BE TESTED !!!
         self.conv  = nn.ModuleList([
-            conv.DenseChebConvV2(input_dim, self.F[i], self.K[i]) if i==0 else conv.DenseChebConvV2(self.F[i-1], self.F[i], self.K[i]) for i in range(len(K))
+            conv.DenseChebConvV2(vertice, self.F[i], self.K[i]) if i==0 else conv.DenseChebConvV2(self.F[i-1], self.F[i], self.K[i]) for i in range(len(K))
         ])
         
 
-        self.fc  = nn.ModuleList([])
-        for i in range(len(M)):
-            if i==0:
-                self.fc.append(nn.Linear(self.F[-1], self.M[i], fc_bias))
-            elif i == 1:
-                self.fc.append(nn.Linear(self.M[i-1]+self.M[i-1], self.M[i], fc_bias))
-            else:
-                self.fc.append(nn.Linear(self.M[i-1], self.M[i], fc_bias))
+        self.fc  = nn.ModuleList([
+            nn.Linear(self.F[-1], self.M[i], fc_bias) if i==0 else nn.Linear(self.M[-1], self.M[i], fc_bias) for i in range(len(M)) 
+        ])
+        '''
 
         self.L = []
         self.x = []
@@ -162,7 +169,7 @@ class seg_model(nn.Module):
         self.x = []
 
 
-    def forward(self, x, cat):
+    def forward2(self, x, cat):
         self.reset_regularization_terms()
 
         x1 = 0  # cache for layer 1
@@ -184,13 +191,66 @@ class seg_model(nn.Module):
                 x1 = out
         
         for i in range(len(self.M)):
-            if i == 1:
-                out = t.concat([out, x1], dim=2)
             out = self.fc[i](out)
             self.append_regularization_terms(out, L)
             out = self.dropout(out)
             out = self.b1relu(out, self.bias_relus[i + len(self.K)])
+            if i == 1:
+                out = t.concat([out, x1], dim=2)
+
+        return out, self.x, self.L
+    
+    def forward(self, x, cat):
+        self.reset_regularization_terms()
+
+        x1 = 0  # cache for layer 1
+
+        L = self.get_laplacian(x)
+
+        cat = one_hot(cat, num_classes=16)
+        cat = torch.tile(cat, [1, self.vertice, 1]) 
+        x = torch.cat([x, cat], dim=2)  ### Pass this to the model
+
+        out = self.conv1(x, L)
+        self.append_regularization_terms(out, L)
+        out = self.dropout(out)
+        out = self.b1relu(out, self.bias_relus[0])
         
+        if self.recompute_L:
+            L = self.get_laplacian(out)
+        out = self.conv2(out, L)
+        self.append_regularization_terms(out, L)
+        out = self.dropout(out)
+
+        out = self.b1relu(out, self.bias_relus[1])
+        x1 = out
+
+        if self.recompute_L:
+            L = self.get_laplacian(out)
+        out = self.conv3(out, L)
+        self.append_regularization_terms(out, L)
+        out = self.dropout(out)
+        out = self.b1relu(out, self.bias_relus[2])
+
+        out = self.fc1(out)
+        self.append_regularization_terms(out, L)
+        out = self.dropout(out)
+        out = self.b1relu(out, self.bias_relus[3])
+
+        out = t.concat([out, x1], dim=2)
+
+        out = self.fc2(out)
+        self.append_regularization_terms(out, L)
+        out = self.dropout(out)
+
+        out = self.b1relu(out, self.bias_relus[4])
+
+        out = self.fc3(out)
+
+        self.append_regularization_terms(out, L)
+        out = self.dropout(out)
+        out = self.b1relu(out, self.bias_relus[5])
+
         return out, self.x, self.L
 
 
@@ -312,7 +372,7 @@ if __name__ == '__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     num_points = 2048
-    batch_size = 4
+    batch_size = 3
     num_epochs = 100
     learning_rate = 1e-3
     decay_rate = 0.8
@@ -353,7 +413,8 @@ if __name__ == '__main__':
                       dropout=dropout, 
                       one_layer=False, 
                       reg_prior=True, 
-                      recompute_L=False,  
+                      recompute_L=False, 
+                      relus=[128, 512, 1024, 512, 128, 50], 
                       b2relu=True)
 
     model = model.to(device)
