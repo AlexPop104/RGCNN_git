@@ -253,11 +253,7 @@ def createConfusionMatrix(model,loader):
     return sn.heatmap(df_cm, annot=True).get_figure()
 
 
-now = datetime.now()
-directory = now.strftime("%d_%m_%y_%H:%M:%S")
-parent_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models"
-path = os.path.join(parent_directory, directory)
-os.mkdir(path)
+
 
 num_points = 512
 batch_size = 16
@@ -278,7 +274,7 @@ print(root)
 
 
 model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, reg_prior=True)
-path_saved_model="/home/alex/Alex_documents/RGCNN_git/Modele_selectate/Normals_recomputed/Noise/RGCNN_noise_005.pt"
+path_saved_model="/home/alex/Alex_documents/RGCNN_git/Modele_selectate/Normals_recomputed/Augmented_rotation/RGCNN_aug_rotation.pt"
 model.load_state_dict(torch.load(path_saved_model))
 print(model.parameters)
 model = model.to(device)
@@ -290,13 +286,14 @@ rot_z=1
 sigma=[0, 0.01,0.03,0.05,0.08,0.1,0.15]
 
 ceva=0
+ceva2=0
 
 torch.manual_seed(0)
 
-for ceva2 in range(0,len(sigma)):
+for ceva in range(0,4):
+#for ceva2 in range(0,len(sigma)):
 
     mu=0
-    
     
     random_rotate = Compose([
     RandomRotate(degrees=rot_x*ceva*10, axis=0),
@@ -314,7 +311,8 @@ for ceva2 in range(0,len(sigma)):
     test_dataset = ModelNet(root=root, train=False,
                             transform=test_transform)
 
-    program_name="RGCNN_rot_x"+str(10*rot_x)+"_rot_y"+str(10*rot_y)+"_rot_z"+str(10*rot_z)
+
+    program_name="RGCNN_rot_x"+str(10*rot_x*ceva)+"_rot_y"+str(10*rot_y*ceva)+"_rot_z"+str(10*rot_z*ceva)
 
 
 ######################################################################33

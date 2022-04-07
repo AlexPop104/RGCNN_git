@@ -404,12 +404,14 @@ def test_pcd_pred(model, loader,num_points,device):
                 viz_points=data.pos
                 viz_points=viz_points.reshape(data.batch.unique().shape[0], num_points, 3)
 
+                viz_points=viz_points.to('cuda')
+
                 pred = logits.argmax(dim=-1)
 
                 ground_truth=data.y.to(device)
                 
                 for it_pcd in range(data.batch.unique().shape[0]):
-                    # if(ground_truth[it_pcd]!=pred[it_pcd]):
+                    if(ground_truth[it_pcd]==pred[it_pcd]):
 
                         print("Actual label:")
                         print(label_to_names[ground_truth[it_pcd].item()])
@@ -419,15 +421,17 @@ def test_pcd_pred(model, loader,num_points,device):
                         viz_points_2=viz_points[it_pcd,:,:]
                         distances=L[it_pcd,:,:]
 
+                        distances=distances.to('cuda')
+
                         threshold=0.7
 
-                        view_graph(viz_points_2,distances,threshold,it_pcd)
+                        #view_graph(viz_points_2,distances,threshold,it_pcd)
 
-                        # fig = plt.figure()
-                        # ax = fig.add_subplot(111, projection='3d')
-                        # ax.set_axis_off()
-                        # for i in range(viz_points.shape[1]):
-                        #     ax.scatter(viz_points[it_pcd,i,0].item(),viz_points[it_pcd,i, 1].item(), viz_points[it_pcd,i,2].item(),color='r')
+                        fig = plt.figure(label_to_names[pred[it_pcd].item()])
+                        ax = fig.add_subplot(111, projection='3d')
+                        ax.set_axis_off()
+                        for i in range(viz_points.shape[1]):
+                            ax.scatter(viz_points[it_pcd,i,0].item(),viz_points[it_pcd,i, 1].item(), viz_points[it_pcd,i,2].item(),color='r')
 
                         # #distances=distances-distances.min()
                         
@@ -438,9 +442,9 @@ def test_pcd_pred(model, loader,num_points,device):
                         #         if (distances[i,j].item()>0.4):
                         #             ax.plot([viz_points[it_pcd,i,0].item(),viz_points[it_pcd,j,0].item()],[viz_points[it_pcd,i, 1].item(),viz_points[it_pcd,j, 1].item()], [viz_points[it_pcd,i,2].item(),viz_points[it_pcd,j,2].item()],alpha=1,color=(0,0,distances[i,j].item()))
                             
-                        # plt.show()
+                        plt.show()
 
-                plt.show()
+                #plt.show()
 
 
 

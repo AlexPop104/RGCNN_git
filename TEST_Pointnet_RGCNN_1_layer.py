@@ -213,11 +213,6 @@ def test(model, loader,nr_points):
     return val_acc
 
 
-now = datetime.now()
-directory = now.strftime("%d_%m_%y_%H:%M:%S")
-parent_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models"
-path = os.path.join(parent_directory, directory)
-os.mkdir(path)
 
 modelnet_num = 40
 num_points= 512
