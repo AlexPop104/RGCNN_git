@@ -194,6 +194,7 @@ if __name__ == '__main__':
     print(f"Mu:     {mu}")
     print(f"Sigma:  {sigma}")
 
+    
     root = '/home/victor/workspace/thesis_ws/github/RGCNN_git/'
     np.save(root + "positions_noisy.npy", position_global_noisy)
     np.save(root + "label_original_noisy.npy", label_original_noisy)
@@ -202,3 +203,4 @@ if __name__ == '__main__':
     np.save(root + "positions_original.npy", position_global_original)
     np.save(root + "label_original_original.npy", label_original_original)
     np.save(root + "label_predicted_original.npy", label_predicted_original)
+    
