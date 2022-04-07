@@ -24,7 +24,6 @@ def get_laplacian(adj_matrix, normalize=True):
         L:          tensor (batch_size, num_points, num_points)
     """
 
-
     if normalize:
         D = t.sum(adj_matrix, dim=1)
         eye = t.ones_like(D)
