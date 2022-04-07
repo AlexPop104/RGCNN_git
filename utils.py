@@ -3,6 +3,8 @@ import torch as t
 from typing import Optional
 from torch_geometric.nn.dense.linear import Linear
 from torch.nn import Parameter
+import torch
+import numpy as np
 
 
 def get_laplacian(adj_matrix, normalize=True):
@@ -122,5 +124,26 @@ class DenseChebConvV2(nn.Module):
         return (f'{self.__class__.__name__}({self.in_channels}, '
                 f'{self.out_channels}, K={self.K}, '
                 f'normalization={self.normalization})')
+
+
+
+def get_weights(dataset, num_points=2048, nr_classes=40):
+    from sklearn.utils import class_weight
+
+    '''
+    If sk=True the weights are computed using Scikit-learn. Otherwise, a 'custom' implementation will
+    be used. It is recommended to use the sk=True.
+    '''
+
+    weights = torch.zeros(nr_classes)
+    
+    y = np.empty(len(dataset)*dataset[0].y.shape[0])
+    i = 0
+    for data in dataset:
+        y[i:num_points+i] = data.y
+        i += num_points
+    weights = class_weight.compute_class_weight(
+        'balanced', np.unique(y), y)
+    return weights
 
 

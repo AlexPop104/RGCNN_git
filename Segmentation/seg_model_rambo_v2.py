@@ -59,25 +59,21 @@ def compute_loss(logits, y, x, L, criterion, s=1e-9):
     return loss
 
 
-def get_weights(dataset, num_points=2048, sk=True):
+def get_weights(dataset, num_points=2048, nr_classes=40):
     '''
     If sk=True the weights are computed using Scikit-learn. Otherwise, a 'custom' implementation will
     be used. It is recommended to use the sk=True.
     '''
-    weights = torch.zeros(50)
-    if sk:
-        y = np.empty(len(dataset)*dataset[0].y.shape[0])
-        i = 0
-        for data in dataset:
-            y[i:num_points+i] = data.y
-            i += num_points
-        weights = class_weight.compute_class_weight(
-            'balanced', np.unique(y), y)
-    else:
-        for data in dataset:
-            for l in torch.unique(data.y):
-                weights[l] += torch.sum(data.y == l.item())
-        weights = 1 - weights / len(dataset)
+
+    weights = torch.zeros(nr_classes)
+    
+    y = np.empty(len(dataset)*dataset[0].y.shape[0])
+    i = 0
+    for data in dataset:
+        y[i:num_points+i] = data.y
+        i += num_points
+    weights = class_weight.compute_class_weight(
+        'balanced', np.unique(y), y)
     return weights
 
 
