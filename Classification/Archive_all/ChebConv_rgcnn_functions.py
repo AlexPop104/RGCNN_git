@@ -41,22 +41,6 @@ def get_laplacian(adj_matrix, normalize=True):
         D = 1 / t.sqrt(D)
         D = t.diag_embed(D)
         L = eye - t.matmul(t.matmul(D, adj_matrix), D)
-
-
-        #################################3
-        #Trying to not have small values / failed because laplacian has almost 1 on diagonal and negativ in rest
-        # nr_points=adj_matrix.shape[1]
-
-        # maximum_values=torch.max(adj_matrix,dim=2)
-        # minimum_values=torch.min(adj_matrix,dim=2)
-
-        # interval=torch.subtract(maximum_values[0],minimum_values[0])
-        # interval=torch.tile(interval,[nr_points])
-        # interval=torch.reshape(interval,(adj_matrix.shape[0],adj_matrix.shape[1],adj_matrix.shape[1]))
-        # L=torch.div(L,interval)
-
-        #######################
-
     else:
         D = t.sum(adj_matrix, dim=1)
         D = t.diag_embed(D)
@@ -333,11 +317,6 @@ def get_RotationInvariantFeatures(point_cloud,num_points):
     output_3=torch.unsqueeze(output_3,2)
     
     PPF_features=torch.cat((Distances,output_1,output_2,output_3),dim=2)
-
-    
-
-    
-    
 
 
     return PPF_features
