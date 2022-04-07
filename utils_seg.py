@@ -18,17 +18,3 @@ def IoU_accuracy(pred, target, n_classes=16):
         else:
             ious.append(float(intersection) / float(max(union, 1)))
     return np.array(ious)
-
-
-def compute_loss(logits, y, x, L, criterion, s=1e-9):
-    if not logits.device == y.device:
-        y = y.to(logits.device)
-
-    loss = criterion(logits, y)
-    l=0
-    for i in range(len(x)):
-        l += (1/2) * t.linalg.norm(t.matmul(t.matmul(t.permute(x[i], (0, 2, 1)), L[i]), x[i]))**2
-    l = l * s
-    loss += l
-    return loss
-
