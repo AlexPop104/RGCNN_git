@@ -155,8 +155,8 @@ class DenseChebConvV2(nn.Module):
 
     def reset_parameters(self):        
         for lin in self.lins:
-            lin.weight = t.nn.init.trunc_normal_(lin.weight, mean=0, std=0.2)
-            lin.bias      = t.nn.init.normal_(lin.bias, mean=0, std=0.2)
+            lin.weight  = t.nn.init.trunc_normal_(lin.weight, mean=0, std=0.2)
+            lin.bias    = t.nn.init.normal_(lin.bias, mean=0, std=0.2)
 
 
     def forward(self, x, L):
@@ -182,74 +182,3 @@ class DenseChebConvV2(nn.Module):
                 f'{self.out_channels}, K={self.K}, '
                 f'normalization={self.normalization})')
 
-
-
-
-if __name__ == "__main__":
-    device = "cuda"
-    A = t.rand(1024, 6)
-    A = A.float()
-    A = t.cat([A, A, A, A, A, A, A, A, A, A, A, A, A, A, A, A])
-    A = A.reshape([16, 1024, 6])
-    print(A.shape)
-
-    if False:
-        A_tf = tf.convert_to_tensor(A, dtype=float)
-        L_A_tf = get_laplacian_tf(A_tf, normalize=True)
-        with tf.Session() as sess:
-            start_time = time()
-            L_A_tf.eval()
-            print(L_A_tf.shape)
-            print(f"Tf Time: {time() -start_time}")
-        print("~~" * 30)
-
-    A = A.to(device)
-    
-    if False:
-        start_time = time()
-        edge_index, edge_weight = tg.utils.dense_to_sparse(A)
-        L_index, L_weight = tg.utils.get_laplacian(edge_index, edge_weight, normalization='sym')
-        L_pyg = tg.utils.to_dense_adj(L_index, edge_attr=L_weight) 
-        print(f"PyG Time: \t\t{time() -start_time}")
-        print(L_pyg.shape)
-        print(f"Memory allocated: \t{torch.cuda.memory_allocated(0)}")
-        del(L_pyg)
-        del(edge_index, edge_weight, L_index, L_weight)
-        torch.cuda.empty_cache()
-
-        print("~~" * 30)
-        # print(torch.cuda.memory_allocated(0))
-
-    if False:
-        start_time = time()
-        L_A = get_laplacian(A, normalize=True)
-        print(f"Remake Time: \t\t{time() -start_time}")
-        print(L_A.shape)
-        #print(L_A)
-        print(f"Memory allocated: \t{torch.cuda.memory_allocated(0)}")
-
-
-
-    #print(L_pyg)
-    conv_dense = DenseChebConv(6, 128, 6).to('cuda').float()
-    max_pool = nn.MaxPool2d(128, 128)
-    fc = nn.Linear(128, 10).to(device)
-
-    L = pairwise_distance(A)
-    L = get_laplacian(L)
-    out = conv_dense(A, L)
-    print("OK")
-    '''
-    test_tf = tf.reduce_max(out.cpu().detach().numpy(), 1)
-    with tf.Session() as sess:
-        print(test_tf.eval())
-        print(out.shape)
-    '''
-    values, indices = t.max(out, 1)
-    #print(f"Indices: {indices} ")
-    print(f"Vals:    {values} ")
-
-    
-    out = fc(values)
-    print(f"FC:       {out.shape}")
-    
