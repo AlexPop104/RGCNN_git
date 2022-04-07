@@ -30,7 +30,7 @@ def get_laplacian(adj_matrix, normalize=True):
 
     return L
 
-def pairwise_distance(point_cloud):
+def pairwise_distance(point_cloud,normalize=False):
     """
     Compute the pairwise distance of a point cloud.
 
@@ -47,6 +47,19 @@ def pairwise_distance(point_cloud):
     point_cloud_square = t.sum(t.mul(point_cloud, point_cloud), dim=2, keepdim=True)
     point_cloud_square_tranpose = point_cloud_square.permute(0, 2, 1)
     adj_matrix = point_cloud_square + point_cloud_inner + point_cloud_square_tranpose
+
+    if(normalize):
+        maximum_values=torch.max(adj_matrix,dim=2)
+        minimum_values=torch.min(adj_matrix,dim=2)
+
+        interval=torch.subtract(maximum_values[0],minimum_values[0])
+
+        interval=torch.tile(interval,[nr_points])
+
+        interval=torch.reshape(interval,(point_cloud.shape[0],point_cloud.shape[1],point_cloud.shape[1]))
+
+        adj_matrix=torch.div(adj_matrix,interval)
+
     adj_matrix = t.exp(-adj_matrix)
     return adj_matrix
 
