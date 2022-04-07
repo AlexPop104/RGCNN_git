@@ -147,3 +147,38 @@ def get_weights(dataset, num_points=2048, nr_classes=40):
     return weights
 
 
+def get_one_matrix_knn(matrix, k,batch_size,nr_points):
+
+    values,indices = torch.topk(matrix, k,sorted=False)
+    
+    batch_correction=torch.arange(0,batch_size,device='cuda')*nr_points
+    batch_correction=torch.reshape(batch_correction,[batch_size,1])
+    batch_correction=torch.tile(batch_correction,(1,nr_points*k))
+    batch_correction=torch.reshape(batch_correction,(batch_size,nr_points,k))
+       
+    my_range=torch.unsqueeze(torch.arange(0,indices.shape[1],device='cuda'),1)
+    my_range_repeated=torch.tile(my_range,[1,k])
+    my_range_repeated=torch.unsqueeze(my_range_repeated,0)
+    my_range_repeated_2=torch.tile(my_range_repeated,[batch_size,1,1])
+
+    indices=indices+batch_correction
+    my_range_repeated_2=my_range_repeated_2+batch_correction
+    
+    edge_indices=torch.cat((torch.unsqueeze(my_range_repeated_2,2),torch.unsqueeze(indices,2)),axis=2)
+    edge_indices=torch.transpose(edge_indices,2,3)
+    edge_indices=torch.reshape(edge_indices,(batch_size,nr_points*k,2))
+    edge_indices=torch.reshape(edge_indices,(batch_size*nr_points*k,2))
+    edge_indices=torch.transpose(edge_indices,0,1)
+    edge_indices=edge_indices.long()
+
+    edge_weights=torch.reshape(values,[-1])
+
+    batch_indexes=torch.arange(0,batch_size,device='cuda')
+    batch_indexes=torch.reshape(batch_indexes,[batch_size,1])
+    batch_indexes=torch.tile(batch_indexes,(1,nr_points))
+    batch_indexes=torch.reshape(batch_indexes,[batch_size*nr_points])
+    batch_indexes=batch_indexes.long()
+
+    knn_weight_matrix=tg.utils.to_dense_adj(edge_indices,batch_indexes,edge_weights)
+
+    return knn_weight_matrix
