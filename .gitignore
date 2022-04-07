@@ -1,6 +1,7 @@
 data
-tests.py
 runs
+
+tests.py
 Test_Shapenet_Dataset.ipynb
 labels.npy
 model95.pt
