@@ -21,7 +21,6 @@ from torch_geometric.transforms import Compose
 from GaussianNoiseTransform import GaussianNoiseTransform
 
 from torch.utils.tensorboard import SummaryWriter
-writer = SummaryWriter(comment='_sn_ww_025_drop_weight_decay', filename_suffix='_no_reg')
 import numpy as np
 from torch.optim import lr_scheduler
 
@@ -73,7 +72,7 @@ def get_weights(dataset, num_points=2048, nr_classes=40):
         y[i:num_points+i] = data.y
         i += num_points
     weights = class_weight.compute_class_weight(
-        'balanced', np.unique(y), y)
+        class_weight='balanced', classes=np.unique(y), y=y)
     return weights
 
 
@@ -292,7 +291,7 @@ def start_training(model, train_loader, test_loader, optimizer, criterion, epoch
 
         # Save the model every 5 epochs
         if epoch % 5 == 0:
-            torch.save(model.state_dict(), path + '/2048p_model_v2' + str(epoch) + '.pt')
+            torch.save(model.state_dict(), path + '/' + str(num_points) + 'p_model_v2_' + str(epoch) + '.pt')
 
     print(f"Training finished")
 
@@ -301,13 +300,13 @@ def start_training(model, train_loader, test_loader, optimizer, criterion, epoch
 if __name__ == '__main__':
     now = datetime.now()
     directory = now.strftime("%d_%m_%y_%H:%M:%S")
-    parent_directory = "/home/victor/workspace/thesis_ws/github/RGCNN_git/models"
+    parent_directory = "/home/domsa/workspace/git/RGCNN_git/Segmentation/models"
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    num_points = 2048
+    num_points = 1024
     batch_size = 4
     num_epochs = 100
     learning_rate = 1e-3
@@ -319,7 +318,8 @@ if __name__ == '__main__':
     K = [6, 5, 3]         # Polynomial orders.
     M = [512, 128, 50]
 
-    root = "/media/rambo/ssd2/Alex_data/RGCNN/ShapeNet/"
+    root = "/home/domsa/workspace/data/ShapeNet/"
+
     print(root)
 
     transforms = Compose([FixedPoints(num_points), GaussianNoiseTransform(mu=0, sigma=0, recompute_normals=False)])
@@ -327,7 +327,7 @@ if __name__ == '__main__':
     dataset_test = ShapeNet(root=root, split="test", transform=transforms)
     decay_steps = len(dataset_train) / batch_size
 
-    weights = get_weights(dataset_train)
+    weights = get_weights(dataset_train, num_points)
 
     criterion = torch.nn.CrossEntropyLoss(weight=torch.tensor(weights, dtype=float32).to('cuda'))  # Define loss criterion.
 
@@ -354,8 +354,6 @@ if __name__ == '__main__':
 
     model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-    
-    start_training(model, train_loader, test_loader, optimizer, epochs=num_epochs, criterion=criterion)
+    writer = SummaryWriter(comment='seg_'+str(num_points)+'_'+str(dropout), filename_suffix='_no_reg')
 
-# New branch
-# here
+    start_training(model, train_loader, test_loader, optimizer, epochs=num_epochs, criterion=criterion)
