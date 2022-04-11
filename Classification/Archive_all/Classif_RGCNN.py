@@ -339,44 +339,44 @@ test_transform_0 = Compose([
     random_rotate_0,
     SamplePoints(num_points, include_normals=True),
     NormalizeScale(),
-    GaussianNoiseTransform(mu, 0.,recompute_normals=True)
+    #GaussianNoiseTransform(mu, 0.,recompute_normals=True)
     ])
 
-random_rotate_10 = Compose([
-    RandomRotate(degrees=0, axis=0),
-    RandomRotate(degrees=0, axis=1),
-    RandomRotate(degrees=0, axis=2),
-    ])
+# random_rotate_10 = Compose([
+#     RandomRotate(degrees=0, axis=0),
+#     RandomRotate(degrees=0, axis=1),
+#     RandomRotate(degrees=0, axis=2),
+#     ])
 
-test_transform_10 = Compose([
-    random_rotate_10,
-    SamplePoints(num_points, include_normals=True),
-    NormalizeScale(),
-    GaussianNoiseTransform(mu, 0.05,recompute_normals=True)
-    ])
+# test_transform_10 = Compose([
+#     random_rotate_10,
+#     SamplePoints(num_points, include_normals=True),
+#     NormalizeScale(),
+#     GaussianNoiseTransform(mu, 0.05,recompute_normals=True)
+#     ])
 
-random_rotate_20 = Compose([
-    RandomRotate(degrees=0, axis=0),
-    RandomRotate(degrees=0, axis=1),
-    RandomRotate(degrees=0, axis=2),
-    ])
+# random_rotate_20 = Compose([
+#     RandomRotate(degrees=0, axis=0),
+#     RandomRotate(degrees=0, axis=1),
+#     RandomRotate(degrees=0, axis=2),
+#     ])
 
-test_transform_20 = Compose([
-    random_rotate_20,
-    SamplePoints(num_points, include_normals=True),
-    NormalizeScale(),
-    GaussianNoiseTransform(mu, 0.08,recompute_normals=True)
-    ])
+# test_transform_20 = Compose([
+#     random_rotate_20,
+#     SamplePoints(num_points, include_normals=True),
+#     NormalizeScale(),
+#     GaussianNoiseTransform(mu, 0.08,recompute_normals=True)
+#     ])
 
 
 train_dataset_0 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_0)
 test_dataset_0 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_0)
 
-train_dataset_10 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_10)
-test_dataset_10 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_10)
+# train_dataset_10 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_10)
+# test_dataset_10 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_10)
 
-train_dataset_20 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_20)
-test_dataset_20 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_20)
+# train_dataset_20 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_20)
+# test_dataset_20 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_20)
 
 
 
@@ -385,11 +385,11 @@ test_dataset_20 = ModelNet(root=root, name=str(modelnet_num), train=False, trans
 train_loader_0 = DataLoader(train_dataset_0, batch_size=batch_size, shuffle=True, pin_memory=True)
 test_loader_0  = DataLoader(test_dataset_0, batch_size=batch_size)
 
-train_loader_10 = DataLoader(train_dataset_10, batch_size=batch_size, shuffle=True, pin_memory=True)
-test_loader_10  = DataLoader(test_dataset_10, batch_size=batch_size)
+# train_loader_10 = DataLoader(train_dataset_10, batch_size=batch_size, shuffle=True, pin_memory=True)
+# test_loader_10  = DataLoader(test_dataset_10, batch_size=batch_size)
 
-train_loader_20 = DataLoader(train_dataset_20, batch_size=batch_size, shuffle=True, pin_memory=True)
-test_loader_20  = DataLoader(test_dataset_20, batch_size=batch_size)
+# train_loader_20 = DataLoader(train_dataset_20, batch_size=batch_size, shuffle=True, pin_memory=True)
+# test_loader_20  = DataLoader(test_dataset_20, batch_size=batch_size)
 
 ###############################################################################
 
@@ -411,19 +411,19 @@ for epoch in range(1, num_epochs+1):
     loss_tr=loss_tr+train_loss
     acc_tr=train_acc
 
-    train_start_time = time.time()
-    train_loss,train_acc = train(model, optimizer, train_loader_10, regularization=regularization)
-    train_stop_time = time.time()
+    # train_start_time = time.time()
+    # train_loss,train_acc = train(model, optimizer, train_loader_10, regularization=regularization)
+    # train_stop_time = time.time()
 
-    loss_tr=loss_tr+train_loss
-    acc_tr=train_acc
+    # loss_tr=loss_tr+train_loss
+    # acc_tr=train_acc
 
-    train_start_time = time.time()
-    train_loss,train_acc = train(model, optimizer, train_loader_20, regularization=regularization)
-    train_stop_time = time.time()
+    # train_start_time = time.time()
+    # train_loss,train_acc = train(model, optimizer, train_loader_20, regularization=regularization)
+    # train_stop_time = time.time()
 
-    loss_tr=loss_tr+train_loss
-    acc_tr=train_acc
+    # loss_tr=loss_tr+train_loss
+    # acc_tr=train_acc
 
     test_start_time = time.time()
     test_loss,test_acc = test(model, test_loader_0)
@@ -432,24 +432,24 @@ for epoch in range(1, num_epochs+1):
     loss_t=loss_t+test_loss
     acc_t=acc_t+test_acc
 
-    test_start_time = time.time()
-    test_loss,test_acc = test(model, test_loader_10)
-    test_stop_time = time.time()
+    # test_start_time = time.time()
+    # test_loss,test_acc = test(model, test_loader_10)
+    # test_stop_time = time.time()
 
-    loss_t=loss_t+test_loss
-    acc_t=acc_t+test_acc
+    # loss_t=loss_t+test_loss
+    # acc_t=acc_t+test_acc
 
-    test_start_time = time.time()
-    test_loss,test_acc = test(model, test_loader_20)
-    test_stop_time = time.time()
+    # test_start_time = time.time()
+    # test_loss,test_acc = test(model, test_loader_20)
+    # test_stop_time = time.time()
 
-    loss_t=loss_t+test_loss
-    acc_t=acc_t+test_acc
+    # loss_t=loss_t+test_loss
+    # acc_t=acc_t+test_acc
 
-    train_loss=loss_tr/3
-    test_loss=loss_t/3
-    test_acc=acc_t/3
-    train_acc=acc_tr/3
+    # train_loss=loss_tr/3
+    # test_loss=loss_t/3
+    # test_acc=acc_t/3
+    # train_acc=acc_tr/3
  
 
     # train_start_time = time.time()

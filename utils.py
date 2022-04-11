@@ -146,8 +146,15 @@ def get_weights(dataset, num_points=2048, nr_classes=40):
     for data in dataset:
         y[i:num_points+i] = data.y
         i += num_points
+
     weights = class_weight.compute_class_weight(
-        'balanced', np.unique(y), y)
+        class_weight = "balanced",
+        classes = np.unique(y),
+        y =  y 
+    )
+
+    #weights = dict(zip(np.unique(y), weights))
+
     return weights
 
 

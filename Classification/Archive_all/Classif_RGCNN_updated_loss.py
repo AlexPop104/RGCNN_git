@@ -11,6 +11,8 @@ writer = SummaryWriter()
 
 from torch.nn import Parameter
 
+from torch import float32, nn
+
 from torch_geometric.datasets import ModelNet
 from torch_geometric.transforms import Compose
 from torch_geometric.transforms import SamplePoints
@@ -58,7 +60,7 @@ random.seed(0)
 
 
 class cls_model(nn.Module):
-    def __init__(self, vertice ,F, K, M, class_num, regularization=0,  dropout=1, reg_prior:bool=True, b2relu=True,input_dim=6, fc_bias=True):
+    def __init__(self, vertice ,F, K, M, class_num, regularization=0,  dropout=1, reg_prior:bool=True, b2relu=True,input_dim=6, fc_bias=True,recompute_L=False):
         assert len(F) == len(K)
         super(cls_model, self).__init__()
 
@@ -66,16 +68,19 @@ class cls_model(nn.Module):
         self.K = K
         self.M = M
 
-        self.max_pool = nn.MaxPool1d(self.vertice)
+        
         
         self.reg_prior = reg_prior
         self.vertice = vertice
         self.regularization = regularization    # gamma from the paper: 10^-9
-        #self.dropout = dropout
+        self.dropout = dropout
         self.regularizers = []
+        self.recompute_L = recompute_L
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
         self.relus = self.F + self.M
+
+        self.max_pool = nn.MaxPool1d(self.vertice)
 
         if b2relu:
             self.bias_relus = nn.ParameterList([
@@ -102,27 +107,27 @@ class cls_model(nn.Module):
         self.L = []
         self.x = []
 
-        def b1relu(self, x, bias):
-            return relu(x + bias)
+    def b1relu(self, x, bias):
+        return relu(x + bias)
     
-        def brelu(self, x, bias):
-            return relu(x + bias)
+    def brelu(self, x, bias):
+        return relu(x + bias)
 
-        def get_laplacian(self, x):
-            with torch.no_grad():
-                return util_functions.get_laplacian(util_functions.pairwise_distance(x))
+    def get_laplacian(self, x):
+        with torch.no_grad():
+            return util_functions.get_laplacian(util_functions.pairwise_distance(x))
         
-        @torch.no_grad()
-        def append_regularization_terms(self, x, L):
-            if self.reg_prior:
-                self.L.append(L)
-                self.x.append(x)
+    @torch.no_grad()
+    def append_regularization_terms(self, x, L):
+        if self.reg_prior:
+            self.L.append(L)
+            self.x.append(x)
 
     
-        @torch.no_grad()
-        def reset_regularization_terms(self):
-            self.L = []
-            self.x = []
+    @torch.no_grad()
+    def reset_regularization_terms(self):
+        self.L = []
+        self.x = []
 
         
     def forward(self, x):
@@ -153,7 +158,7 @@ class cls_model(nn.Module):
 
 #criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 
-def train(model, optimizer, loader, regularization):
+def train(model, optimizer, loader, regularization, criterion):
     model.train()
     total_loss = 0
     total_correct = 0
@@ -163,14 +168,21 @@ def train(model, optimizer, loader, regularization):
         x = torch.cat([data.pos, data.normal], dim=1)   
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
+        
+
         logits,  out, L  = model(x=x.to(device))
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == data.y.to(device)).sum())
 
-        
-        logits = logits.permute([0, 2, 1])
+        logits=logits.squeeze(0)
 
-        loss = util_functions.compute_loss(logits, data.y.to(device), out, L, criterion, s=regularization)
+        #logits = logits.permute([1, 0])
+
+
+        #logits = logits.permute([0, 2, 1])
+
+        y = data.y.type(torch.LongTensor)
+        loss = util_functions.compute_loss(logits, y, out, L, criterion, s=regularization)
 
         loss.backward()
         optimizer.step()
@@ -179,7 +191,7 @@ def train(model, optimizer, loader, regularization):
     return total_loss / len(loader.dataset) , total_correct / len(loader.dataset) 
 
 @torch.no_grad()
-def test(model, loader):
+def test(model, loader, criterion):
     model.eval()
 
     total_loss = 0
@@ -189,44 +201,20 @@ def test(model, loader):
         x = torch.cat([data.pos, data.normal], dim=1)   
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
 
-        logits, regularizers  = model(x=x.to(device))
-        loss    = criterion(logits, data.y.to(device))
-
-        
-        total_loss += loss.item() * data.num_graphs
-       
+        logits,  out, L  = model(x=x.to(device))
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == data.y.to(device)).sum())
 
-    return total_loss / len(loader.dataset) , total_correct / len(loader.dataset) 
+        # logits = logits.permute([0, 2, 1])
 
-def createConfusionMatrix(model,loader):
-    y_pred = [] # save predction
-    y_true = [] # save ground truth
+        # loss = util_functions.compute_loss(logits, data.y.to(device), out, L, criterion, s=regularization)
 
-    # iterate over data
-    for  data in loader:
-        x = torch.cat([data.pos, data.normal], dim=1)
-        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
-
-        # x=data.pos
-        # x=x.reshape(data.batch.unique().shape[0], num_points, 3)
-        logits, _ = model(x.to(device))
-        pred = logits.argmax(dim=-1)
+        # total_loss += loss.item() * data.num_graphs
+       
         
-        output = pred.cpu().numpy()
-        y_pred.extend(output)  # save prediction
 
-        labels = data.y.cpu().numpy()
-        y_true.extend(labels)  # save ground truth
-
-   
-    # Build confusion matrix
-    cf_matrix = confusion_matrix(y_true, y_pred,normalize='true')
-    df_cm = pd.DataFrame(cf_matrix, index=[i for i in range(40)],
-                         columns=[i for i in range(40)])
-    plt.figure(figsize=(50, 50))    
-    return sn.heatmap(df_cm, annot=True).get_figure()
+    return 0 , total_correct / len(loader.dataset) 
+    #return total_loss / len(loader.dataset) , total_correct / len(loader.dataset) 
 
 
 now = datetime.now()
@@ -257,13 +245,26 @@ root = "/mnt/ssd1/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
 #root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
 #print(root)
 
-model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, reg_prior=True)
+#model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, reg_prior=True)
+
+model = cls_model(num_points, F, K, M,
+                      class_num= modelnet_num,
+                      dropout=dropout, 
+                      reg_prior=True, 
+                      recompute_L=True,  
+                      b2relu=False)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = model.to(device)
 
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
+
+
+#criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
+
+
+
+
 my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
 regularization = 1e-9
 
@@ -300,44 +301,44 @@ test_transform_0 = Compose([
     random_rotate_0,
     SamplePoints(num_points, include_normals=True),
     NormalizeScale(),
-    GaussianNoiseTransform(mu, 0.,recompute_normals=True)
+    #GaussianNoiseTransform(mu, 0.,recompute_normals=True)
     ])
 
-random_rotate_10 = Compose([
-    RandomRotate(degrees=0, axis=0),
-    RandomRotate(degrees=0, axis=1),
-    RandomRotate(degrees=0, axis=2),
-    ])
+# random_rotate_10 = Compose([
+#     RandomRotate(degrees=0, axis=0),
+#     RandomRotate(degrees=0, axis=1),
+#     RandomRotate(degrees=0, axis=2),
+#     ])
 
-test_transform_10 = Compose([
-    random_rotate_10,
-    SamplePoints(num_points, include_normals=True),
-    NormalizeScale(),
-    GaussianNoiseTransform(mu, 0.05,recompute_normals=True)
-    ])
+# test_transform_10 = Compose([
+#     random_rotate_10,
+#     SamplePoints(num_points, include_normals=True),
+#     NormalizeScale(),
+#     GaussianNoiseTransform(mu, 0.05,recompute_normals=True)
+#     ])
 
-random_rotate_20 = Compose([
-    RandomRotate(degrees=0, axis=0),
-    RandomRotate(degrees=0, axis=1),
-    RandomRotate(degrees=0, axis=2),
-    ])
+# random_rotate_20 = Compose([
+#     RandomRotate(degrees=0, axis=0),
+#     RandomRotate(degrees=0, axis=1),
+#     RandomRotate(degrees=0, axis=2),
+#     ])
 
-test_transform_20 = Compose([
-    random_rotate_20,
-    SamplePoints(num_points, include_normals=True),
-    NormalizeScale(),
-    GaussianNoiseTransform(mu, 0.08,recompute_normals=True)
-    ])
+# test_transform_20 = Compose([
+#     random_rotate_20,
+#     SamplePoints(num_points, include_normals=True),
+#     NormalizeScale(),
+#     GaussianNoiseTransform(mu, 0.08,recompute_normals=True)
+#     ])
 
 
 train_dataset_0 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_0)
 test_dataset_0 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_0)
 
-train_dataset_10 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_10)
-test_dataset_10 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_10)
+# train_dataset_10 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_10)
+# test_dataset_10 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_10)
 
-train_dataset_20 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_20)
-test_dataset_20 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_20)
+# train_dataset_20 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_20)
+# test_dataset_20 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_20)
 
 
 
@@ -346,14 +347,16 @@ test_dataset_20 = ModelNet(root=root, name=str(modelnet_num), train=False, trans
 train_loader_0 = DataLoader(train_dataset_0, batch_size=batch_size, shuffle=True, pin_memory=True)
 test_loader_0  = DataLoader(test_dataset_0, batch_size=batch_size)
 
-train_loader_10 = DataLoader(train_dataset_10, batch_size=batch_size, shuffle=True, pin_memory=True)
-test_loader_10  = DataLoader(test_dataset_10, batch_size=batch_size)
+# train_loader_10 = DataLoader(train_dataset_10, batch_size=batch_size, shuffle=True, pin_memory=True)
+# test_loader_10  = DataLoader(test_dataset_10, batch_size=batch_size)
 
-train_loader_20 = DataLoader(train_dataset_20, batch_size=batch_size, shuffle=True, pin_memory=True)
-test_loader_20  = DataLoader(test_dataset_20, batch_size=batch_size)
+# train_loader_20 = DataLoader(train_dataset_20, batch_size=batch_size, shuffle=True, pin_memory=True)
+# test_loader_20  = DataLoader(test_dataset_20, batch_size=batch_size)
 
 ###############################################################################
 
+weights = util_functions.get_weights(train_dataset_0,num_points=num_points,nr_classes=modelnet_num)
+criterion = torch.nn.CrossEntropyLoss(weight=torch.tensor(weights, dtype=float32).to('cuda'))  # Define loss criterion.
 
 for epoch in range(1, num_epochs+1):
 
@@ -366,51 +369,51 @@ for epoch in range(1, num_epochs+1):
     acc_tr=0
 
     train_start_time = time.time()
-    train_loss,train_acc = train(model, optimizer, train_loader_0, regularization=regularization)
+    train_loss,train_acc = train(model, optimizer, train_loader_0, regularization=regularization,criterion=criterion)
     train_stop_time = time.time()
 
     loss_tr=loss_tr+train_loss
-    acc_tr=train_acc
+    acc_tr=acc_tr+train_acc
 
-    train_start_time = time.time()
-    train_loss,train_acc = train(model, optimizer, train_loader_10, regularization=regularization)
-    train_stop_time = time.time()
+    # train_start_time = time.time()
+    # train_loss,train_acc = train(model, optimizer, train_loader_10, regularization=regularization,criterion=criterion)
+    # train_stop_time = time.time()
 
-    loss_tr=loss_tr+train_loss
-    acc_tr=train_acc
+    # loss_tr=loss_tr+train_loss
+    # acc_tr=acc_tr+train_acc
 
-    train_start_time = time.time()
-    train_loss,train_acc = train(model, optimizer, train_loader_20, regularization=regularization)
-    train_stop_time = time.time()
+    # train_start_time = time.time()
+    # train_loss,train_acc = train(model, optimizer, train_loader_20, regularization=regularization,criterion=criterion)
+    # train_stop_time = time.time()
 
-    loss_tr=loss_tr+train_loss
-    acc_tr=train_acc
+    # loss_tr=loss_tr+train_loss
+    # acc_tr=acc_tr+train_acc
 
     test_start_time = time.time()
-    test_loss,test_acc = test(model, test_loader_0)
+    test_loss,test_acc = test(model, test_loader_0,criterion=criterion)
     test_stop_time = time.time()
 
     loss_t=loss_t+test_loss
     acc_t=acc_t+test_acc
 
-    test_start_time = time.time()
-    test_loss,test_acc = test(model, test_loader_10)
-    test_stop_time = time.time()
+    # test_start_time = time.time()
+    # test_loss,test_acc = test(model, test_loader_10,criterion=criterion)
+    # test_stop_time = time.time()
 
-    loss_t=loss_t+test_loss
-    acc_t=acc_t+test_acc
+    # loss_t=loss_t+test_loss
+    # acc_t=acc_t+test_acc
 
-    test_start_time = time.time()
-    test_loss,test_acc = test(model, test_loader_20)
-    test_stop_time = time.time()
+    # test_start_time = time.time()
+    # test_loss,test_acc = test(model, test_loader_20,criterion=criterion)
+    # test_stop_time = time.time()
 
-    loss_t=loss_t+test_loss
-    acc_t=acc_t+test_acc
+    # loss_t=loss_t+test_loss
+    # acc_t=acc_t+test_acc
 
-    train_loss=loss_tr/3
-    test_loss=loss_t/3
-    test_acc=acc_t/3
-    train_acc=acc_tr/3
+    # train_loss=loss_tr/3
+    # test_loss=loss_t/3
+    # test_acc=acc_t/3
+    # train_acc=acc_tr/3
  
 
     # train_start_time = time.time()
