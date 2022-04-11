@@ -256,7 +256,8 @@ if __name__ == '__main__':
         
     transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
-    root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+    root = "/mnt/ssd1/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+    #root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
     print(root)
     dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
     dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms)

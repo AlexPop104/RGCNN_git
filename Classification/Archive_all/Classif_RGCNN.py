@@ -25,10 +25,8 @@ from torch_geometric.utils import (add_self_loops, get_laplacian,
 
 from torch_geometric.utils import get_laplacian as get_laplacian_pyg
 
-from noise_transform import GaussianNoiseTransform
-
-
-import ChebConv_rgcnn_functions as conv
+#from noise_transform import GaussianNoiseTransform
+#import ChebConv_rgcnn_functions as conv
 import os
 
 
@@ -44,6 +42,13 @@ import numpy as np
 
 import matplotlib.pyplot
 from mpl_toolkits.mplot3d import Axes3D
+
+import sys
+sys.path.insert(1, '/home/alex/Alex_documents/RGCNN_git/')
+
+from utils import GaussianNoiseTransform
+import utils as util_functions
+
 
 import random
 random.seed(0)
@@ -75,41 +80,9 @@ class cls_model(nn.Module):
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
 
-
-        # self.fc_test_1 = nn.Linear(7, 64, bias=True)
-        # self.fc_test_2 = nn.Linear(64, 128, bias=True)
-        # self.fc_test_3 = nn.Linear(128,256,bias=True)
-        # self.relu_test_1 = nn.ReLU()
-        # self.relu_test_2 = nn.ReLU()
-        # self.relu_test_3 = nn.ReLU()
-
-
-
-
-        # self.conv1 = conv.DenseChebConv(3, 128, 6)
-        # self.conv1 = conv.DenseChebConv(6, 128, 6)
-
-        # self.conv1 = conv.DenseChebConvV2(6, 128, 3)
-        # self.conv2 = conv.DenseChebConvV2(128,512, 3)
-        # self.conv3 = conv.DenseChebConvV2(512,1024, 3)
-
-        # self.conv1 = conv.DenseChebConv_small_linear(6, 128, 3)
-        # self.conv2 = conv.DenseChebConv_small_linear(128,512, 3)
-        # self.conv3 = conv.DenseChebConv_small_linear(512,1024, 3)
-
-
-        # self.conv1 = conv.DenseChebConv_theta_and_sum(6, 128, 3)
-        # self.conv2 = conv.DenseChebConv_theta_and_sum(128,512, 3)
-        # self.conv3 = conv.DenseChebConv_theta_and_sum(512,1024, 3)
-
-        # self.conv1 = conv.DenseChebConv_theta_nosum(6, 128, 3)
-        # self.conv2 = conv.DenseChebConv_theta_nosum(128,512, 3)
-        # self.conv3 = conv.DenseChebConv_theta_nosum(512,1024, 3)
-
-
-        self.conv1 = conv.DenseChebConv(6, 128, 3)
-        self.conv2 = conv.DenseChebConv(128,512, 3)
-        self.conv3 = conv.DenseChebConv(512,1024, 3)
+        self.conv1 = util_functions.DenseChebConvV2(6, 128, 3)
+        self.conv2 = util_functions.DenseChebConvV2(128,512, 3)
+        self.conv3 = util_functions.DenseChebConvV2(512,1024, 3)
 
         self.fc1 = nn.Linear(1024, 512, bias=True)
         self.fc2 = nn.Linear(512, 128, bias=True)
@@ -126,8 +99,8 @@ class cls_model(nn.Module):
     #def forward(self, x,x2):
         self.regularizers = []
         with torch.no_grad():
-            L = conv.pairwise_distance(x) # W - weight matrix
-            L = conv.get_laplacian(L)
+            L = util_functions.pairwise_distance(x) # W - weight matrix
+            L = util_functions.get_laplacian(L)
 
         out = self.conv1(x, L)
         out = self.relu1(out)
@@ -137,8 +110,8 @@ class cls_model(nn.Module):
         
        
         with torch.no_grad():
-            L = conv.pairwise_distance(out) # W - weight matrix
-            L = conv.get_laplacian(L)
+            L = util_functions.pairwise_distance(out) # W - weight matrix
+            L = util_functions.get_laplacian(L)
         
         out = self.conv2(out, L)
         out = self.relu2(out)
@@ -146,8 +119,8 @@ class cls_model(nn.Module):
             self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
         with torch.no_grad():
-            L = conv.pairwise_distance(out) # W - weight matrix
-            L = conv.get_laplacian(L)
+            L = util_functions.pairwise_distance(out) # W - weight matrix
+            L = util_functions.get_laplacian(L)
         
         out = self.conv3(out, L)
         out = self.relu3(out)
@@ -156,32 +129,7 @@ class cls_model(nn.Module):
             self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
         out, _ = t.max(out, 1)
-        #################################################################################
-        #Test fully connected
-        
-        # out = self.fc_test_1(x)
-
-        # if self.reg_prior:
-        #     self.regularizers.append(t.linalg.norm(self.fc_test_1.weight.data[0]) ** 2)
-        #     self.regularizers.append(t.linalg.norm(self.fc_test_1.bias.data[0]) ** 2)
-
-        # out = self.relu_test_1(out)
-        # #out = self.dropout(out)
-
-        # out = self.fc_test_2(out)
-        # if self.reg_prior:
-        #     self.regularizers.append(t.linalg.norm(self.fc_test_2.weight.data[0]) ** 2)
-        #     self.regularizers.append(t.linalg.norm(self.fc_test_2.bias.data[0]) ** 2)
-        # out = self.relu_test_2(out)
-        # #out = self.dropout(out)
-
-        # out = self.fc_test_3(out)
-        # if self.reg_prior:
-        #     self.regularizers.append(t.linalg.norm(self.fc_test_3.weight.data[0]) ** 2)
-        #     self.regularizers.append(t.linalg.norm(self.fc_test_3.bias.data[0]) ** 2)
-        
-        # out, _ = t.max(out, 1)
-
+       
         # ~~~~ Fully Connected ~~~~
         
         out = self.fc1(out)

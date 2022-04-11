@@ -26,13 +26,19 @@ from torch_geometric.transforms import RandomRotate
 from torch_geometric.transforms import NormalizeScale
 from torch_geometric.loader import DataLoader
 
-from noise_transform import GaussianNoiseTransform
+# from noise_transform import GaussianNoiseTransform
 
-import ChebConv_rgcnn_functions as conv
+# import ChebConv_rgcnn_functions as conv
 
 from torch.optim import lr_scheduler
 
 import os
+
+import sys
+sys.path.insert(1, '/home/alex/Alex_documents/RGCNN_git/')
+
+from utils import GaussianNoiseTransform
+import utils as util_functions
 
 import random
 random.seed(0)
@@ -118,7 +124,7 @@ class PointNet(nn.Module):
         self.fc2 = nn.Linear(512, 256)
         self.fc3 = nn.Linear(256, num_classes)
         
-        self.RGCNN_conv=conv.DenseChebConv(128,1024,3)
+        self.RGCNN_conv=util_functions.DenseChebConvV2(128,1024,3)
         self.relu_rgcnn=torch.nn.ReLU()
         self.bn1 = nn.BatchNorm1d(512)
         self.bn2 = nn.BatchNorm1d(256)
@@ -131,7 +137,7 @@ class PointNet(nn.Module):
         xb=torch.permute(xb,(0,2,1))
 
         with torch.no_grad():
-            L = conv.pairwise_distance(xb) # W - weight matrix
+            L = util_functions.pairwise_distance(xb) # W - weight matrix
             # for it_pcd in range(1):
             #     viz_points_2=input[it_pcd,:,:]
             #     viz_points_2=torch.permute(viz_points_2,(1,0))
@@ -139,7 +145,7 @@ class PointNet(nn.Module):
             #     threshold=0.3
             #     conv.view_graph(viz_points_2,distances,threshold,1)
             # plt.show()
-            L = conv.get_laplacian(L)
+            L = util_functions.get_laplacian(L)
 
         xb = self.RGCNN_conv(xb, L)
         xb = self.relu_rgcnn(xb)
@@ -257,7 +263,8 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 print(f"Training on {device}")
 
-root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+root = "/mnt/ssd1/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+#root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
 
 model = PointNet(num_classes=modelnet_num,nr_features=nr_features)
 model = model.to(device)
