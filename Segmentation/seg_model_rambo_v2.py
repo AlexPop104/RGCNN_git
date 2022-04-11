@@ -356,3 +356,6 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     
     start_training(model, train_loader, test_loader, optimizer, epochs=num_epochs, criterion=criterion)
+
+# New branch
+# here
