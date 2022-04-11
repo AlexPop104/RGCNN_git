@@ -344,7 +344,8 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 print(f"Training on {device}")
 
-root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+root = "/mnt/ssd1/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+#root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
 #print(root)
 
 model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, reg_prior=True)
