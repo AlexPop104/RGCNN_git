@@ -315,14 +315,54 @@ test_transform_0 = Compose([
     #GaussianNoiseTransform(mu, 0.,recompute_normals=True)
     ])
 
+random_rotate_10 = Compose([
+    RandomRotate(degrees=0, axis=0),
+    RandomRotate(degrees=0, axis=1),
+    RandomRotate(degrees=0, axis=2),
+    ])
+
+test_transform_10 = Compose([
+    random_rotate_10,
+    SamplePoints(num_points, include_normals=True),
+    NormalizeScale(),
+    GaussianNoiseTransform(mu, 0.05,recompute_normals=True)
+    ])
+
+random_rotate_20 = Compose([
+    RandomRotate(degrees=0, axis=0),
+    RandomRotate(degrees=0, axis=1),
+    RandomRotate(degrees=0, axis=2),
+    ])
+
+test_transform_20 = Compose([
+    random_rotate_20,
+    SamplePoints(num_points, include_normals=True),
+    NormalizeScale(),
+    GaussianNoiseTransform(mu, 0.08,recompute_normals=True)
+    ])
+
+
 train_dataset_0 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_0)
 test_dataset_0 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_0)
+
+train_dataset_10 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_10)
+test_dataset_10 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_10)
+
+train_dataset_20 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_20)
+test_dataset_20 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_20)
+
+
 
 ###############################################################################
 
 train_loader_0 = DataLoader(train_dataset_0, batch_size=batch_size, shuffle=True, pin_memory=True)
 test_loader_0  = DataLoader(test_dataset_0, batch_size=batch_size)
 
+train_loader_10 = DataLoader(train_dataset_10, batch_size=batch_size, shuffle=True, pin_memory=True)
+test_loader_10  = DataLoader(test_dataset_10, batch_size=batch_size)
+
+train_loader_20 = DataLoader(train_dataset_20, batch_size=batch_size, shuffle=True, pin_memory=True)
+test_loader_20  = DataLoader(test_dataset_20, batch_size=batch_size)
 
 ###############################################################################
 
@@ -338,12 +378,25 @@ for epoch in range(1, num_epochs+1):
     acc_tr=0
 
     train_start_time = time.time()
-    train_loss,train_acc = train(model=model, optimizer=optimizer, loader=train_loader_0, regularization=regularization,criterion=criterion,num_points=num_points,device=device)
+    train_loss,train_acc = train(model=model, optimizer=optimizer, loader=train_loader_0, regularization=regularization,num_points=num_points,criterion=criterion, device=device)
     train_stop_time = time.time()
 
     loss_tr=loss_tr+train_loss
     acc_tr=acc_tr+train_acc
 
+    train_start_time = time.time()
+    train_loss,train_acc = train(model=model, optimizer=optimizer, loader=train_loader_10, regularization=regularization,num_points=num_points,criterion=criterion, device=device)
+    train_stop_time = time.time()
+
+    loss_tr=loss_tr+train_loss
+    acc_tr=acc_tr+train_acc
+
+    train_start_time = time.time()
+    train_loss,train_acc = train(model=model, optimizer=optimizer, loader=train_loader_20, regularization=regularization,num_points=num_points,criterion=criterion, device=device)
+    train_stop_time = time.time()
+
+    loss_tr=loss_tr+train_loss
+    acc_tr=acc_tr+train_acc
 
     test_start_time = time.time()
     test_loss,test_acc = test(model=model, loader=test_loader_0,num_points=num_points,criterion=criterion,device=device)
@@ -351,6 +404,28 @@ for epoch in range(1, num_epochs+1):
 
     loss_t=loss_t+test_loss
     acc_t=acc_t+test_acc
+
+    test_start_time = time.time()
+    test_loss,test_acc = test(model=model, loader=test_loader_10,num_points=num_points,criterion=criterion,device=device)
+    test_stop_time = time.time()
+
+    loss_t=loss_t+test_loss
+    acc_t=acc_t+test_acc
+
+    test_start_time = time.time()
+    test_loss,test_acc = test(model=model, loader=test_loader_20,num_points=num_points,criterion=criterion,device=device)
+    test_stop_time = time.time()
+
+    loss_t=loss_t+test_loss
+    acc_t=acc_t+test_acc
+
+    train_loss=loss_tr/3
+    test_loss=loss_t/3
+    test_acc=acc_t/3
+    train_acc=acc_tr/3
+ 
+
+
 
     #conv.test_pcd_pred(model=model,loader=train_loader,num_points=num_points,device=device)
 

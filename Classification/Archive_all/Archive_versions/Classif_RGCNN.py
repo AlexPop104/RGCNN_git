@@ -378,14 +378,14 @@ for epoch in range(1, num_epochs+1):
     # train_stop_time = time.time()
 
     # loss_tr=loss_tr+train_loss
-    # acc_tr=train_acc
+    # acc_tr=acc_tr+train_acc
 
     # train_start_time = time.time()
     # train_loss,train_acc = train(model, optimizer, train_loader_20, regularization=regularization)
     # train_stop_time = time.time()
 
     # loss_tr=loss_tr+train_loss
-    # acc_tr=train_acc
+    # acc_tr=acc_tr+train_acc
 
     test_start_time = time.time()
     test_loss,test_acc = test(model, test_loader_0)
