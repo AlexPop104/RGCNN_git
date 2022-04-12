@@ -51,10 +51,10 @@ class DenseChebConv(nn.Module):
                 f'{self.out_channels}, K={self.K}, '
                 f'normalization={self.normalization})')
 
-class DenseChebConvV2(nn.Module):
+class DenseChebConvV2_old(nn.Module):
     def __init__(self, in_channels: int, out_channels: int, K: int, normalization: Optional[bool]=True, bias: bool=False, **kwargs):
         assert K > 0
-        super(DenseChebConvV2, self).__init__()
+        super(DenseChebConvV2_old, self).__init__()
         self.K = K
         self.in_channels = in_channels
         self.out_channels = out_channels

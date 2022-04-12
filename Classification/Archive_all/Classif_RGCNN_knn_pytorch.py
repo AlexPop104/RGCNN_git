@@ -37,20 +37,24 @@ import seaborn as sn
 import pandas as pd
 import numpy as np
 
+import sys
+sys.path.insert(1, '/home/alex/Alex_documents/RGCNN_git/')
+
+from utils import GaussianNoiseTransform
+import utils as util_functions
+
 from torch_cluster import knn_graph
 
 
 
 class cls_model(nn.Module):
-    def __init__(self, vertice ,F, K, M, class_num, regularization=0, one_layer=True, dropout=0, reg_prior:bool=True):
+    def __init__(self, vertice ,F, K, M, class_num, regularization=0,  dropout=0, reg_prior:bool=True):
         assert len(F) == len(K)
         super(cls_model, self).__init__()
 
         self.F = F
         self.K = K
         self.M = M
-
-        self.one_layer = one_layer
 
         self.reg_prior = reg_prior
         self.vertice = vertice
@@ -66,9 +70,9 @@ class cls_model(nn.Module):
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
-        self.conv1 = conv.DenseChebConv(6, 128, 3)
-        self.conv2 = conv.DenseChebConv(128, 512, 3)
-        self.conv3 = conv.DenseChebConv(512, 1024, 3)
+        self.conv1 = util_functions.DenseChebConvV2(6, 128, 3)
+        self.conv2 = util_functions.DenseChebConvV2(128, 512, 3)
+        self.conv3 = util_functions.DenseChebConvV2(512, 1024, 3)
         
         self.fc1 = nn.Linear(1024, 512, bias=True)
         self.fc2 = nn.Linear(512, 128, bias=True)
@@ -78,16 +82,12 @@ class cls_model(nn.Module):
 
         self.max_pool = nn.MaxPool1d(self.vertice)
 
-        if one_layer == True:
-            self.fc = nn.Linear(128, class_num)
 
         self.regularizer = 0
         self.regularization = []
 
 
     def forward(self, x,k,batch_size,num_points,batch):
-
-        
 
         self.regularizers = []
         with torch.no_grad():
@@ -102,70 +102,65 @@ class cls_model(nn.Module):
         out = self.conv1(x, L)
         out = self.relu1(out)
 
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+ 
+        with torch.no_grad():
+            out=out.reshape(batch_size*num_points,out.shape[2])
+            L=conv.get_knn_adj_matrix_pytorch(x=out,batch=batch,k=k)
 
+            # L = conv.pairwise_distance(out) # W - weight matrix
+            # L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+            L = conv.get_laplacian(L)
+            out=out.reshape(batch_size,num_points,out.shape[1])
         
+        out = self.conv2(out, L)
+        out = self.relu2(out)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+
+        with torch.no_grad():
+            out=out.reshape(batch_size*num_points,out.shape[2])
+            L=conv.get_knn_adj_matrix_pytorch(x=out,batch=batch,k=k)
+
+            # L = conv.pairwise_distance(out) # W - weight matrix
+            # L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+            L = conv.get_laplacian(L)
+            out=out.reshape(batch_size,num_points,out.shape[1])
         
-        if self.one_layer == False:
-            with torch.no_grad():
-                out=out.reshape(batch_size*num_points,out.shape[2])
-                L=conv.get_knn_adj_matrix_pytorch(x=out,batch=batch,k=k)
+        plt.show()
+        out = self.conv3(out, L)
+        out = self.relu3(out)
+        
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
-                # L = conv.pairwise_distance(out) # W - weight matrix
-                # L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
-                L = conv.get_laplacian(L)
-                out=out.reshape(batch_size,num_points,out.shape[1])
-            
-            out = self.conv2(out, L)
-            out = self.relu2(out)
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
-    
-            with torch.no_grad():
-                out=out.reshape(batch_size*num_points,out.shape[2])
-                L=conv.get_knn_adj_matrix_pytorch(x=out,batch=batch,k=k)
+        out, _ = t.max(out, 1)
 
-                # L = conv.pairwise_distance(out) # W - weight matrix
-                # L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
-                L = conv.get_laplacian(L)
-                out=out.reshape(batch_size,num_points,out.shape[1])
-            
-            plt.show()
-            out = self.conv3(out, L)
-            out = self.relu3(out)
-            
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
-    
-            out, _ = t.max(out, 1)
+        # ~~~~ Fully Connected ~~~~
+        
+        out = self.fc1(out)
 
-            # ~~~~ Fully Connected ~~~~
-            
-            out = self.fc1(out)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
+        out = self.dropout(out)
+        out = self.relu4(out)
+       
 
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
+        out = self.fc2(out)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
+        out = self.dropout(out)
+        out = self.relu5(out)
 
-            out = self.relu4(out)
-            #out = self.dropout(out)
 
-            out = self.fc2(out)
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
-            out = self.relu5(out)
-            #out = self.dropout(out)
-
-            out = self.fc3(out)
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc3.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc3.bias.data[0]) ** 2)
-        else:
-            out, _ = t.max(out, 1)
-            out = self.fc(out)
-
+        out = self.fc3(out)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc3.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc3.bias.data[0]) ** 2)
+        
         return out, self.regularizers
 
 criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
@@ -244,6 +239,7 @@ if __name__ == '__main__':
     learning_rate = 1e-3
     modelnet_num = 40
     k_KNN=30
+    dropout=0.25
 
     F = [128, 512, 1024]  # Outputs size of convolutional filter.
     K = [6, 5, 3]         # Polynomial orders.
@@ -271,7 +267,7 @@ if __name__ == '__main__':
     train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
     test_loader  = DataLoader(dataset_test, batch_size=batch_size)
     
-    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False, reg_prior=True)
+    model = cls_model(num_points, F, K, M, modelnet_num, dropout=dropout, reg_prior=True)
     # path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/28_02_22_10:10:19/model50.pt"
     # model.load_state_dict(torch.load(path_saved_model))
     model = model.to(device)

@@ -23,13 +23,19 @@ import torch_geometric as tg
 from torch_geometric.utils import get_laplacian as get_laplacian_pyg
 from torch_geometric.transforms import Compose
 
-import ChebConv_rgcnn_functions as conv
+#import ChebConv_rgcnn_functions as conv
 import os
 from torch_geometric.transforms import NormalizeScale
 from torch_geometric.loader import DataLoader
 from datetime import datetime
 from torch.nn import MSELoss
 from torch.optim import lr_scheduler
+
+import sys
+sys.path.insert(1, '/home/alex/Alex_documents/RGCNN_git/')
+
+from utils import GaussianNoiseTransform
+import utils as util_functions
 
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
@@ -64,9 +70,9 @@ class cls_model(nn.Module):
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
-        self.conv1 = conv.DenseChebConv(6, 128, 3)
-        self.conv2 = conv.DenseChebConv(128, 512, 3)
-        self.conv3 = conv.DenseChebConv(512, 1024, 3)
+        self.conv1 = util_functions.DenseChebConvV2(6, 128, 3)
+        self.conv2 = util_functions.DenseChebConvV2(128, 512, 3)
+        self.conv3 = util_functions.DenseChebConvV2(512, 1024, 3)
         
         self.fc1 = nn.Linear(1024, 512, bias=True)
         self.fc2 = nn.Linear(512, 128, bias=True)
@@ -76,8 +82,6 @@ class cls_model(nn.Module):
 
         self.max_pool = nn.MaxPool1d(self.vertice)
 
-        if one_layer == True:
-            self.fc = nn.Linear(128, class_num)
 
         self.regularizer = 0
         self.regularization = []
@@ -86,66 +90,65 @@ class cls_model(nn.Module):
     def forward(self, x,k,batch_size,num_points):
         self.regularizers = []
         with torch.no_grad():
-            L = conv.pairwise_distance(x) # W - weight matrix
-            L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
-            L = conv.get_laplacian(L)
+            L = util_functions.pairwise_distance(x) # W - weight matrix
+            L = util_functions.get_one_matrix_knn(L, k,batch_size,num_points)
+            L = util_functions.get_laplacian(L)
 
         out = self.conv1(x, L)
         out = self.relu1(out)
 
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
         
-        if self.one_layer == False:
-            with torch.no_grad():
-                L = conv.pairwise_distance(out) # W - weight matrix
-                L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
-                L = conv.get_laplacian(L)
-            
-            out = self.conv2(out, L)
-            out = self.relu2(out)
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
     
-            with torch.no_grad():
-                L = conv.pairwise_distance(out) # W - weight matrix
-                L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
-                L = conv.get_laplacian(L)
-            
-            plt.show()
-            out = self.conv3(out, L)
-            out = self.relu3(out)
-            
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
-    
-            out, _ = t.max(out, 1)
+        with torch.no_grad():
+            L = util_functions.pairwise_distance(out) # W - weight matrix
+            L = util_functions.get_one_matrix_knn(L, k,batch_size,num_points)
+            L = util_functions.get_laplacian(L)
+        
+        out = self.conv2(out, L)
+        out = self.relu2(out)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
-            # ~~~~ Fully Connected ~~~~
-            
-            out = self.fc1(out)
+        with torch.no_grad():
+            L = util_functions.pairwise_distance(out) # W - weight matrix
+            L = util_functions.get_one_matrix_knn(L, k,batch_size,num_points)
+            L = util_functions.get_laplacian(L)
+        
+        plt.show()
+        out = self.conv3(out, L)
+        out = self.relu3(out)
+        
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
+        out, _ = t.max(out, 1)
 
-            out = self.relu4(out)
-            #out = self.dropout(out)
+        # ~~~~ Fully Connected ~~~~
+        
+        out = self.fc1(out)
 
-            out = self.fc2(out)
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
-            out = self.relu5(out)
-            #out = self.dropout(out)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
+        out = self.dropout(out)
+        out = self.relu4(out)
+        
 
-            out = self.fc3(out)
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc3.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc3.bias.data[0]) ** 2)
-        else:
-            out, _ = t.max(out, 1)
-            out = self.fc(out)
+        out = self.fc2(out)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
+        out = self.dropout(out)
+        out = self.relu5(out)
+        
+
+        out = self.fc3(out)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc3.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc3.bias.data[0]) ** 2)
+        
 
         return out, self.regularizers
 
@@ -224,6 +227,7 @@ if __name__ == '__main__':
     learning_rate = 1e-3
     modelnet_num = 40
     k_KNN=55
+    dropout=0.25
 
     F = [128, 512, 1024]  # Outputs size of convolutional filter.
     K = [6, 5, 3]         # Polynomial orders.
@@ -236,7 +240,8 @@ if __name__ == '__main__':
         
     transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
-    root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+    root = "/mnt/ssd1/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+    #root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
     print(root)
     dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
     dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms)
@@ -250,7 +255,7 @@ if __name__ == '__main__':
     train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
     test_loader  = DataLoader(dataset_test, batch_size=batch_size)
     
-    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False, reg_prior=True)
+    model = cls_model(num_points, F, K, M, modelnet_num, dropout=dropout,  reg_prior=True)
     # path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/28_02_22_10:10:19/model50.pt"
     # model.load_state_dict(torch.load(path_saved_model))
     model = model.to(device)

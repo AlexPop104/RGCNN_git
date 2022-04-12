@@ -1,5 +1,6 @@
 from torch_geometric.datasets import ModelNet
 from torch_geometric.datasets import GeometricShapes
+from torch.utils.data import Dataset, DataLoader
 
 class Modelnet_with_indices(Dataset):
     def __init__(self,root,modelnet_num,train_bool,transforms):
