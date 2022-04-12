@@ -68,8 +68,6 @@ class cls_model(nn.Module):
         self.K = K
         self.M = M
 
-        
-        
         self.reg_prior = reg_prior
         self.vertice = vertice
         self.regularization = regularization    # gamma from the paper: 10^-9
