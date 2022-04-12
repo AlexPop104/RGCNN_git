@@ -25,8 +25,8 @@ from torch_geometric.utils import (add_self_loops, get_laplacian,
 
 from torch_geometric.utils import get_laplacian as get_laplacian_pyg
 
-
-import ChebConv_rgcnn_functions as conv
+#from noise_transform import GaussianNoiseTransform
+#import ChebConv_rgcnn_functions as conv
 import os
 
 
@@ -42,6 +42,16 @@ import numpy as np
 
 import matplotlib.pyplot
 from mpl_toolkits.mplot3d import Axes3D
+
+import sys
+sys.path.insert(1, '/home/alex/Alex_documents/RGCNN_git/')
+
+from utils import GaussianNoiseTransform
+import utils as util_functions
+
+
+import random
+random.seed(0)
 
 
 
@@ -69,65 +79,73 @@ class cls_model(nn.Module):
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
-        self.conv1 = conv.DenseChebConv(6, 128, 3)
-        self.conv2 = conv.DenseChebConv(128,512, 3)
-           
+
+        self.conv1 = util_functions.DenseChebConvV2(6, 128, 3)
+        self.conv2 = util_functions.DenseChebConvV2(128,512, 3)
+       
         self.fc2 = nn.Linear(512, 128, bias=True)
         self.fc3 = nn.Linear(128, class_num, bias=True)
         
         self.max_pool = nn.MaxPool1d(self.vertice)
 
         self.regularizer = 0
-        self.regularization = []
-
-        
+        self.regularization = []             
 
     def forward(self, x):
     #def forward(self, x,x2):
         self.regularizers = []
         with torch.no_grad():
-            L = conv.pairwise_distance(x) # W - weight matrix
-            L = conv.get_laplacian(L)
+            L = util_functions.pairwise_distance(x) # W - weight matrix
+            L = util_functions.get_laplacian(L)
 
         out = self.conv1(x, L)
         out = self.relu1(out)
 
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+        # if self.reg_prior:
+
+        #     # self.L.append(L)
+        #     # self.x.append(out)
+
+        #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
         
        
         with torch.no_grad():
-            L = conv.pairwise_distance(out) # W - weight matrix
-            L = conv.get_laplacian(L)
+            L = util_functions.pairwise_distance(out) # W - weight matrix
+            L = util_functions.get_laplacian(L)
         
         out = self.conv2(out, L)
         out = self.relu2(out)
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
-        
+        # if self.reg_prior:
+        #     # self.L.append(L)
+        #     # self.x.append(out)
+
+        #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+
+       
 
         out, _ = t.max(out, 1)
-        #################################################################################
-        
+       
+        # ~~~~ Fully Connected ~~~~
 
         out = self.fc2(out)
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
-            self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
+        out = self.dropout(out)
         out = self.relu5(out)
         #out = self.dropout(out)
 
         out = self.fc3(out)
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(self.fc3.weight.data[0]) ** 2)
-            self.regularizers.append(t.linalg.norm(self.fc3.bias.data[0]) ** 2)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc3.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc3.bias.data[0]) ** 2)
         
         return out, self.regularizers
 
 criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 
-def train(model, optimizer, loader, regularization):
+def train(model, optimizer,num_points,criterion, loader, regularization,device):
     model.train()
     total_loss = 0
     total_correct = 0
@@ -143,34 +161,31 @@ def train(model, optimizer, loader, regularization):
         total_correct += int((pred == data.y.to(device)).sum())
         
         loss    = criterion(logits, data.y.to(device))
-        # s = t.sum(t.as_tensor(regularizers))
-        # loss = loss + regularization * s
+       
         loss.backward()
         optimizer.step()
         total_loss += loss.item() * data.num_graphs
-        #if i%100 == 0:
-            #print(f"{i}: curr loss: {loss}")
-            #$print(f"{data.y} --- {logits.argmax(dim=1)}")
+        
     return total_loss / len(loader.dataset) , total_correct / len(loader.dataset) 
 
 @torch.no_grad()
-def test(model, loader):
+def test(model, loader,num_points,criterion,device):
     model.eval()
 
     # Dict from labels to names
 
-
     total_loss = 0
     total_correct = 0
     for data in loader:
+       
         x = torch.cat([data.pos, data.normal], dim=1)   
         x = x.reshape(data.batch.unique().shape[0], num_points, 6)
-        logits, regularizers  = model(x=x.to(device))
-        loss    = criterion(logits, data.y.to(device))
-        # s = t.sum(t.as_tensor(regularizers))
-        # loss = loss + regularization * s
-        total_loss += loss.item() * data.num_graphs
 
+        logits, regularizers = model(x=x.to(device))
+        loss    = criterion(logits, data.y.to(device))
+
+        total_loss += loss.item() * data.num_graphs
+        
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == data.y.to(device)).sum())
 
@@ -205,146 +220,208 @@ def createConfusionMatrix(model,loader):
     return sn.heatmap(df_cm, annot=True).get_figure()
 
 
+now = datetime.now()
+directory = now.strftime("%d_%m_%y_%H:%M:%S")
+parent_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models"
+path = os.path.join(parent_directory, directory)
+os.mkdir(path)
 
-if __name__ == '__main__':
-    now = datetime.now()
-    directory = now.strftime("%d_%m_%y_%H:%M:%S")
-    parent_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models"
-    path = os.path.join(parent_directory, directory)
-    os.mkdir(path)
+num_points = 512
+batch_size = 16
+num_epochs = 250
+learning_rate = 1e-3
+modelnet_num = 40
+dropout=0.25
 
-    num_points = 512
-    batch_size = 16
-    num_epochs = 250
-    learning_rate = 1e-3
-    modelnet_num = 40
+F = [128, 512, 1024]  # Outputs size of convolutional filter.
+K = [6, 5, 3]         # Polynomial orders.
+M = [512, 128, modelnet_num]
 
-    F = [128, 512, 1024]  # Outputs size of convolutional filter.
-    K = [6, 5, 3]         # Polynomial orders.
-    M = [512, 128, modelnet_num]
 
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    print(f"Training on {device}")
+print(f"Training on {device}")
 
-        
-    transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
-    
-    random_rotate_train = Compose([
-    RandomRotate(degrees=15, axis=0),
-    RandomRotate(degrees=15, axis=1),
-    RandomRotate(degrees=15, axis=2),
-])
+root = "/mnt/ssd1/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+#root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+#print(root)
 
-    random_rotate_test = Compose([
-    RandomRotate(degrees=45, axis=0),
-    RandomRotate(degrees=45, axis=1),
-    RandomRotate(degrees=45, axis=2),
-])
+model = cls_model(num_points, F, K, M, modelnet_num, dropout=dropout, reg_prior=True)
 
-    train_transform = Compose([
-    random_rotate_train,
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+model = model.to(device)
+
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
+my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
+regularization = 1e-9
+
+torch.manual_seed(0)
+#################################################################33
+
+# transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
+
+# train_dataset = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
+# test_dataset = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms)
+
+###################################################################
+
+mu=0
+sigma=0.
+#transforms_noisy = Compose([SamplePoints(num_points),NormalizeScale(),GaussianNoiseTransform(mu, sigma,recompute_normals=True)])
+
+rot_x=30
+rot_y=30
+rot_z=30
+
+torch.manual_seed(0)
+
+#################################
+
+
+random_rotate_0 = Compose([
+    RandomRotate(degrees=0, axis=0),
+    RandomRotate(degrees=0, axis=1),
+    RandomRotate(degrees=0, axis=2),
+    ])
+
+test_transform_0 = Compose([
+    random_rotate_0,
     SamplePoints(num_points, include_normals=True),
-    NormalizeScale()
-])
+    NormalizeScale(),
+    #GaussianNoiseTransform(mu, 0.,recompute_normals=True)
+    ])
 
-    test_transform = Compose([
-    random_rotate_test,
+random_rotate_10 = Compose([
+    RandomRotate(degrees=0, axis=0),
+    RandomRotate(degrees=0, axis=1),
+    RandomRotate(degrees=0, axis=2),
+    ])
+
+test_transform_10 = Compose([
+    random_rotate_10,
     SamplePoints(num_points, include_normals=True),
-    NormalizeScale()
-])
+    NormalizeScale(),
+    GaussianNoiseTransform(mu, 0.05,recompute_normals=True)
+    ])
 
+random_rotate_20 = Compose([
+    RandomRotate(degrees=0, axis=0),
+    RandomRotate(degrees=0, axis=1),
+    RandomRotate(degrees=0, axis=2),
+    ])
+
+test_transform_20 = Compose([
+    random_rotate_20,
+    SamplePoints(num_points, include_normals=True),
+    NormalizeScale(),
+    GaussianNoiseTransform(mu, 0.08,recompute_normals=True)
+    ])
+
+
+train_dataset_0 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_0)
+test_dataset_0 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_0)
+
+train_dataset_10 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_10)
+test_dataset_10 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_10)
+
+train_dataset_20 = ModelNet(root=root, name=str(modelnet_num), train=True, transform=test_transform_20)
+test_dataset_20 = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform_20)
+
+
+
+###############################################################################
+
+train_loader_0 = DataLoader(train_dataset_0, batch_size=batch_size, shuffle=True, pin_memory=True)
+test_loader_0  = DataLoader(test_dataset_0, batch_size=batch_size)
+
+train_loader_10 = DataLoader(train_dataset_10, batch_size=batch_size, shuffle=True, pin_memory=True)
+test_loader_10  = DataLoader(test_dataset_10, batch_size=batch_size)
+
+train_loader_20 = DataLoader(train_dataset_20, batch_size=batch_size, shuffle=True, pin_memory=True)
+test_loader_20  = DataLoader(test_dataset_20, batch_size=batch_size)
+
+###############################################################################
+
+
+for epoch in range(1, num_epochs+1):
+
+    #program_name="RGCNN-recomputed-normals"
+    # conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
+
+    loss_tr=0
+    loss_t=0
+    acc_t=0
+    acc_tr=0
+
+    train_start_time = time.time()
+    train_loss,train_acc = train(model=model, optimizer=optimizer, loader=train_loader_0, regularization=regularization,num_points=num_points,criterion=criterion, device=device)
+    train_stop_time = time.time()
+
+    loss_tr=loss_tr+train_loss
+    acc_tr=acc_tr+train_acc
+
+    train_start_time = time.time()
+    train_loss,train_acc = train(model=model, optimizer=optimizer, loader=train_loader_10, regularization=regularization,num_points=num_points,criterion=criterion, device=device)
+    train_stop_time = time.time()
+
+    loss_tr=loss_tr+train_loss
+    acc_tr=acc_tr+train_acc
+
+    train_start_time = time.time()
+    train_loss,train_acc = train(model=model, optimizer=optimizer, loader=train_loader_20, regularization=regularization,num_points=num_points,criterion=criterion, device=device)
+    train_stop_time = time.time()
+
+    loss_tr=loss_tr+train_loss
+    acc_tr=acc_tr+train_acc
+
+    test_start_time = time.time()
+    test_loss,test_acc = test(model=model, loader=test_loader_0,num_points=num_points,criterion=criterion,device=device)
+    test_stop_time = time.time()
+
+    loss_t=loss_t+test_loss
+    acc_t=acc_t+test_acc
+
+    test_start_time = time.time()
+    test_loss,test_acc = test(model=model, loader=test_loader_10,num_points=num_points,criterion=criterion,device=device)
+    test_stop_time = time.time()
+
+    loss_t=loss_t+test_loss
+    acc_t=acc_t+test_acc
+
+    test_start_time = time.time()
+    test_loss,test_acc = test(model=model, loader=test_loader_20,num_points=num_points,criterion=criterion,device=device)
+    test_stop_time = time.time()
+
+    loss_t=loss_t+test_loss
+    acc_t=acc_t+test_acc
+
+    train_loss=loss_tr/3
+    test_loss=loss_t/3
+    test_acc=acc_t/3
+    train_acc=acc_tr/3
  
 
-    root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
-    print(root)
 
 
+    #conv.test_pcd_pred(model=model,loader=train_loader,num_points=num_points,device=device)
+
+    writer.add_scalar("Loss/train", train_loss, epoch)
+    writer.add_scalar("Loss/test", test_loss, epoch)
+    writer.add_scalar("Acc/train", train_acc, epoch)
+    writer.add_scalar("Acc/test", test_acc, epoch)
+
+    print(f'Epoch: {epoch:02d}, Loss: {train_loss:.4f}, Test Accuracy: {test_acc:.4f}')
+    print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
+    Test Time: \t{test_stop_time - test_start_time }')
+
+    # writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader), epoch)
+
+    if(epoch%5==0):
+        torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+
+    my_lr_scheduler.step()
 
 
+torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
 
-    dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
-    dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms)
-
-
-    # Verification...
-    print(f"Train dataset shape: {dataset_train}")
-    print(f"Test dataset shape:  {dataset_test}")
-
-
-    train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
-    test_loader  = DataLoader(dataset_test, batch_size=batch_size)
-    
-    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, reg_prior=True)
-    model = model.to(device)
-
-    print(model.parameters)
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
-
-    regularization = 1e-9
-    for epoch in range(1, num_epochs+1):
-        train_start_time = time.time()
-        train_loss,train_acc = train(model, optimizer, train_loader, regularization=regularization)
-        train_stop_time = time.time()
-
-        test_start_time = time.time()
-        test_loss,test_acc = test(model, test_loader)
-        test_stop_time = time.time()
-
-        #conv.test_pcd_pred(model=model,loader=train_loader,num_points=num_points,device=device)
-
-        writer.add_scalar("Loss/train", train_loss, epoch)
-        writer.add_scalar("Loss/test", test_loss, epoch)
-        writer.add_scalar("Acc/train", train_acc, epoch)
-        writer.add_scalar("Acc/test", test_acc, epoch)
-
-        print(f'Epoch: {epoch:02d}, Loss: {train_loss:.4f}, Test Accuracy: {test_acc:.4f}')
-        print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
-        Test Time: \t{test_stop_time - test_start_time }')
-
-        # writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader), epoch)
-
-        if(epoch%5==0):
-            torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
-
-        my_lr_scheduler.step()
-
-    
-    torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
-
-    ##################################################################################################3
-#     #Testing the model
-
-#     random_rotate = Compose([
-#     RandomRotate(degrees=180, axis=0),
-#     RandomRotate(degrees=180, axis=1),
-#     RandomRotate(degrees=180, axis=2),
-# ])
-
-#     test_transform = Compose([
-#     #random_rotate,
-#     SamplePoints(num_points, include_normals=True),
-#     NormalizeScale()
-# ])
-#     dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
-#     dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform)
-
-#     train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
-#     test_loader  = DataLoader(dataset_test, batch_size=batch_size)
-    
-    
-#     model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, reg_prior=True)
-#     path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/02_03_22_11:43:08_2_Layers_Points/model100.pt"
-#     model.load_state_dict(torch.load(path_saved_model))
-#     model = model.to(device)
-
-#     test_start_time = time.time()
-#     test_acc,confidence = test(model, test_loader)
-#     test_stop_time = time.time()
-#     print(f'Test Accuracy: {test_acc:.4f}')
-#     print(f'Test Average_confidence: {confidence:.4f}')
-   
-
-    

@@ -33,6 +33,12 @@ from datetime import datetime
 from torch.nn import MSELoss
 from torch.optim import lr_scheduler
 
+import sys
+sys.path.insert(1, '/home/alex/Alex_documents/RGCNN_git/')
+
+from utils import GaussianNoiseTransform
+import utils as util_functions
+
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import seaborn as sn
@@ -42,15 +48,13 @@ import numpy as np
 
 
 class cls_model(nn.Module):
-    def __init__(self, vertice ,F, K, M, class_num, regularization=0, one_layer=True, dropout=0, reg_prior:bool=True):
+    def __init__(self, vertice ,F, K, M, class_num, regularization=0,  dropout=0, reg_prior:bool=True):
         assert len(F) == len(K)
         super(cls_model, self).__init__()
 
         self.F = F
         self.K = K
         self.M = M
-
-        self.one_layer = one_layer
 
         self.reg_prior = reg_prior
         self.vertice = vertice
@@ -67,9 +71,9 @@ class cls_model(nn.Module):
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
-        self.conv1 = conv.DenseChebConv(6, 128, 6)
-        self.conv2 = conv.DenseChebConv(128, 512, 5)
-        self.conv_Reeb = conv.DenseChebConv(128, 512, 5)
+        self.conv1 = util_functions.DenseChebConvV2(6, 128, 6)
+        self.conv2 = util_functions.DenseChebConvV2(128, 512, 5)
+        self.conv_Reeb = util_functions.DenseChebConvV2(128, 512, 5)
         
         self.fc1 = nn.Linear(1024, 512, bias=True)
         self.fc2 = nn.Linear(512, 128, bias=True)
@@ -79,8 +83,6 @@ class cls_model(nn.Module):
 
         self.max_pool = nn.MaxPool1d(self.vertice)
 
-        if one_layer == True:
-            self.fc = nn.Linear(128, class_num)
 
         self.regularizer = 0
         self.regularization = []
@@ -89,99 +91,97 @@ class cls_model(nn.Module):
     def forward(self, x,k,batch_size,num_points,nr_points_fps):
         self.regularizers = []
         with torch.no_grad():
-            L = conv.pairwise_distance(x) # W - weight matrix
-            #L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
-            L = conv.get_laplacian(L)
+            L = util_functions.pairwise_distance(x) # W - weight matrix
+            #L = util_functions.get_one_matrix_knn(L, k,batch_size,num_points)
+            L = util_functions.get_laplacian(L)
 
         out = self.conv1(x, L)
         out = self.relu1(out)
 
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
         
-        if self.one_layer == False:
+        
 
+        with torch.no_grad():
 
-            with torch.no_grad():
+            # nr_points_fps=55
 
-                # nr_points_fps=55
+            x2=x
+            x2=torch.reshape(x2,(batch_size*num_points,x2.shape[2]))
 
-                x2=x
-                x2=torch.reshape(x2,(batch_size*num_points,x2.shape[2]))
-
-                nr_points_batch=int(num_points)
-                out_2=torch.reshape(out,(batch_size*num_points,out.shape[2]))
-                sccs_batch, pcd_fps_points=conv.get_fps_matrix_2(point_cloud=out_2,original_cloud=x2,batch_size=batch_size,nr_points=num_points,nr_points_fps=nr_points_fps)
-                sccs_batch=sccs_batch.long()
-                sccs_batch=torch.reshape(sccs_batch,(batch_size,nr_points_fps,nr_points_batch))
-                Vertices_final_FPS=torch.zeros([batch_size,sccs_batch.shape[1], out_2.shape[1]], dtype=torch.float32,device='cuda')
-                
-                for batch_iter in range(batch_size):   
-                    for i in range(sccs_batch.shape[1]):
-                        Vertices_pool_FPS=torch.zeros([sccs_batch[batch_iter,i].shape[0],out_2.shape[1]], dtype=torch.float32,device='cuda')
-                        Vertices_pool_FPS=out[batch_iter,sccs_batch[batch_iter,i]]
-                        Vertices_final_FPS[batch_iter,i],_ =t.max(Vertices_pool_FPS, 0)
-
-                L = conv.pairwise_distance(out) # W - weight matrix
-                #L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
-
-                # for it_pcd in range(1):
-                #     viz_points_fps=pcd_fps_points[it_pcd,:,:]
-                #     original_points_pcd=x[it_pcd,:,:]
-                #     distances=L[it_pcd,:,:]
-                #     threshold=0.
-                # conv.view_graph_with_original_pcd(viz_points=viz_points_fps,original_points=original_points_pcd,distances=distances,threshold=threshold,nr=2)
-
-                # plt.show()
-
-                L = conv.get_laplacian(L)
-
-            out = self.conv2(out, L)
-            out = self.relu2(out)
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
-
-            with torch.no_grad():
-                L = conv.pairwise_distance(Vertices_final_FPS) # W - weight matrix
-                #L = conv.get_one_matrix_knn(L, 40,batch_size,L.shape[2])
-                L = conv.get_laplacian(L)
-
-            out_FPS=self.conv_Reeb(Vertices_final_FPS,L)
-            out_FPS=self.relu_Reeb(out_FPS)
-    
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out_FPS, (0, 2, 1)), L), out_FPS))**2)
-    
-            out, _ = t.max(out, 1)
-            out_FPS, _ = t.max(out_FPS, 1)
-
-            out=torch.cat((out_FPS,out),1)
-
-            # ~~~~ Fully Connected ~~~~
+            nr_points_batch=int(num_points)
+            out_2=torch.reshape(out,(batch_size*num_points,out.shape[2]))
+            sccs_batch, pcd_fps_points=conv.get_fps_matrix_2(point_cloud=out_2,original_cloud=x2,batch_size=batch_size,nr_points=num_points,nr_points_fps=nr_points_fps)
+            sccs_batch=sccs_batch.long()
+            sccs_batch=torch.reshape(sccs_batch,(batch_size,nr_points_fps,nr_points_batch))
+            Vertices_final_FPS=torch.zeros([batch_size,sccs_batch.shape[1], out_2.shape[1]], dtype=torch.float32,device='cuda')
             
-            out = self.fc1(out)
+            for batch_iter in range(batch_size):   
+                for i in range(sccs_batch.shape[1]):
+                    Vertices_pool_FPS=torch.zeros([sccs_batch[batch_iter,i].shape[0],out_2.shape[1]], dtype=torch.float32,device='cuda')
+                    Vertices_pool_FPS=out[batch_iter,sccs_batch[batch_iter,i]]
+                    Vertices_final_FPS[batch_iter,i],_ =t.max(Vertices_pool_FPS, 0)
 
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
+            L = util_functions.pairwise_distance(out) # W - weight matrix
+            #L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
 
-            out = self.relu4(out)
-            #out = self.dropout(out)
+            # for it_pcd in range(1):
+            #     viz_points_fps=pcd_fps_points[it_pcd,:,:]
+            #     original_points_pcd=x[it_pcd,:,:]
+            #     distances=L[it_pcd,:,:]
+            #     threshold=0.
+            # conv.view_graph_with_original_pcd(viz_points=viz_points_fps,original_points=original_points_pcd,distances=distances,threshold=threshold,nr=2)
 
-            out = self.fc2(out)
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
-            out = self.relu5(out)
-            #out = self.dropout(out)
+            # plt.show()
 
-            out = self.fc3(out)
-            if self.reg_prior:
-                self.regularizers.append(t.linalg.norm(self.fc3.weight.data[0]) ** 2)
-                self.regularizers.append(t.linalg.norm(self.fc3.bias.data[0]) ** 2)
-        else:
-            out, _ = t.max(out, 1)
-            out = self.fc(out)
+            L = util_functions.get_laplacian(L)
+
+        out = self.conv2(out, L)
+        out = self.relu2(out)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+
+        with torch.no_grad():
+            L = util_functions.pairwise_distance(Vertices_final_FPS) # W - weight matrix
+            #L = conv.get_one_matrix_knn(L, 40,batch_size,L.shape[2])
+            L = util_functions.get_laplacian(L)
+
+        out_FPS=self.conv_Reeb(Vertices_final_FPS,L)
+        out_FPS=self.relu_Reeb(out_FPS)
+
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out_FPS, (0, 2, 1)), L), out_FPS))**2)
+
+        out, _ = t.max(out, 1)
+        out_FPS, _ = t.max(out_FPS, 1)
+
+        out=torch.cat((out_FPS,out),1)
+
+        # ~~~~ Fully Connected ~~~~
+        
+        out = self.fc1(out)
+
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
+        #out = self.dropout(out)
+        out = self.relu4(out)
+        #
+
+        out = self.fc2(out)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
+        #out = self.dropout(out)
+        out = self.relu5(out)
+        #
+
+        out = self.fc3(out)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc3.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc3.bias.data[0]) ** 2)
+        
 
         return out, self.regularizers
 
@@ -268,13 +268,14 @@ if __name__ == '__main__':
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
-    num_points = 1024
-    batch_size = 32
+    num_points = 512
+    batch_size = 16
     num_epochs = 260
     learning_rate = 1e-3
     modelnet_num = 40
-    k_KNN=5
-    nr_points_fps=30
+    k_KNN=30
+    nr_points_fps=55
+    dropout=0.25
 
     F = [128, 512, 1024]  # Outputs size of convolutional filter.
     K = [6, 5, 3]         # Polynomial orders.
@@ -302,7 +303,7 @@ if __name__ == '__main__':
     train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
     test_loader  = DataLoader(dataset_test, batch_size=batch_size)
     
-    model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, one_layer=False, reg_prior=True)
+    model = cls_model(num_points, F, K, M, modelnet_num, dropout=dropout, reg_prior=True)
     # path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/28_02_22_10:10:19/model50.pt"
     # model.load_state_dict(torch.load(path_saved_model))
     model = model.to(device)

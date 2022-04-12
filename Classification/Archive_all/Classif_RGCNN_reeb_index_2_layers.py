@@ -24,10 +24,12 @@ import torch_geometric as tg
 from torch_geometric.utils import get_laplacian as get_laplacian_pyg
 from torch_geometric.transforms import Compose
 
-import ChebConv_rgcnn_functions as conv
-import ChebConv_rgcnn_functions_reeb as conv_reeb
-import ChebConv_loader_indices as index_dataset
-import ChebConv_test_reeb as test_reeb
+# import ChebConv_rgcnn_functions as conv
+# import ChebConv_rgcnn_functions_reeb as conv_reeb
+
+
+# import ChebConv_loader_indices as index_dataset
+#import ChebConv_test_reeb as test_reeb
 
 import os
 from torch_geometric.transforms import NormalizeScale
@@ -44,6 +46,13 @@ import numpy as np
 
 import matplotlib.pyplot
 from mpl_toolkits.mplot3d import Axes3D
+
+import sys
+sys.path.insert(1, '/home/alex/Alex_documents/RGCNN_git/')
+
+from utils import GaussianNoiseTransform
+import utils as util_functions
+import utils_cls as utils_cls
 
 import torch_geometric.utils 
 
@@ -76,9 +85,9 @@ class cls_model(nn.Module):
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
-        self.conv1 = conv.DenseChebConv(6, 128, 3)
-        self.conv2 = conv.DenseChebConv(128, 512, 3)
-        self.conv_Reeb = conv.DenseChebConv(128, 512,3)
+        self.conv1 = util_functions.DenseChebConvV2(6, 128, 3)
+        self.conv2 = util_functions.DenseChebConvV2(128, 512, 3)
+        self.conv_Reeb = util_functions.DenseChebConvV2(128, 512,3)
         
         self.fc1 = nn.Linear(1024, 512, bias=True)
         self.fc2 = nn.Linear(512, 128, bias=True)
@@ -98,22 +107,22 @@ class cls_model(nn.Module):
         position=0
 
         with torch.no_grad():
-            L = conv.pairwise_distance(x) # W - weight matrix
-            L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+            L = util_functions.pairwise_distance(x) # W - weight matrix
+            L = util_functions.get_one_matrix_knn(L, k,batch_size,num_points)
 
             # for it_pcd in range(1):
             #     viz_points_2=x[it_pcd,:,:]
             #     distances=L[it_pcd,:,:]
             #     threshold=0.3
             #     conv.view_graph(viz_points_2,distances,threshold,1)
-            L = conv.get_laplacian(L)
+            L = util_functions.get_laplacian(L)
 
 
         out = self.conv1(x, L)
         out = self.relu1(out)
 
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
         
 
@@ -132,30 +141,30 @@ class cls_model(nn.Module):
             
                     
         with torch.no_grad():         
-            L = conv.pairwise_distance(out) # W - weight matrix
-            L = conv.get_one_matrix_knn(L, k,batch_size,num_points)
+            L = util_functions.pairwise_distance(out) # W - weight matrix
+            L = util_functions.get_one_matrix_knn(L, k,batch_size,num_points)
             # for it_pcd in range(1):
             #     viz_points_2=x[it_pcd,:,:]
             #     distances=L[it_pcd,:,:]
             #     threshold=0.3
             #     conv.view_graph(viz_points_2,distances,threshold,4)
-            L = conv.get_laplacian(L)
+            L = util_functions.get_laplacian(L)
 
         #plt.show()
         
         out = self.conv2(out, L)
         out = self.relu3(out)
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out, (0, 2, 1)), L), out))**2)
 
 
-        conv.tsne_features(x=x,out=out,batch_size=batch_size,labels=labels,position=position)
+        #conv.tsne_features(x=x,out=out,batch_size=batch_size,labels=labels,position=position)
 
         out_Reeb=self.conv_Reeb(Vertices_final_Reeb,laplacian_Reeb_final)
         out_Reeb=self.relu_Reeb(out_Reeb)
 
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out_Reeb, (0, 2, 1)), laplacian_Reeb_final), out_Reeb))**2)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(t.matmul(t.matmul(t.permute(out_Reeb, (0, 2, 1)), laplacian_Reeb_final), out_Reeb))**2)
 
         out, _ = t.max(out, 1)
         out_Reeb, _ = t.max(out_Reeb, 1)
@@ -166,24 +175,24 @@ class cls_model(nn.Module):
         
         out = self.fc1(out)
 
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
-            self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc1.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc1.bias.data[0]) ** 2)
 
         out = self.relu4(out)
         ######out = self.dropout(out)
 
         out = self.fc2(out)
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
-            self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc2.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc2.bias.data[0]) ** 2)
         out = self.relu5(out)
         #######out = self.dropout(out)
 
         out = self.fc3(out)
-        if self.reg_prior:
-            self.regularizers.append(t.linalg.norm(self.fc3.weight.data[0]) ** 2)
-            self.regularizers.append(t.linalg.norm(self.fc3.bias.data[0]) ** 2)
+        # if self.reg_prior:
+        #     self.regularizers.append(t.linalg.norm(self.fc3.weight.data[0]) ** 2)
+        #     self.regularizers.append(t.linalg.norm(self.fc3.bias.data[0]) ** 2)
         
 
         return out, self.regularizers
@@ -389,11 +398,12 @@ if __name__ == '__main__':
     
     transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
-    root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+    #root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+    root = "/mnt/ssd1/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
     print(root)
 
-    dataset_train =index_dataset.Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=True,transforms=transforms)
-    dataset_test = index_dataset.Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=False,transforms=transforms)
+    dataset_train =utils_cls.Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=True,transforms=transforms)
+    dataset_test = utils_cls.Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=False,transforms=transforms)
 
     ###################################################################
     #Testing with Geometric Shapes
@@ -523,55 +533,6 @@ if __name__ == '__main__':
     torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
 
 
-#        ###################################################################################################3
-# #     #Testing the model
-
-# #     timp_train=0
-# #     timp_test=0
-
-
-# #     knn_REEB = 20
-# #     ns = 20
-# #     tau = 2
-# #     reeb_nodes_num=20
-# #     reeb_sim_margin=20
-# #     pointNumber=200
-
-# #     path_logs="/home/alex/Alex_documents/RGCNN_git/data/logs/Reeb_data/"
-# #     sccs_path_test=path_logs+directory+"sccs_test.npy"
-# #     reeb_laplacian_path_test=path_logs+directory+"reeb_laplacian_test.npy"
-
-# #     random_rotate = Compose([
-# #     RandomRotate(degrees=180, axis=0),
-# #     RandomRotate(degrees=180, axis=1),
-# #     RandomRotate(degrees=180, axis=2),
-# # ])
-
-# #     test_transform = Compose([
-# #     random_rotate,
-# #     SamplePoints(num_points, include_normals=True),
-# #     NormalizeScale()
-# # ])
-# #     dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
-# #     dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=test_transform)
-
-# #     train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, pin_memory=True)
-# #     test_loader  = DataLoader(dataset_test, batch_size=batch_size)
-
-    
-
-# #     all_sccs_test, all_reeb_laplacian_test= conv_reeb.Create_Reeb_from_Dataset_batched(loader=test_loader,sccs_path=sccs_path_test,reeb_laplacian_path=reeb_laplacian_path_test,time_execution=timp_test,knn=knn_REEB,ns=ns,tau=tau,reeb_nodes_num=reeb_nodes_num,reeb_sim_margin=reeb_sim_margin,pointNumber=pointNumber)
-    
-    
-# #     model = cls_model(num_points, F, K, M, modelnet_num, dropout=1,  reg_prior=True)
-# #     path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/28_02_22_21:52:37/model260.pt"
-# #     model.load_state_dict(torch.load(path_saved_model))
-# #     model = model.to(device)
-
-# #     test_start_time = time.time()
-# #     test_acc = test(model, loader=test_loader,all_sccs=all_sccs_test,all_Reeb_laplacian=all_reeb_laplacian_test,k=k_KNN,num_points=num_points)
-# #     test_stop_time = time.time()
-# #     print(f'Test Accuracy: {test_acc:.4f}')
 
 
     
