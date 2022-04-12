@@ -79,6 +79,7 @@ class cls_model(nn.Module):
 
         self.dropout = torch.nn.Dropout(p=self.dropout)
         self.relus = self.F + self.M
+        #self.relus = self.F
 
         self.max_pool = nn.MaxPool1d(self.vertice)
 
@@ -150,7 +151,7 @@ class cls_model(nn.Module):
 
         for i in range(len(self.M)):
             out = self.fc[i](out)
-            self.append_regularization_terms(out, L)
+            #self.append_regularization_terms(out, L)
             out = self.dropout(out)
             out = self.b1relu(out, self.bias_relus[i + len(self.K)])
         
@@ -355,7 +356,7 @@ test_loader_0  = DataLoader(test_dataset_0, batch_size=batch_size)
 
 ###############################################################################
 
-weights = util_functions.get_weights(train_dataset_0,num_points=num_points,nr_classes=modelnet_num)
+weights = util_functions.get_weights_clasif(train_dataset_0,num_points=num_points,nr_classes=modelnet_num)
 criterion = torch.nn.CrossEntropyLoss(weight=torch.tensor(weights, dtype=float32).to('cuda'))  # Define loss criterion.
 
 for epoch in range(1, num_epochs+1):

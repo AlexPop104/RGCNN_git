@@ -157,6 +157,32 @@ def get_weights(dataset, num_points=2048, nr_classes=40):
 
     return weights
 
+def get_weights_clasif(dataset, num_points=2048, nr_classes=40):
+    from sklearn.utils import class_weight
+
+    '''
+    If sk=True the weights are computed using Scikit-learn. Otherwise, a 'custom' implementation will
+    be used. It is recommended to use the sk=True.
+    '''
+
+    weights = torch.zeros(nr_classes)
+    
+    y = np.empty(len(dataset))
+    i = 0
+    for data in dataset:
+        y[i] = data.y
+        i += 1
+    weights = class_weight.compute_class_weight(
+        class_weight = "balanced",
+        classes = np.unique(y),
+        y =  y 
+    )
+
+
+    #weights = dict(zip(np.unique(y), weights))
+
+    return weights
+
 
 def get_one_matrix_knn(matrix, k,batch_size,nr_points):
 
