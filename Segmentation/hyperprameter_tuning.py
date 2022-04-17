@@ -16,11 +16,13 @@ import numpy as np
 from torch.optim import lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
 from torch_geometric.transforms import Compose
-from utils import DenseChebConvV2 as conv
+from utils import DenseChebConvV2
 from utils import GaussianNoiseTransform
 from utils import compute_loss
 from utils import get_weights
 from utils import IoU_accuracy
+from utils import get_laplacian
+from utils import pairwise_distance
 from datetime import datetime
 
 torch.manual_seed(0)
@@ -35,6 +37,8 @@ label_to_cat = {}
 for key in seg_classes.keys():
     for label in seg_classes[key]:
         label_to_cat[label] = key
+
+device = 'cuda' if t.cuda.is_available() else 'cpu'
 
 class seg_model(nn.Module):
     def __init__(self, parameters):
@@ -67,7 +71,7 @@ class seg_model(nn.Module):
             ])
 
         self.conv = nn.ModuleList([
-            conv.DenseChebConvV2(22, self.F[i], self.K[i]) if i == 0 else conv.DenseChebConvV2(self.F[i-1], self.F[i], self.K[i]) for i in range(len(self.K))
+            DenseChebConvV2(22, self.F[i], self.K[i]) if i == 0 else DenseChebConvV2(self.F[i-1], self.F[i], self.K[i]) for i in range(len(self.K))
         ])
 
         self.fc = nn.ModuleList([])
@@ -91,7 +95,7 @@ class seg_model(nn.Module):
 
     def get_laplacian(self, x):
         with torch.no_grad():
-            return conv.get_laplacian(conv.pairwise_distance(x))
+            return get_laplacian(pairwise_distance(x))
 
     @torch.no_grad()
     def append_regularization_terms(self, x, L):
@@ -112,7 +116,7 @@ class seg_model(nn.Module):
         L = self.get_laplacian(x)
 
         cat = one_hot(cat, num_classes=16)
-        cat = torch.tile(cat, [1, self.vertice, 1])
+        cat = torch.tile(cat, [1, self.num_points, 1])
         out = torch.cat([x, cat], dim=2)  # Pass this to the model
 
         for i in range(len(self.K)):
@@ -146,7 +150,7 @@ def fit(model, optimizer, loader, criterion, regularization):
         x = t.cat([data.pos.type(torch.float32),
                   data.x.type(torch.float32)], dim=2)
         # out, L are for regularization
-        logits, out, L = model(x.to(model.device), cat.to(model.device))
+        logits, out, L = model(x.to(device), cat.to(device))
         logits = logits.permute([0, 2, 1])
 
         loss = compute_loss(logits, y, out, L, criterion, s=regularization)
@@ -156,7 +160,7 @@ def fit(model, optimizer, loader, criterion, regularization):
         total_loss += loss.item()
         if i % 100 == 0:
             print(f"{i}: curr loss: {loss}")
-    return total_loss * model.batch_size / len(loader.dataset)
+    return total_loss * loader.batch_size / len(loader.dataset)
 
 
 def test(model, loader):
@@ -171,13 +175,13 @@ def test(model, loader):
         x = t.cat([data.pos.type(torch.float32),
                   data.x.type(torch.float32)], dim=2)
         y = data.y
-        logits, _, _ = model(x.to(model.device), cat.to(model.device))
+        logits, _, _ = model(x.to(device), cat.to(device))
         logits = logits.to('cpu')
         pred = logits.argmax(dim=2)
 
         total_correct += int((pred == y).sum())
-        start = i * model.batch_size
-        stop = start + model.batch_size
+        start = i * loader.batch_size
+        stop = start + loader.batch_size
         predictions[start:stop] = pred
         lab = data.y
         labels[start:stop] = lab.reshape([-1, model.num_points])
@@ -216,7 +220,7 @@ def train(parameters, root):
     
     train_loader = DenseDataLoader(
         dataset_train, batch_size=parameters["batch_size"],
-        shuffle=True, pin_memory=True)
+        shuffle=True, pin_memory=False)
 
     test_loader = DenseDataLoader(
         dataset_test, batch_size=parameters["batch_size"],
@@ -229,13 +233,44 @@ def train(parameters, root):
     criterion = torch.nn.CrossEntropyLoss(weight=torch.tensor(weights, dtype=float32).to('cuda'))
 
     model = seg_model(parameters)
+    model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=parameters["learning_rate"],
         weight_decay=parameters["weight_decay"])
+
+    my_lr_scheduler = lr_scheduler.ExponentialLR(
+    optimizer=optimizer, gamma=parameters['decay_rate'])
     
     for epoch in range(50):    
+        start_time = time.time()
         loss = fit(model, optimizer, train_loader, criterion, parameters['regularization'])
-        acc = test(model, test_loader)
+        end_time = time.time()
+        train_time = end_time - start_time
+
+        writer.add_scalar('loss/train', loss, epoch)
+
+        start_time = time.time()
+        acc, cat_iou, tot_iou, ncorrect = test(model, test_loader)
+        end_time = time.time()
+        test_time = end_time - start_time
+
+        for key, value in cat_iou.items():
+            print(
+                key + ': {:.4f}, total: {:d}'.format(np.mean(value), len(value)))
+            writer.add_scalar(key + '/test', np.mean(value), epoch)
+
+        writer.add_scalar("IoU/test", np.mean(tot_iou) * 100, epoch)
+        writer.add_scalar("accuracy/test", acc, epoch)
+
+        print(
+            f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Test Accuracy: {acc:.4f}%, IoU: {np.mean(tot_iou)*100:.4f}%')
+        print(f'ncorrect: {ncorrect} / {len(dataset_test) * model.num_points}')
+        print(
+            f'Train Time: \t{train_time} \nTest Time: \t{test_time}')
+        print("~~~" * 30)
+
+        my_lr_scheduler.step()
+
 
         if epoch % 5 == 0:
              torch.save(model.state_dict(), path + '/' +
@@ -272,4 +307,7 @@ if __name__ == "__main__":
         "regularization": 1e-9,
     }
 
-    train(parameters)
+    writer = SummaryWriter(comment='seg_'+str(parameters['num_points']) +
+                            '_'+str(parameters['dropout']), filename_suffix='_reg')
+
+    train(parameters, root)
