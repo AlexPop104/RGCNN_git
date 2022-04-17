@@ -130,6 +130,25 @@ class DenseChebConvV2(nn.Module):
                 f'normalization={self.normalization})')
 
 
+def IoU_accuracy(pred, target, n_classes=16):
+    ious = []
+    pred = pred.view(-1)
+    target = target.view(-1)
+
+    # Ignore IoU for background class ("0")
+    for cls in range(1, n_classes):  # This goes from 1:n_classes-1 -> class "0" is ignored
+        pred_inds = pred == cls
+        target_inds = target == cls
+        intersection = (pred_inds[target_inds]).long().sum().data.cpu()[
+            0]  # Cast to long to prevent overflows
+        union = pred_inds.long().sum().data.cpu()[
+            0] + target_inds.long().sum().data.cpu()[0] - intersection
+        if union == 0:
+            # If there is no ground truth, do not include in evaluation
+            ious.append(float('nan'))
+        else:
+            ious.append(float(intersection) / float(max(union, 1)))
+    return np.array(ious)
 
 def get_weights(dataset, num_points=2048, nr_classes=40):
     from sklearn.utils import class_weight
@@ -147,7 +166,7 @@ def get_weights(dataset, num_points=2048, nr_classes=40):
         y[i:num_points+i] = data.y
         i += num_points
     weights = class_weight.compute_class_weight(
-        'balanced', np.unique(y), y)
+        class_weight='balanced', classes=np.unique(y), y=y)
     return weights
 
 
