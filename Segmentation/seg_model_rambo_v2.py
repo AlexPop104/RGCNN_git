@@ -364,6 +364,7 @@ if __name__ == '__main__':
                       b2relu=True)
 
     model = model.to(device)
+    
     optimizer = torch.optim.Adam(
         model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     writer = SummaryWriter(comment='seg_'+str(num_points) +
