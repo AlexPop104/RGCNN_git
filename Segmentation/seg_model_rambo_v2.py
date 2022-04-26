@@ -25,6 +25,24 @@ import utils as conv
 
 torch.manual_seed(0)
 
+def count_categories(dataset):
+    cat = dataset.categories
+    count_cat = np.zeros_like(cat, dtype=int)
+    for i, data in enumerate(dataset):
+        c = data.category.item()
+        count_cat[c] += 1
+    return count_cat
+
+def reduce_dataset(dataset, reduce_factor=0.6):
+    count_cat = count_categories(dataset)
+    new_count = np.zeros_like(count_cat, dtype=int)
+    new_data = []
+    for i, data in enumerate(dataset):
+        c = data.category.item()
+        new_count[c] += 1
+        if(new_count[c] < int(count_cat[c] * reduce_factor) or count_cat[c] < 100):
+            new_data.append(data)
+    return new_data
 
 def IoU_accuracy(pred, target, n_classes=16):
     ious = []
@@ -315,12 +333,13 @@ if __name__ == '__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     num_points = 1024
-    batch_size = 16
-    num_epochs = 100
-    learning_rate = 1e-3
-    decay_rate = 0.7
-    weight_decay = 1e-8  # 1e-9
-    dropout = 0.25
+    batch_size = 4
+    num_epochs = 80
+    learning_rate = 0.003111998
+    decay_rate = 0.8
+    weight_decay = 1e-9  # 1e-9
+    dropout = 0.09170225
+    regularization = 5.295088673159155e-9
 
     F = [128, 512, 1024]  # Outputs size of convolutional filter.
     K = [6, 5, 3]         # Polynomial orders.
@@ -336,6 +355,9 @@ if __name__ == '__main__':
     dataset_test = ShapeNet(root=root, split="test", transform=transforms)
     decay_steps = len(dataset_train) / batch_size
 
+    # dataset_train = reduce_dataset(dataset_train, 0.6)
+    # dataset_test = reduce_dataset(dataset_test, 0.6)
+
     weights = get_weights(dataset_train, num_points)
 
     # Define loss criterion.
@@ -350,7 +372,7 @@ if __name__ == '__main__':
 
     train_loader = DenseDataLoader(
         dataset_train, batch_size=batch_size,
-        shuffle=True, pin_memory=True)
+        shuffle=True, pin_memory=False)
 
     test_loader = DenseDataLoader(
         dataset_test, batch_size=batch_size,
@@ -360,7 +382,7 @@ if __name__ == '__main__':
                       dropout=dropout,
                       one_layer=False,
                       reg_prior=True,
-                      recompute_L=False,
+                      recompute_L=True,
                       b2relu=True)
 
     model = model.to(device)

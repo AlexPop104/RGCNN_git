@@ -25,6 +25,10 @@ from utils import get_laplacian
 from utils import pairwise_distance
 from datetime import datetime
 
+from ray.tune.suggest.hyperopt import HyperOptSearch
+from ray import tune
+from ray.tune.schedulers import ASHAScheduler
+
 torch.manual_seed(0)
 
 seg_classes = {'Earphone': [16, 17, 18], 'Motorbike': [30, 31, 32, 33, 34, 35], 'Rocket': [41, 42, 43],
@@ -210,40 +214,40 @@ def test(model, loader):
     return accuracy, cat_iou, tot_iou, ncorrects
 
 
-def train(parameters, root):
+def train(config, checkpoint_dir=None):
     
-    transforms = Compose([FixedPoints(parameters["num_points"]), GaussianNoiseTransform(
+    transforms = Compose([FixedPoints(config["num_points"]), GaussianNoiseTransform(
         mu=0, sigma=0, recompute_normals=False)])
 
-    dataset_train = ShapeNet(root=root, split="train", transform=transforms)
-    dataset_test  = ShapeNet(root=root, split="test", transform=transforms)
+    dataset_train = ShapeNet(root=config['root'], split="train", transform=transforms)
+    dataset_test  = ShapeNet(root=config['root'], split="test", transform=transforms)
     
     train_loader = DenseDataLoader(
-        dataset_train, batch_size=parameters["batch_size"],
+        dataset_train, batch_size=config["batch_size"],
         shuffle=True, pin_memory=False)
 
     test_loader = DenseDataLoader(
-        dataset_test, batch_size=parameters["batch_size"],
+        dataset_test, batch_size=config["batch_size"],
         shuffle=True)
 
 
-    decay_steps   = len(dataset_train) / parameters["batch_size"]
-    weights       = get_weights(dataset_train, parameters["num_points"])
+    decay_steps   = len(dataset_train) / config["batch_size"]
+    weights       = get_weights(dataset_train, config["num_points"])
 
     criterion = torch.nn.CrossEntropyLoss(weight=torch.tensor(weights, dtype=float32).to('cuda'))
 
-    model = seg_model(parameters)
+    model = seg_model(config)
     model.to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=parameters["learning_rate"],
-        weight_decay=parameters["weight_decay"])
+    optimizer = torch.optim.Adam(model.parameters(), lr=config["learning_rate"],
+        weight_decay=config["weight_decay"])
 
     my_lr_scheduler = lr_scheduler.ExponentialLR(
-    optimizer=optimizer, gamma=parameters['decay_rate'])
+        optimizer=optimizer, gamma=config['decay_rate'])
     
-    for epoch in range(50):    
+    for epoch in range(1, num_epochs + 1):    
         start_time = time.time()
-        loss = fit(model, optimizer, train_loader, criterion, parameters['regularization'])
+        loss = fit(model, optimizer, train_loader, criterion, config['regularization'])
         end_time = time.time()
         train_time = end_time - start_time
 
@@ -271,10 +275,11 @@ def train(parameters, root):
 
         my_lr_scheduler.step()
 
+        tune.report(mean_accuracy=tot_iou)
 
         if epoch % 5 == 0:
              torch.save(model.state_dict(), path + '/' +
-                       str(parameters["num_points"]) + 'p_model_v2_' + str(epoch) + '.pt')
+                       str(config["num_points"]) + 'p_model_v2_' + str(epoch) + '.pt')
 
 
 now = datetime.now()
@@ -289,17 +294,18 @@ if __name__ == "__main__":
 
     num_epochs = 50
 
-    parameters = {
-        "num_points": 2048,
-        "dropout": 0.25,
-        "batch_size": 16,
-        "learning_rate": 1e-3,
-        "decay_rate": 0.7,
-        "weight_decay": 1e-9,
+    config = {
+        "root": root,
+        "num_points": 1024,
+        "dropout": tune.uniform(0, 0.5),               # 0.25
+        "batch_size": 2,
+        "learning_rate": tune.uniform(1e-4, 1e-2),     # 1e-3
+        "decay_rate": tune.uniform(0.6, 0.9),          # 0.8,
+        "weight_decay": 1e-8,
         "one_layer": False,
-        "reg_prior": False,
+        "reg_prior": True,
         "recompute_L": False,
-        "b2relu": False,
+        "b2relu": True,
         "fc_bias": True,
         "F": [128, 512, 1024],  # Outputs size of convolutional filter.
         "K": [6, 5, 3],         # Polynomial orders.
@@ -307,7 +313,25 @@ if __name__ == "__main__":
         "regularization": 1e-9,
     }
 
-    writer = SummaryWriter(comment='seg_'+str(parameters['num_points']) +
-                            '_'+str(parameters['dropout']), filename_suffix='_reg')
+    writer = SummaryWriter(comment='seg_'+str(config['num_points']) +
+                            '_'+str(config['dropout']), filename_suffix='_reg')
 
-    train(parameters, root)
+
+    hyperopt_search = HyperOptSearch(config, metric="mean_accuracy", mode="max")
+
+    analysis = tune.run(train, config=config, num_samples=10, scheduler=ASHAScheduler(metric='mean_accuracy', mode='max'), resources_per_trial={'gpu': 0})
+
+    dfs = analysis.trial_dataframes
+
+    ax = None
+    for d in dfs.values():
+        ax = d.mean_accuracy.plot(ax=ax, legend=False)
+
+    df = analysis.results_df
+    logdir = analysis.get_best_logdir("mean_accuracy", mode="max")
+    state_dict = torch.load(os.path.join(logdir, "model.pth"))
+    model=seg_model(config)
+    model.load_state_dict(state_dict)
+
+
+    # train(parameters)
