@@ -33,7 +33,6 @@ def get_laplacian(adj_matrix, normalize=True):
         D = t.sum(adj_matrix, dim=1)
         D = t.diag(D)
         L = D - adj_matrix
-
     return L
 
 def pairwise_distance(point_cloud,normalize=False):
@@ -86,7 +85,6 @@ class DenseChebConvV2(nn.Module):
         self.out_channels = out_channels
         self.normalization = normalization
 
-        self.lin = Linear(in_channels * K, out_channels, bias=bias)
         self.lins = t.nn.ModuleList([
             Linear(in_channels, out_channels, bias=True, 
                 weight_initializer='glorot') for _ in range(K)
@@ -126,8 +124,8 @@ class DenseChebConvV2(nn.Module):
 
     def __repr__(self) -> str:
         return (f'{self.__class__.__name__}({self.in_channels}, '
-                f'{self.out_channels}, K={self.K}, '
-                f'normalization={self.normalization})')
+                f'{self.out_channels}, K={self.K},'
+                f'bias={self.bias})')
 
 
 def IoU_accuracy(pred, target, n_classes=16):
@@ -225,6 +223,24 @@ def get_centroid(point_cloud,num_points):
 
     return Distances
 
+
+def compute_loss_with_weights(logits, y, x, L, criterion, model, s=1e-9):
+    if not logits.device == y.device:
+            y = y.to(logits.device)
+
+    l_norm = 0
+    for name, p in model.named_parameters():
+         if 'conv' in name and 'weight' in name and 'lins' in name:
+            l_norm += t.norm(p,p=1)
+
+    loss = criterion(logits, y)
+    
+    l=0
+    for i in range(len(x)):
+        l += (1/2) * t.linalg.norm(t.matmul(t.matmul(t.permute(x[i], (0, 2, 1)), L[i]), x[i]))**2
+    l = (l_norm + l) * s
+    loss += l
+    return loss
 
 def compute_loss(logits, y, x, L, criterion, s=1e-9):
     if not logits.device == y.device:

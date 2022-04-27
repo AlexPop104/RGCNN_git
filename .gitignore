@@ -2,5 +2,6 @@ data
 runs
 Segmentation/models
 Segmentation/runs
+Segmentation/tests
 hyperparameter_tuning_runs
 experiments

@@ -18,7 +18,7 @@ num_points = 512
 transforms = Compose([FixedPoints(num_points), GaussianNoiseTransform(
     mu=0, sigma=0, recompute_normals=False)])
 
-dataset = ShapeNet(root, split='test', transform=transforms)
+dataset = ShapeNet(root, split='train', transform=transforms)
 dataloader = DenseDataLoader(dataset, batch_size=6, shuffle=True)
 
 print(dataset[0])

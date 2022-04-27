@@ -23,7 +23,7 @@ from torch_geometric.transforms import FixedPoints
 
 import utils as conv
 
-torch.manual_seed(0)
+#torch.manual_seed(0)
 
 def count_categories(dataset):
     cat = dataset.categories
@@ -64,6 +64,24 @@ def IoU_accuracy(pred, target, n_classes=16):
             ious.append(float(intersection) / float(max(union, 1)))
     return np.array(ious)
 
+
+def compute_loss_with_weights(logits, y, x, L, criterion, model, s=1e-9):
+    if not logits.device == y.device:
+            y = y.to(logits.device)
+
+    l_norm = 0
+    for name, p in model.named_parameters():
+         if 'bias_relus' not in name:
+            l_norm += t.norm(p, p=2)
+
+    loss = criterion(logits, y)
+    
+    l=0
+    for i in range(len(x)):
+        l += (1/2) * t.linalg.norm(t.matmul(t.matmul(t.permute(x[i], (0, 2, 1)), L[i]), x[i]))**2
+    l = (l_norm + l) * s
+    loss += l
+    return loss
 
 def compute_loss(logits, y, x, L, criterion, s=1e-9):
     if not logits.device == y.device:
@@ -122,7 +140,6 @@ class seg_model(nn.Module):
         self.reg_prior = reg_prior
         self.vertice = vertice
         self.dropout = dropout
-        self.regularizers = []
         self.recompute_L = recompute_L
         self.dropout = torch.nn.Dropout(p=self.dropout)
         self.relus = self.F + self.M
@@ -220,7 +237,7 @@ def train(model, optimizer, loader, regularization, criterion):
         logits, out, L = model(x.to(device), cat.to(device))
         logits = logits.permute([0, 2, 1])
 
-        loss = compute_loss(logits, y, out, L, criterion, s=regularization)
+        loss = compute_loss_with_weights(logits, y, out, L, criterion, model, s=regularization)
 
         loss.backward()
         optimizer.step()
@@ -332,14 +349,14 @@ if __name__ == '__main__':
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    num_points = 1024
-    batch_size = 4
-    num_epochs = 80
-    learning_rate = 0.003111998
-    decay_rate = 0.8
+    num_points = 2048
+    batch_size = 8
+    num_epochs = 200
+    learning_rate =  1e-3 # 0.003111998
+    decay_rate = 0.95
     weight_decay = 1e-9  # 1e-9
-    dropout = 0.09170225
-    regularization = 5.295088673159155e-9
+    dropout = 0.25 # 0.09170225
+    regularization = 1e-9 # 5.295088673159155e-9
 
     F = [128, 512, 1024]  # Outputs size of convolutional filter.
     K = [6, 5, 3]         # Polynomial orders.
@@ -372,11 +389,11 @@ if __name__ == '__main__':
 
     train_loader = DenseDataLoader(
         dataset_train, batch_size=batch_size,
-        shuffle=True, pin_memory=False)
+        shuffle=True, pin_memory=False, num_workers=4)
 
     test_loader = DenseDataLoader(
         dataset_test, batch_size=batch_size,
-        shuffle=True)
+        shuffle=True, num_workers=4)
 
     model = seg_model(num_points, F, K, M,
                       dropout=dropout,
@@ -393,4 +410,4 @@ if __name__ == '__main__':
                            '_'+str(dropout), filename_suffix='_reg')
 
     start_training(model, train_loader, test_loader, optimizer,
-                   epochs=num_epochs, criterion=criterion)
+                   epochs=num_epochs, criterion=criterion, regularization=regularization)
