@@ -301,7 +301,7 @@ def start_training(model, train_loader, test_loader, optimizer, criterion, epoch
 if __name__ == '__main__':
     now = datetime.now()
     directory = now.strftime("%d_%m_%y_%H:%M:%S")
-    parent_directory = "/home/victor/workspace/thesis_ws/github/RGCNN_git/models"
+    parent_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models"
     path = os.path.join(parent_directory, directory)
     os.mkdir(path)
 
@@ -319,7 +319,9 @@ if __name__ == '__main__':
     K = [6, 5, 3]         # Polynomial orders.
     M = [512, 128, 50]
 
-    root = "/media/rambo/ssd2/Alex_data/RGCNN/ShapeNet/"
+    #root = "/media/rambo/ssd2/Alex_data/RGCNN/ShapeNet/"
+
+    root = "/mnt/ssd1/Alex_data/RGCNN/ShapeNet/"
     print(root)
 
     transforms = Compose([FixedPoints(num_points), GaussianNoiseTransform(mu=0, sigma=0, recompute_normals=False)])
