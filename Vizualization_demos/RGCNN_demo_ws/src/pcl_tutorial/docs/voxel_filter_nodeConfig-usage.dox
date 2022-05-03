@@ -1,0 +1,7 @@
+\subsubsection usage Usage
+\verbatim
+<node name="pcl_tutorial" pkg="pcl_tutorial" type="pcl_tutorial">
+  <param name="leafsize" type="double" value="0.01" />
+</node>
+\endverbatim
+
