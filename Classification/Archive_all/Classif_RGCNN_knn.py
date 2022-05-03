@@ -222,7 +222,7 @@ if __name__ == '__main__':
     os.mkdir(path)
 
     num_points = 512
-    batch_size = 16
+    batch_size = 256
     num_epochs = 50
     learning_rate = 1e-3
     modelnet_num = 40
@@ -241,7 +241,10 @@ if __name__ == '__main__':
     transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
     #root = "/mnt/ssd1/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
-    root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+
+    root = "/home/alex/Alex_documents/RGCNN_git/data/Datasets/ModelNet"+str(modelnet_num)
+    #root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+
     print(root)
     dataset_train = ModelNet(root=root, name=str(modelnet_num), train=True, transform=transforms)
     dataset_test = ModelNet(root=root, name=str(modelnet_num), train=False, transform=transforms)
