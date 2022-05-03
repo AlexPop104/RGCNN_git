@@ -1,6 +1,8 @@
 #!/home/victor/anaconda3/envs/thesis_env/bin/python3
 import struct
 from subprocess import call
+
+from matplotlib.pyplot import axis
 import rospy
 import std_msgs.msg as msg
 from sensor_msgs.msg import PointCloud2
@@ -42,7 +44,7 @@ label_to_names = {0: 'airplane',
                         16: 'glass_box',
                         17: 'guitar',
                         18: 'keyboard',
-                        19: 'lamp',
+                        19: 'airplane',   # lamp
                         20: 'laptop',
                         21: 'mantel',
                         22: 'monitor',
@@ -176,7 +178,17 @@ def callback(data, model):
 
 
     # Only get the first 2048 points. MUST BE CHANGED AS PCD MAY HAVE LESS THAN 2048 POINTS
-    xyz = xyz[0:num_points]
+    # xyz = xyz[0:num_points]
+    # xyz = xyz[1:-1]
+    # max_x = np.absolute(xyz[:,0]).max()
+    # max_y = np.absolute(xyz[:,1]).max()
+    # max_z = np.absolute(xyz[:,2]).max()
+    # # print(f'{max_x}, {max_y}, {max_z}')
+
+    # xyz[:,0] = (xyz[:,0] / max_x + 0.5) 
+    # xyz[:,1] = (xyz[:,1] / max_y - 0.5)
+    # xyz[:,2] = (xyz[:,2] / max_z - 0.5)
+    # print(xyz)
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(xyz)
     pcd.estimate_normals(fast_normal_computation=False)
@@ -196,7 +208,7 @@ def callback(data, model):
     labels = pred.argmax(dim=-1)
     labels = labels.to('cpu')
     # rospy.loginfo(labels.shape)
-    print(label_to_names[labels.item()])
+    print(f'{label_to_names[labels.item()]}, {xyz.shape[1]}')
     # print(labels.shape)
 
     # aux_label = np.zeros([num_points, 3])
