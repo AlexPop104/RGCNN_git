@@ -19,7 +19,7 @@ from classification_model import cls_model
 from seg_model_rambo_v2 import seg_model
 
 model_path = "/home/victor/workspace/catkin_ws/src/RGCNN_demo_ws/src/pcl_tutorial/models/"
-model_name = "2048p_model.pt"
+model_name = "model140.pt"
 model_file = model_path + model_name
 device = 'cuda'
 
@@ -190,37 +190,40 @@ def callback(data, model):
     xyz = xyz.unsqueeze(0)
 
 
-    if xyz.shape[1] == num_points: 
-        pass
-    pred, _, _ = model(xyz.to(t.float32).to(device), cat)
-    labels = pred.argmax(dim=2).squeeze(0)
-    # labels = pred.argmax(dim=-1)
+    #if xyz.shape[1] == num_points: 
+    pred,_ = model(xyz.to(t.float32).to(device))
+    # labels = pred.argmax(dim=2).squeeze(0)
+    labels = pred.argmax(dim=-1)
     labels = labels.to('cpu')
-
     # rospy.loginfo(labels.shape)
-    # print(label_to_names[labels.item()])
+    print(label_to_names[labels.item()])
     # print(labels.shape)
 
-    aux_label = np.zeros([num_points, 3])
-    for i in range(num_points):
-        aux_label[i] = color[int(labels[i])]
+    # aux_label = np.zeros([num_points, 3])
+    # for i in range(num_points):
+    #     aux_label[i] = color[int(labels[i])]
 
     # print(aux_label) 
 
-    points = np.append(points, aux_label, axis=1)
-
-    # print(points.shape)
-    # print(color[0].shape)
-    # for i in range(points.shape[0]):
-    #     for j in range(3):
-    #         points[i] = np.append(points[i], color[int(labels[i])][j])
+    #points = np.append(points, aux_label, axis=1)
     
 
+    # print(points)
+
+    '''
+    for i in range(points.shape[0]):
+        for j in range(3):
+            points[i] = np.append(points[i], color[int(labels[i])][j])
+    '''
+    
     message = pcl2.create_cloud(header, fields, points)
     pub.publish(message)
 
-    # else: 
-    #     rospy.loginfo(xyz.shape)
+    '''
+    else: 
+        
+        rospy.loginfo(xyz.shape)
+    '''
 
 def listener(model):
     rospy.init_node('listener', anonymous=True)
@@ -232,24 +235,26 @@ if __name__ == "__main__":
     F = [128, 512, 1024]  # Outputs size of convolutional filter.
     K = [6, 5, 3]         # Polynomial orders.
     M = [512, 128, 50]
-
-    num_points = 2048
+    num_points = 512
     header = msg.Header()
     header.frame_id = 'map'
+    # fields = [PointField('x', 0,  PointField.FLOAT32, 1),
+    #             PointField('y', 4,  PointField.FLOAT32, 1),
+    #             PointField('z', 8,  PointField.FLOAT32, 1),
+    #             PointField('r', 12, PointField.FLOAT32, 1),
+    #             PointField('g', 16, PointField.FLOAT32, 1),
+    #             PointField('b', 20, PointField.FLOAT32, 1)]
     fields = [PointField('x', 0,  PointField.FLOAT32, 1),
                 PointField('y', 4,  PointField.FLOAT32, 1),
                 PointField('z', 8,  PointField.FLOAT32, 1),
-                PointField('r', 12, PointField.FLOAT32, 1),
-                PointField('g', 16, PointField.FLOAT32, 1),
-                PointField('b', 20, PointField.FLOAT32, 1)]
-   
+                ]
     color = []
     rng = default_rng()
     pub = rospy.Publisher("Segmented_Point_Cloud", PointCloud2, queue_size=10)
-    for i in range(50):
+    for i in range(40):
         color.append(rng.choice(254, size=3, replace=False).tolist())
 
-    model = seg_model(num_points, F, K, M)
+    model = cls_model(num_points, F, K, M, class_num=40)
     model.load_state_dict(t.load(model_file))
     model.to(device)
     model.eval()
