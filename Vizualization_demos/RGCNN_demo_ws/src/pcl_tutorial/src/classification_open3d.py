@@ -221,7 +221,7 @@ if __name__ == "__main__":
     F = [128, 512, 1024]  # Outputs size of convolutional filter.
     K = [6, 5, 3]         # Polynomial orders.
     M = [512, 128, 50]
-    num_points = 512
+    num_points =1024
     header = msg.Header()
     header.frame_id = 'camera_depth_optical_frame'
     
@@ -243,4 +243,5 @@ if __name__ == "__main__":
     model.to(device)
     model.eval()
     listener(model)
+ 
 

@@ -218,4 +218,3 @@ if __name__ == "__main__":
     model.to(device)
     model.eval()
     listener(model)
-

@@ -274,7 +274,7 @@ print(root)
 
 
 model = cls_model(num_points, F, K, M, modelnet_num, dropout=1, reg_prior=True)
-path_saved_model="/home/alex/Alex_documents/RGCNN_git/Modele_selectate/Normals_recomputed/Augmented_rotation/RGCNN_aug_rotation.pt"
+path_saved_model="/home/alex/Alex_documents/RGCNN_git/Classification/Modele_selectate/Normals_recomputed/Augmented_rotation/RGCNN_aug_rotation.pt"
 model.load_state_dict(torch.load(path_saved_model))
 print(model.parameters)
 model = model.to(device)

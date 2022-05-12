@@ -249,7 +249,7 @@ parent_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models
 path = os.path.join(parent_directory, directory)
 os.mkdir(path)
 
-num_points = 512
+num_points = 1024
 batch_size = 16
 num_epochs = 250
 learning_rate = 1e-3
@@ -265,8 +265,8 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 print(f"Training on {device}")
 
-root = "/mnt/ssd1/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
-#root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+#root = "/mnt/ssd1/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
 #print(root)
 
 model = cls_model(num_points, F, K, M, modelnet_num, dropout=dropout, reg_prior=True)
