@@ -15,6 +15,8 @@ import scipy.spatial.distance
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 
+from torch_geometric.nn import fps
+
 import torch_geometric.transforms
 
 import open3d as o3d
@@ -49,8 +51,6 @@ class PcdDataset(Dataset):
 
     def __preproc__(self, file, idx):
         pcd = o3d.io.read_point_cloud(file)
-        #o3d.visualization.draw_geometries([pcd])
-
         points = np.asarray(pcd.points)
         points = torch.tensor(points)
 
@@ -61,30 +61,49 @@ class PcdDataset(Dataset):
             pcd.normalize_normals()
             pcd.orient_normals_consistent_tangent_plane(100)
 
-            # o3d.visualization.draw_geometries([pcd])
+            normals=np.asarray(pcd.normals)
+           
 
-        print(len(points))
-        if len(points) < 2048:
-            radii = [0.005, 0.01, 0.02, 0.04]
-            alpha = 0.03
-            rec_mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_alpha_shape(
-                pcd, alpha)
+            #print(len(points))
+
+            if len(points) < 2048:
+                radii = [0.005, 0.01, 0.02, 0.04]
+                alpha = 0.03
+                rec_mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_alpha_shape(
+                    pcd, alpha)
 
 
-            #o3d.visualization.draw_geometries([pcd, rec_mesh])
+                #o3d.visualization.draw_geometries([pcd, rec_mesh])
 
-            num_points_sample = 2048
+                num_points_sample = 2048
 
-            pcd_sampled = rec_mesh.sample_points_poisson_disk(num_points_sample) 
-            points = pcd_sampled.points
+                pcd_sampled = rec_mesh.sample_points_poisson_disk(num_points_sample) 
+
+                points = pcd_sampled.points
+                points = torch.tensor(points)
+                normals = np.asarray(pcd_sampled.normals)
+
+                # print(len(points))
+                # print(len(normals))
+            else:
+
+                nr_points_fps=2048
+                nr_points=points.shape[0]
+
+                index_fps = fps(points, ratio=float(nr_points_fps/nr_points) , random_start=True)
+
+                fps_points=points[index_fps]
+                fps_normals=normals[index_fps]
+
+                points=fps_points
+                normals = fps_normals
+
+            normals = torch.Tensor(normals)
+
+        pointcloud = torch_geometric.data.Data(x=normals, pos=points, y=[self.classes[self.files[idx]['category']]])
+
         
-            normals = np.asarray(pcd_sampled.normals)
-        else:
-            normals = np.asarray(pcd.normals)
-
-        normals = torch.Tensor(normals)
-
-        pointcloud = torch_geometric.data.Data(x=normals, pos=points, y=self.files[idx]['category'])
+       
 
         if self.transforms:
             pointcloud = self.transforms(pointcloud)
@@ -100,20 +119,20 @@ class PcdDataset(Dataset):
 
 
 if __name__ == '__main__':
-    root = Path("/home/alex/Alex_documents/RGCNN_git/Vizualization_demos/RGCNN_demo_ws/Dataset_camera/")
+    root = Path("/home/alex/Alex_documents/RGCNN_git/Vizualization_demos/RGCNN_demo_ws/Dataset_camera")
    
     transform = torch_geometric.transforms.FixedPoints(2048, allow_duplicates=False)
 
-    dataset = PcdDataset(root, transform=transform)
+    dataset = PcdDataset(root)
     print(len(dataset))
-    print(dataset[0])
+    print(dataset[280])
     print("~~~" * 20)
 
     loader = DenseDataLoader(dataset, batch_size=8)
 
     for data in loader:
         print(data)
-        print(data.y)
-        break
+        #print(data.y)
+        
 
 # /home/victor/workspace/catkin_ws/dataset_camera

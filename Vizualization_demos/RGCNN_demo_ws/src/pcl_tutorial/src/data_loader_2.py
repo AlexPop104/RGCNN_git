@@ -63,9 +63,9 @@ class PcdDataset(Dataset):
 
             # o3d.visualization.draw_geometries([pcd])
 
-        print(len(points))
-        if len(points) < 2048:
-            radii = [0.005, 0.01, 0.02, 0.04]
+            # print(len(points))
+            # if len(points) < 2048:
+            # radii = [0.005, 0.01, 0.02, 0.04]
             alpha = 0.03
             rec_mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_alpha_shape(
                 pcd, alpha)
@@ -79,12 +79,12 @@ class PcdDataset(Dataset):
             points = pcd_sampled.points
         
             normals = np.asarray(pcd_sampled.normals)
-        else:
-            normals = np.asarray(pcd.normals)
+            # else:
+            #     normals = np.asarray(pcd.normals)
 
-        normals = torch.Tensor(normals)
-
-        pointcloud = torch_geometric.data.Data(x=normals, pos=points, y=self.files[idx]['category'])
+            normals = torch.Tensor(normals)
+        points = np.asarray(points)
+        pointcloud = torch_geometric.data.Data(pos=points, normal=normals, y=[self.classes[self.files[idx]['category']]])
 
         if self.transforms:
             pointcloud = self.transforms(pointcloud)
@@ -100,13 +100,13 @@ class PcdDataset(Dataset):
 
 
 if __name__ == '__main__':
-    root = Path("/home/alex/Alex_documents/RGCNN_git/Vizualization_demos/RGCNN_demo_ws/Dataset_camera/")
+    root = Path("/home/alex/Alex_documents/RGCNN_git/Vizualization_demos/RGCNN_demo_ws/Dataset_camera")
    
     transform = torch_geometric.transforms.FixedPoints(2048, allow_duplicates=False)
 
-    dataset = PcdDataset(root, transform=transform)
+    dataset = PcdDataset(root)
     print(len(dataset))
-    print(dataset[0])
+    print(dataset[250])
     print("~~~" * 20)
 
     loader = DenseDataLoader(dataset, batch_size=8)
@@ -114,6 +114,6 @@ if __name__ == '__main__':
     for data in loader:
         print(data)
         print(data.y)
-        break
+        
 
 # /home/victor/workspace/catkin_ws/dataset_camera
