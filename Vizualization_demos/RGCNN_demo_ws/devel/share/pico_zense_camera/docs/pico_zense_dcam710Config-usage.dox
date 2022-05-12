@@ -1,0 +1,9 @@
+\subsubsection usage Usage
+\verbatim
+<node name="pico_zense_camera" pkg="pico_zense_camera" type="pico_zense_camera">
+  <param name="depth_confidence_threshold" type="int" value="100" />
+  <param name="depth_range" type="double" value="1.0" />
+  <param name="rgb_resolution" type="str" value="1280x720" />
+</node>
+\endverbatim
+

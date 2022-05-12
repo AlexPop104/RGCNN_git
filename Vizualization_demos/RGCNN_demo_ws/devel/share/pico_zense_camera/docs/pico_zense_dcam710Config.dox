@@ -1,0 +1,8 @@
+\subsubsection parameters ROS parameters
+
+Reads and maintains the following parameters on the ROS server
+
+- \b "~depth_confidence_threshold" : \b [int] Depth distance confidance (0% keeps all, 100% drops every depth point with <100% confidence min: 0, default: 100, max: 100
+- \b "~depth_range" : \b [double] Optimise the camera for this depth range min: 0.0, default: 1.0, max: 15.0
+- \b "~rgb_resolution" : \b [str] RGB Resolution min: , default: 1280x720, max: 
+

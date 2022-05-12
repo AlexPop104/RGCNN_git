@@ -1,0 +1,8 @@
+prefix=/home/alex/Alex_documents/RGCNN_git/Vizualization_demos/RGCNN_demo_ws/install
+
+Name: pico_zense_camera
+Description: Description of pico_zense_camera
+Version: 0.0.0
+Cflags: -I${prefix}/include
+Libs: -L${prefix}/lib 
+Requires: camera_info_manager image_transport tf2 tf2_ros geometry_msgs std_msgs message_runtime roscpp rospy cv_bridge

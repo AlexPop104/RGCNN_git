@@ -1,0 +1,8 @@
+prefix=/home/alex/Alex_documents/RGCNN_git/Vizualization_demos/RGCNN_demo_ws/devel
+
+Name: pcl_tutorial
+Description: Description of pcl_tutorial
+Version: 0.0.0
+Cflags: -I/home/alex/Alex_documents/RGCNN_git/Vizualization_demos/RGCNN_demo_ws/devel/include
+Libs: -L${prefix}/lib 
+Requires: 

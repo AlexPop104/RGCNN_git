@@ -1,0 +1,7 @@
+set(pico_zense_camera_SETUP_PY_SETUP_MODULE "distutils.core")
+set(pico_zense_camera_SETUP_PY_VERSION "0.0.0")
+set(pico_zense_camera_SETUP_PY_SCRIPTS "")
+set(pico_zense_camera_SETUP_PY_PACKAGES "pico_zense_camera")
+set(pico_zense_camera_SETUP_PY_PACKAGE_DIRS "src/pico_zense_camera")
+set(pico_zense_camera_SETUP_PY_MODULES "")
+set(pico_zense_camera_SETUP_PY_MODULE_DIRS "")

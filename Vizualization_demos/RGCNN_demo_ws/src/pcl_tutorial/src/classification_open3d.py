@@ -44,7 +44,7 @@ label_to_names = {0: 'airplane',
                         16: 'glass_box',
                         17: 'guitar',
                         18: 'keyboard',
-                        19: 'airplane',   # lamp
+                        19: 'lamp',   
                         20: 'laptop',
                         21: 'mantel',
                         22: 'monitor',
