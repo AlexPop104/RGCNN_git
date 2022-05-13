@@ -121,7 +121,7 @@ class PcdDataset(Dataset):
 
 
 if __name__ == '__main__':
-    root = Path("/home/alex/Alex_documents/RGCNN_git/Demo_vizualization/RGCNN/RGCNN_demo_ws/Dataset_camera")
+    root = Path("/home/alex/Alex_documents/RGCNN_git/Vizualization_demos/RGCNN_demo_ws/Dataset")
    
     #transform = torch_geometric.transforms.FixedPoints(2048, allow_duplicates=False)
 

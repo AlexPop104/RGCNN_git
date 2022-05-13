@@ -259,7 +259,7 @@ num_points = 1024
 batch_size = 16
 num_epochs = 250
 learning_rate = 1e-3
-modelnet_num = 2
+modelnet_num = 5
 dropout=0.25
 
 F = [128, 512, 1024]  # Outputs size of convolutional filter.
@@ -291,7 +291,7 @@ regularization = 1e-9
 torch.manual_seed(0)
 #################################################################33
 
-root = Path("/home/alex/Alex_documents/RGCNN_git/Vizualization_demos/RGCNN_demo_ws/Dataset_camera/")
+root = Path("/home/alex/Alex_documents/RGCNN_git/Vizualization_demos/RGCNN_demo_ws/Dataset/")
 train_dataset_0 = cam_loader.PcdDataset(root_dir=root, valid=False)
 test_dataset_0 = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test')
 
@@ -305,7 +305,7 @@ test_loader_0  = DataLoader(test_dataset_0, batch_size=batch_size)
 ###############################################################################
 
 
-for epoch in range(1, num_epochs+1):
+for epoch in range(0, num_epochs+1):
 
     #program_name="RGCNN-recomputed-normals"
     # conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
@@ -345,7 +345,7 @@ for epoch in range(1, num_epochs+1):
 
     # writer.add_figure("Confusion matrix", createConfusionMatrix(model,test_loader), epoch)
 
-    if(epoch%5==0):
+    if(epoch%3==0):
         torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
 
     my_lr_scheduler.step()

@@ -220,6 +220,40 @@ def test(model, loader,num_points,criterion,device):
 
     return total_loss / len(loader.dataset) , total_correct / len(loader.dataset) 
 
+def createConfusionMatrix(model,loader):
+    y_pred = [] # save predction
+    y_true = [] # save ground truth
+
+    # iterate over data
+    for  data in loader:
+        x = torch.cat([data.pos, data.normal], dim=1)
+        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+
+        # x=data.pos
+        # x=x.reshape(data.batch.unique().shape[0], num_points, 3)
+        logits, _ = model(x.to(device))
+        pred = logits.argmax(dim=-1)
+        
+        output = pred.cpu().numpy()
+        y_pred.extend(output)  # save prediction
+
+        labels = data.y.cpu().numpy()
+        y_true.extend(labels)  # save ground truth
+
+   
+    # Build confusion matrix
+    cf_matrix = confusion_matrix(y_true, y_pred,normalize='true')
+    df_cm = pd.DataFrame(cf_matrix, index=[i for i in range(40)],
+                         columns=[i for i in range(40)])
+    plt.figure(figsize=(50, 50))    
+    return sn.heatmap(df_cm, annot=True).get_figure()
+
+
+now = datetime.now()
+directory = now.strftime("%d_%m_%y_%H:%M:%S")
+parent_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models"
+path = os.path.join(parent_directory, directory)
+os.mkdir(path)
 
 num_points = 1024
 batch_size = 16
@@ -243,6 +277,7 @@ print(f"Training on {device}")
 
 
 
+
 model = cls_model(num_points, F, K, M, modelnet_num, dropout=dropout, reg_prior=True)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -253,3 +288,31 @@ criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
 regularization = 1e-9
 
+torch.manual_seed(0)
+path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/model5.pt"
+model.load_state_dict(torch.load(path_saved_model))
+print(model.parameters)
+model = model.to(device)
+
+torch.manual_seed(0)
+
+root = Path("/home/alex/Alex_documents/RGCNN_git/Vizualization_demos/RGCNN_demo_ws/Dataset_camera")
+test_dataset_0 = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test')
+
+
+###############################################################################
+
+
+test_loader  = DataLoader(test_dataset_0, batch_size=batch_size)
+
+################################################
+test_start_time = time.time()
+test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+test_stop_time = time.time()
+
+print(f'{test_acc:.4f}')
+
+#print(f'\Test Time: \t{test_stop_time - test_start_time }')
+    #print(f' Test Accuracy: {test_acc:.4f}')
+
+    

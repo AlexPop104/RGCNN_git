@@ -259,7 +259,7 @@ num_points = 1024
 batch_size = 16
 num_epochs = 250
 learning_rate = 1e-3
-modelnet_num = 2
+modelnet_num = 5
 dropout=0.25
 
 F = [128, 512, 1024]  # Outputs size of convolutional filter.
@@ -289,14 +289,14 @@ my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
 regularization = 1e-9
 
 torch.manual_seed(0)
-path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models/model5.pt"
+path_saved_model="/home/alex/Alex_documents/RGCNN_git/Classification/Modele_selectate/Camera/model3.pt"
 model.load_state_dict(torch.load(path_saved_model))
 print(model.parameters)
 model = model.to(device)
 
 torch.manual_seed(0)
 
-root = Path("/home/alex/Alex_documents/RGCNN_git/Vizualization_demos/RGCNN_demo_ws/Dataset_camera")
+root = Path("/home/alex/Alex_documents/RGCNN_git/Vizualization_demos/RGCNN_demo_ws/Dataset")
 test_dataset_0 = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test')
 
 
