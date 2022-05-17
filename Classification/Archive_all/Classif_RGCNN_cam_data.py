@@ -255,7 +255,7 @@ parent_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models
 path = os.path.join(parent_directory, directory)
 os.mkdir(path)
 
-num_points = 1024
+num_points = 206
 batch_size = 16
 num_epochs = 250
 learning_rate = 1e-3
@@ -291,9 +291,9 @@ regularization = 1e-9
 torch.manual_seed(0)
 #################################################################33
 
-root = Path("/home/alex/Alex_documents/RGCNN_git/Vizualization_demos/RGCNN_demo_ws/Dataset/")
-train_dataset_0 = cam_loader.PcdDataset(root_dir=root, valid=False)
-test_dataset_0 = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test')
+root = Path("/home/alex/Alex_documents/RGCNN_git/Vizualization_demos/RGCNN_demo_ws/dataset_resampled/")
+train_dataset_0 = cam_loader.PcdDataset(root_dir=root, points=num_points)
+test_dataset_0 = cam_loader.PcdDataset(root_dir=root, folder='test',points=num_points)
 
 
 ###############################################################################

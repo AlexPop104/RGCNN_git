@@ -190,7 +190,7 @@ if __name__ == "__main__":
 
     device = 'cuda'
 
-    num_points = 1024
+    num_points = 206
     modelnet_num = 2
     dropout=0.25
 

@@ -18,13 +18,9 @@ np.random.seed(0)
 import open3d as o3d
 import torch as t
 from torch_geometric.nn import fps
-from classification_model import cls_model
-from seg_model_rambo_v2 import seg_model
 
-model_path = "/home/alex/Alex_documents/RGCNN_git/Vizualization_demos/RGCNN_demo_ws/src/pcl_tutorial/src/models/"
-model_name = "model140.pt"
-model_file = model_path + model_name
-device = 'cuda'
+
+
 
 label_to_names = {0: 'chair',
                   1: 'plane',
@@ -171,9 +167,9 @@ def callback(data, model):
 
    
 
-def listener(model):
+def listener():
     rospy.init_node('listener', anonymous=True)
-    rospy.Subscriber("/no_floor_out", PointCloud2, callback=callback, callback_args=model)
+    rospy.Subscriber("/no_floor_out", PointCloud2, callback=callback)
     rospy.spin()
 
 
@@ -198,11 +194,8 @@ if __name__ == "__main__":
     for i in range(40):
         color.append(rng.choice(254, size=3, replace=False).tolist())
 
-    model = cls_model(num_points, F, K, M, class_num=40)
-    model.load_state_dict(t.load(model_file))
-    model.to(device)
-    model.eval()
-    listener(model)
+ 
+    listener()
  
 
 
