@@ -89,7 +89,7 @@ class pcd_registration():
         return self.result
 
 class PcdDataset(Dataset):
-    def __init__(self, root_dir, valid=False, folder="train", transform=default_transforms(), with_normals=True, save_path=None):
+    def __init__(self, root_dir, points=512, valid=False, folder="train", transform=default_transforms(), with_normals=True, save_path=None):
         self.root_dir = root_dir
         folders = [dir for dir in sorted(os.listdir(root_dir)) if os.path.isdir(root_dir/dir)]
         self.classes = {folder: i for i, folder in enumerate(folders)}
@@ -99,6 +99,7 @@ class PcdDataset(Dataset):
         self.with_normals = with_normals
         self.save_path = None
         self.folder = folder
+        self.points = points
         if save_path is not None:
             self.save_path = save_path
             if not os.path.exists(save_path):
@@ -136,14 +137,13 @@ class PcdDataset(Dataset):
 
             # print(len(points))
             if self.save_path is not None:
-                if len(points) < 2048:
-                    radii = [0.005, 0.01, 0.02, 0.04]
+                if len(points) < self.points:
                     alpha = 0.03
                     rec_mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_alpha_shape(
                         pcd, alpha)
                     # o3d.visualization.draw_geometries([pcd, rec_mesh])
 
-                    num_points_sample = 2048
+                    num_points_sample = self.points
 
                     pcd_sampled = rec_mesh.sample_points_poisson_disk(num_points_sample) 
                     points = pcd_sampled.points
@@ -181,9 +181,9 @@ class PcdDataset(Dataset):
         return pointcloud
 
 
-def process_dataset(root, save_path, transform=None):
-    dataset_train = PcdDataset(root, folder="train", transform=transform, save_path=save_path)
-    dataset_test =  PcdDataset(root, folder="test", transform=transform, save_path=save_path)
+def process_dataset(root, save_path, transform=None, num_points=512):
+    dataset_train = PcdDataset(root, folder="train", transform=transform, save_path=save_path, points=num_points)
+    dataset_test =  PcdDataset(root, folder="test", transform=transform, save_path=save_path, points=num_points)
 
     print("Processing train data: ")
     for i in tqdm(range(len(dataset_train))):
@@ -194,12 +194,13 @@ def process_dataset(root, save_path, transform=None):
         _ = dataset_test[i]
     
 if __name__ == '__main__':
+    num_points = 206
     root = Path("/home/victor/workspace/catkin_ws/Dataset/")
     save_path = Path("/home/victor/workspace/catkin_ws/dataset_resampled/")
-    transform = torch_geometric.transforms.FixedPoints(206, allow_duplicates=False)
+    transform = torch_geometric.transforms.FixedPoints(num_points, allow_duplicates=False)
 
 
-    process_dataset(root, save_path, transform)
+    process_dataset(root, save_path, transform, num_points)
 
     # dataset = PcdDataset(root, save_path=save_path, transform=transform)
     # print(len(dataset))
