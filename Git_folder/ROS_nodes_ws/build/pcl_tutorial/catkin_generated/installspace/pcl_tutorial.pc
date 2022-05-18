@@ -1,0 +1,8 @@
+prefix=/home/alex/Alex_documents/RGCNN_git/Git_folder/ROS_nodes_ws/install
+
+Name: pcl_tutorial
+Description: Description of pcl_tutorial
+Version: 0.0.0
+Cflags: -I${prefix}/include
+Libs: -L${prefix}/lib 
+Requires: 

@@ -1,0 +1,8 @@
+prefix=/home/alex/Alex_documents/RGCNN_git/Git_folder/ROS_nodes_ws/devel
+
+Name: openni2_launch
+Description: Description of openni2_launch
+Version: 1.4.2
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

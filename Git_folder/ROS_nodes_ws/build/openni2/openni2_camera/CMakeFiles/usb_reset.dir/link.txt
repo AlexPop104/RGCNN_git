@@ -1,0 +1,1 @@
+/usr/bin/cc   -rdynamic CMakeFiles/usb_reset.dir/src/usb_reset.c.o  -o /home/alex/Alex_documents/RGCNN_git/Git_folder/ROS_nodes_ws/devel/lib/openni2_camera/usb_reset 

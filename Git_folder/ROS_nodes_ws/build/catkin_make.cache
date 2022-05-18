@@ -1,0 +1,2 @@
+openni2/openni2_camera:openni2/openni2_launch:pcl_tutorial
+-DCATKIN_DEVEL_PREFIX=/home/alex/Alex_documents/RGCNN_git/Git_folder/ROS_nodes_ws/devel -DCMAKE_INSTALL_PREFIX=/home/alex/Alex_documents/RGCNN_git/Git_folder/ROS_nodes_ws/install -G Unix Makefiles

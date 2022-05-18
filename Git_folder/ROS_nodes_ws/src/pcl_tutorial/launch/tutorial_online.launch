@@ -1,0 +1,23 @@
+<launch>
+ <node pkg="pcl_tutorial" type="voxel_filter_node" name="voxel_filter_node" output="screen" >
+<remap from="point_cloud_in" to="/camera/depth_registered/points" />
+</node>
+
+
+ <node pkg="pcl_tutorial" type="passthrough_filter_node" name="passthrough_filter_node" output="screen" >
+<remap from="point_cloud_in" to="/vf_out" />
+</node>
+
+
+<node pkg="pcl_tutorial" type="remove_floor_node" name="remove_floor_node" output="screen">
+</node>
+
+<node pkg="pcl_tutorial" type="open3d_sampling_node.py" name="open3d_sampling_node.py" output="screen">
+</node>
+
+ <node pkg="rviz" type="rviz" name="rviz" output="screen" args="-d $(find pcl_tutorial)/cfg/rviz.rviz"/>
+
+ <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="rqt_reconfigure" output="screen" />
+
+
+</launch>

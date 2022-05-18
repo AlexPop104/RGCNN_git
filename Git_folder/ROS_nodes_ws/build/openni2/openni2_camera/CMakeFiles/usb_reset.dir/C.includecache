@@ -1,0 +1,22 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/alex/Alex_documents/RGCNN_git/Git_folder/ROS_nodes_ws/src/openni2/openni2_camera/src/usb_reset.c
+stdio.h
+-
+unistd.h
+-
+fcntl.h
+-
+errno.h
+-
+sys/ioctl.h
+-
+linux/usbdevice_fs.h
+-
+

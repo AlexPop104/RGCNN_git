@@ -1,0 +1,8 @@
+prefix=/home/alex/Alex_documents/RGCNN_git/Git_folder/ROS_nodes_ws/install
+
+Name: openni2_camera
+Description: Description of openni2_camera
+Version: 1.4.2
+Cflags: -I${prefix}/include
+Libs: -L${prefix}/lib -lopenni2_wrapper
+Requires: camera_info_manager dynamic_reconfigure image_transport nodelet sensor_msgs roscpp message_runtime
