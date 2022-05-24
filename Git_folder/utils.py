@@ -280,3 +280,113 @@ class GaussianNoiseTransform(BaseTransform):
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}()'
+
+class Sphere_Occlusion_Transform(BaseTransform):
+
+    def __init__(self, radius: Optional[float] = 0.1,percentage:Optional[float] = 0.1):
+        torch.manual_seed(0)
+        np.random.seed(0)
+        
+        self.radius = radius
+        self.percentage=percentage
+
+    def __call__(self, data: Union[Data, HeteroData]):
+        chosen_center= np.random.randint(0, data.pos.shape[0])
+       
+        pcd_center=data.pos[chosen_center]
+
+        nr_coordinates=pcd_center.shape[0]
+
+        pcd_center=np.tile(pcd_center, data.pos.shape[0])
+        pcd_center=pcd_center.reshape(data.pos.shape[0],nr_coordinates)
+
+        points=data.pos
+        points=points-pcd_center
+        points=np.linalg.norm(points, axis=1)
+
+        sorted_points=np.sort(points)
+
+        selected_position=int(data.pos.shape[0]*self.percentage)
+
+        radius=sorted_points[selected_position]
+        
+        # index_pcd= np.squeeze(np.argwhere(points_final<self.radius))
+
+        remaining_index= np.squeeze(np.argwhere(points>=radius))
+
+    
+        pcd_o3d = o3d.geometry.PointCloud()
+        pcd_o3d.points = o3d.utility.Vector3dVector(data.pos)
+
+        pcd_o3d_remaining = o3d.geometry.PointCloud()
+        pcd_o3d_remaining.points = o3d.utility.Vector3dVector(np.squeeze(data.pos[remaining_index]))
+        pcd_o3d.paint_uniform_color([0, 1, 0])
+
+        # pcd_o3d_sphere = o3d.geometry.PointCloud()
+        # pcd_o3d_sphere.points=o3d.utility.Vector3dVector(np.squeeze(data.pos[index_pcd]))
+        # pcd_o3d_sphere.normals=o3d.utility.Vector3dVector(np.squeeze(data.normal[index_pcd]))
+        # pcd_o3d_sphere.paint_uniform_color([1, 0, 0])
+
+
+
+        
+
+        # o3d.visualization.draw_geometries([pcd_o3d_sphere]) 
+        
+
+
+
+        # o3d.visualization.draw_geometries([pcd_o3d_remaining]) 
+        # o3d.visualization.draw_geometries([pcd_o3d])        
+
+        pcd_o3d_remaining.estimate_normals(fast_normal_computation=False)
+        pcd_o3d_remaining.normalize_normals()
+        pcd_o3d_remaining.orient_normals_consistent_tangent_plane(100)
+
+        normals=np.asarray(pcd_o3d_remaining.normals)
+
+        if len(pcd_o3d_remaining.points) < data.pos.shape[0]:
+                alpha = 0.03
+                rec_mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_alpha_shape(
+                    pcd_o3d_remaining, alpha)
+
+                num_points_sample = data.pos.shape[0]
+
+                pcd_sampled = rec_mesh.sample_points_poisson_disk(num_points_sample) 
+
+                points = pcd_sampled.points
+
+                pcd_o3d_remaining.points=points
+
+                pcd_o3d_remaining.paint_uniform_color([0.5, 0.3, 0.2])
+
+                # o3d.visualization.draw_geometries([pcd_o3d_remaining]) 
+                # o3d.visualization.draw_geometries([pcd_o3d_remaining,pcd_o3d])
+
+
+                points = torch.tensor(points)
+                points=points.float()
+                normals = np.asarray(pcd_sampled.normals)
+                normals = torch.tensor(normals)
+                normals=normals.float()
+
+                
+
+                data.pos=points
+                data.normal=normals
+
+        
+
+
+        # pcd_o3d.estimate_normals(fast_normal_computation=False)
+        # pcd_o3d.normalize_normals()
+        # if hasattr(data, 'normal'):
+        #     data.normal = np.asarray(pcd_o3d.normals)
+        #     data.normal = torch.tensor(data.normal, dtype=torch.float32)
+        # else:
+        #     data.normal = np.asarray(pcd_o3d.normals)
+        #     data.normal = torch.tensor(data.normal, dtype=torch.float32)
+        return data
+
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}()'
