@@ -290,7 +290,7 @@ ceva2=0
 
 torch.manual_seed(0)
 
-for ceva in range(0,4):
+for ceva in range(2,3):
 #for ceva2 in range(0,len(sigma)):
 
     mu=0
@@ -344,7 +344,7 @@ for ceva in range(0,4):
     #conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
 
 
-    #conv.test_pcd_pred(model=model,loader=test_loader,num_points=num_points,device=device)
+    conv.test_pcd_pred(model=model,loader=test_loader,num_points=num_points,device=device)
         
     test_start_time = time.time()
     test_loss, test_acc = test(model, test_loader)

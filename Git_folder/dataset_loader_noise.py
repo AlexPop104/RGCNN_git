@@ -25,7 +25,10 @@ import open3d as o3d
 import random
 import time
 
+from torch_geometric.transforms import Compose
+
 from utils import GaussianNoiseTransform
+from torch_geometric.transforms import RandomRotate
 
 def default_transforms():
     return transforms.Compose([
@@ -68,6 +71,7 @@ class PcdDataset(Dataset):
 
     def __preproc__(self, file, idx):
         pcd = o3d.io.read_point_cloud(file)
+        print(file)
         points = np.asarray(pcd.points)
         points = torch.tensor(points)
 
@@ -165,29 +169,81 @@ def process_dataset(root, save_path, transform=None, num_points=512):
 if __name__ == '__main__':
 
 
+    ########################3
+    ######New tests
 
-    root = Path("/home/alex/Alex_documents/RGCNN_git/Vizualization_demos/RGCNN_demo_ws/Dataset/")
+    mu=0
+    sigma=0.0
+
+    rot_x=1
+    rot_y=1
+    rot_z=1
+
+    ceva=0
+
+    random_rotate = Compose([
+    RandomRotate(degrees=rot_x*ceva*10, axis=0),
+    RandomRotate(degrees=rot_y*ceva*10, axis=1),
+    RandomRotate(degrees=rot_z*ceva*10, axis=2),
+    ])
+
+    test_transform = Compose([
+                    random_rotate,
+                    #GaussianNoiseTransform(mu, sigma,recompute_normals=True)])
+
+    ##################################################3
    
     ####Processing the datasets
 
-    num_points = 512
-    root = Path("/home/alex/Alex_documents/RGCNN_git/Classification/Archive_all/Git_folder/data/Dataset/")
-    save_path = Path("/home/alex/Alex_documents/RGCNN_git/Classification/Archive_all/Git_folder/data/dataset_resampled_v2/")
-    process_dataset(root=root, save_path=save_path,  num_points=num_points)
+    # num_points = 512
+    # root = Path("/home/alex/Alex_documents/RGCNN_git/Git_folder/data/dataset_resampled_512/")
+    # save_path = Path("/home/alex/Alex_documents/RGCNN_git/Git_folder/data/dataset_resampled_rotate_0/")
+    # process_dataset(root=root, save_path=save_path,  num_points=num_points,transform=test_transform)
 
 
     ##################################################################333333333
 
-    ##Loading the processed dataset
+    # ##Loading the processed dataset
 
-    # root =Path("/home/alex/Alex_documents/RGCNN_git/Vizualization_demos/RGCNN_demo_ws/dataset_resampled/")
+    root =Path("/home/alex/Alex_documents/RGCNN_git/Git_folder/data/dataset_resampled_512/")
+    root_noise =Path("/home/alex/Alex_documents/RGCNN_git/Git_folder/data/dataset_resampled_rotate_0/")
 
-    # num_points = 206
-    # train_dataset = PcdDataset(root,valid=False,points=num_points)
-    # test_dataset = PcdDataset(root,folder="test",points=num_points)
+    num_points = 512
 
-    # loader_train = DenseDataLoader(train_dataset, batch_size=8)
-    # loader_test = DenseDataLoader(test_dataset, batch_size=8)
+    train_dataset = PcdDataset(root,valid=False,points=num_points)
+    test_dataset = PcdDataset(root,folder="test",points=num_points)
+
+    loader_train = DenseDataLoader(train_dataset, batch_size=8)
+    loader_test = DenseDataLoader(test_dataset, batch_size=8)
+
+    train_dataset_noise = PcdDataset(root_noise,valid=False,points=num_points)
+    test_dataset_noise = PcdDataset(root_noise,folder="test",points=num_points)
+
+    loader_train_noise = DenseDataLoader(train_dataset_noise, batch_size=8)
+    loader_test_noise = DenseDataLoader(test_dataset_noise, batch_size=8)
+
+
+    for i in range(2):
+    
+        pcd_sampled = o3d.geometry.PointCloud()
+        pcd_noise = o3d.geometry.PointCloud()
+
+        print("PCD sampled")
+        pcd_sampled.points=o3d.utility.Vector3dVector(train_dataset[i].pos)
+        pcd_sampled.normals=o3d.utility.Vector3dVector(train_dataset[i].normal)
+
+        pcd_sampled.paint_uniform_color([0, 0, 1])
+
+        print("PCD noise")
+        pcd_noise.points=o3d.utility.Vector3dVector(train_dataset_noise[i].pos)
+        pcd_noise.normals=o3d.utility.Vector3dVector(train_dataset_noise[i].normal)
+        pcd_noise.paint_uniform_color([1, 0, 0])
+
+        o3d.visualization.draw_geometries([pcd_sampled, pcd_noise])
+        #o3d.visualization.draw_geometries([pcd_sampled])
+        #o3d.visualization.draw_geometries([pcd_noise])
+
+######################################################################333333
 
 
     # print("Starting test dataset")

@@ -24,8 +24,8 @@ import torch_geometric as tg
 from torch_geometric.utils import get_laplacian as get_laplacian_pyg
 from torch_geometric.transforms import Compose
 
-# import ChebConv_rgcnn_functions as conv
-# import ChebConv_rgcnn_functions_reeb as conv_reeb
+import ChebConv_rgcnn_functions as conv
+import ChebConv_rgcnn_functions_reeb as conv_reeb
 
 
 # import ChebConv_loader_indices as index_dataset
@@ -110,11 +110,11 @@ class cls_model(nn.Module):
             L = util_functions.pairwise_distance(x) # W - weight matrix
             L = util_functions.get_one_matrix_knn(L, k,batch_size,num_points)
 
-            # for it_pcd in range(1):
-            #     viz_points_2=x[it_pcd,:,:]
-            #     distances=L[it_pcd,:,:]
-            #     threshold=0.3
-            #     conv.view_graph(viz_points_2,distances,threshold,1)
+            for it_pcd in range(1):
+                viz_points_2=x[it_pcd,:,:]
+                distances=L[it_pcd,:,:]
+                threshold=0.3
+                conv.view_graph(viz_points_2,distances,threshold,1)
             L = util_functions.get_laplacian(L)
 
 
@@ -270,7 +270,7 @@ def test(model, loader,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points):
         num_vertices_reeb=all_Reeb_laplacian.shape[1]
         edge_dim=edges.shape[1]
 
-        #position=0
+        position=0
         #conv_reeb.Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points)
 
         #conv_reeb.Test_reeb_iteration_labels(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points,position=position)
@@ -323,7 +323,7 @@ def createConfusionMatrix(model, loader,all_sccs,all_Reeb_laplacian,edges,vertic
         num_vertices_reeb=all_Reeb_laplacian.shape[1]
         edge_dim=edges.shape[1]
 
-        # conv_reeb.Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points)
+        #conv_reeb.Test_reeb_iteration(i, pos, y, normal, idx,all_sccs,all_Reeb_laplacian,edges,vertices,k,num_points)
 
         ceva=torch.tile(idx.unsqueeze(1).to(device)*num_vertices_reeb,(1,num_vertices_reeb))
         ceva=torch.reshape(ceva,[idx.shape[0]*num_vertices_reeb])
@@ -383,7 +383,7 @@ if __name__ == '__main__':
     num_epochs = 260
     learning_rate = 1e-3
     modelnet_num = 40
-    k_KNN=5
+    k_KNN=3
 
     F = [128, 512, 1024]  # Outputs size of convolutional filter.
     K = [6, 5, 3]         # Polynomial orders.
@@ -398,8 +398,8 @@ if __name__ == '__main__':
     
     transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
 
-    #root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
-    root = "/mnt/ssd1/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+    root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+    #root = "/mnt/ssd1/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
     print(root)
 
     dataset_train =utils_cls.Modelnet_with_indices(root=root,modelnet_num=modelnet_num,train_bool=True,transforms=transforms)
@@ -498,12 +498,12 @@ if __name__ == '__main__':
     edges_test=np.load(path_edges_test)
 
    
-    #conv.test_pcd_with_index(model=model,loader=train_loader,num_points=num_points,device=device)
+    #conv.test_pcd_with_index(model=model,loader=test_loader,num_points=num_points,device=device)
 #     ################################
     regularization = 1e-9
     for epoch in range(1, num_epochs+1):
         train_start_time = time.time()
-        train_loss,train_acc = train(model, optimizer,loader=train_loader,all_sccs=all_sccs_train,all_Reeb_laplacian=all_reeb_laplacian_train,edges=edges_train,vertices=vertices_train,k=k_KNN,num_points=num_points,regularization=regularization)
+        #train_loss,train_acc = train(model, optimizer,loader=train_loader,all_sccs=all_sccs_train,all_Reeb_laplacian=all_reeb_laplacian_train,edges=edges_train,vertices=vertices_train,k=k_KNN,num_points=num_points,regularization=regularization)
         
         train_stop_time = time.time()
 

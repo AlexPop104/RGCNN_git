@@ -32,7 +32,8 @@ class pcd_registration():
         self.target.paint_uniform_color([0, 0.651, 0.929])
         if self.result:
             self.result.paint_uniform_color([1, 0.235, 0.722])
-            o3d.visualization.draw_geometries([self.source, self.target, self.result])
+            #o3d.visualization.draw_geometries([self.source, self.target, self.result])
+            o3d.visualization.draw_geometries([self.target,self.result])
         else:
             o3d.visualization.draw_geometries([self.source, self.target])
 
@@ -81,9 +82,9 @@ def align_all_pcds(root, folder='train'):
                     result = aligner.register_pcds()
                     
                     aligner.draw_pcds()
-                    break
+                   
 
 if __name__ == "__main__":
-    root = Path("/home/alex/Alex_documents/RGCNN_git/Vizualization_demos/RGCNN_demo_ws/dataset_resampled/")
+    root = Path("/home/alex/Alex_documents/RGCNN_git/Git_folder/data/Dataset/")
 
     align_all_pcds(root)

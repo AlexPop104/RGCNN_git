@@ -435,7 +435,7 @@ def view_graph(viz_points,distances,threshold,nr):
     ax = fig.add_subplot(111, projection='3d')
     ax.set_axis_off()
     for i in range(viz_points.shape[0]):
-        ax.scatter(viz_points[i,0].item(),viz_points[i, 1].item(), viz_points[i,2].item(),color='r')
+        ax.scatter(viz_points[i,0].item(),viz_points[i, 1].item(), viz_points[i,2].item(),s=1,color='r')
 
     for i in range(viz_points.shape[0]):
         for j in range(viz_points.shape[0]):
