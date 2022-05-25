@@ -87,7 +87,7 @@ class PcdDataset(Dataset):
 
             pcd.estimate_normals(fast_normal_computation=False)
             pcd.normalize_normals()
-            pcd.orient_normals_consistent_tangent_plane(100)
+            #pcd.orient_normals_consistent_tangent_plane(100)
 
             normals=np.asarray(pcd.normals)
 
@@ -177,7 +177,7 @@ if __name__ == '__main__':
     ######New tests
 
     mu=0
-    sigma=0.0
+    sigma=0.1
 
     rot_x=1
     rot_y=1
@@ -196,70 +196,57 @@ if __name__ == '__main__':
 
     test_transform = Compose([
                     #random_rotate,
-                    Sphere_Occlusion_Transform(percentage=percentage)
+                    #GaussianNoiseTransform(mu=mu,sigma=sigma),
+                    #Sphere_Occlusion_Transform(percentage=percentage)
                     ])
 
     ##################################################3
    
+    print("Type value for selected choice---------1 for processing dataset-----all else for loading dataset")
+    print("Choice=")
+    choice=int(input())
+
+    num_points = 1024
+    root = Path("/home/alex/Alex_documents/RGCNN_git/Git_folder/data/Dataset/")
+    root_noise = Path("/home/alex/Alex_documents/RGCNN_git/Git_folder/data/dataset_resampled_1024/")
+
+    if(choice==1):
     ####Processing the datasets
+         process_dataset(root=root, save_path=root_noise,  num_points=num_points,transform=test_transform)
 
-    num_points = 512
-    root = Path("/home/alex/Alex_documents/RGCNN_git/Git_folder/data/dataset_resampled_512/")
-    save_path = Path("/home/alex/Alex_documents/RGCNN_git/Git_folder/data/dataset_occlusion_2/")
-    process_dataset(root=root, save_path=save_path,  num_points=num_points,transform=test_transform)
-
-
+    else:
     ##################################################################333333333
 
-    # ##Loading the processed dataset
+    ##Loading the processed dataset
 
-    # root=Path("/home/alex/Alex_documents/RGCNN_git/Git_folder/data/dataset_resampled_512/")
-    # root_noise =Path("/home/alex/Alex_documents/RGCNN_git/Git_folder/data/dataset_occlusion_2/")
-
-    # num_points = 512
-
-    # train_dataset = PcdDataset(root,valid=False,points=num_points)
-    # test_dataset = PcdDataset(root,folder="test",points=num_points)
-
-    # loader_train = DenseDataLoader(train_dataset, batch_size=8)
-    # loader_test = DenseDataLoader(test_dataset, batch_size=8)
-
-    # train_dataset_noise = PcdDataset(root_noise,valid=False,points=num_points)
-    # test_dataset_noise = PcdDataset(root_noise,folder="test",points=num_points)
-
-    # loader_train_noise = DenseDataLoader(train_dataset_noise, batch_size=8)
-    # loader_test_noise = DenseDataLoader(test_dataset_noise, batch_size=8)
-
-
-    # for i in range(100):
     
-    #     pcd_sampled = o3d.geometry.PointCloud()
-    #     pcd_noise = o3d.geometry.PointCloud()
 
-    #     print("PCD sampled")
-    #     pcd_sampled.points=o3d.utility.Vector3dVector(train_dataset[i].pos)
-    #     #pcd_sampled.normals=o3d.utility.Vector3dVector(train_dataset[i].normal)
+        num_points = 1024
 
-    #     pcd_sampled.paint_uniform_color([0, 0, 1])
+        train_dataset = PcdDataset(root,valid=False,points=num_points)
+        test_dataset = PcdDataset(root,folder="test",points=num_points)
 
-    #     print("PCD noise")
-    #     pcd_noise.points=o3d.utility.Vector3dVector(train_dataset_noise[i].pos)
-    #     #pcd_noise.normals=o3d.utility.Vector3dVector(train_dataset_noise[i].normal)
-    #     pcd_noise.paint_uniform_color([1, 0, 0])
+        train_dataset_noise = PcdDataset(root_noise,valid=False,points=num_points)
+        test_dataset_noise = PcdDataset(root_noise,folder="test",points=num_points)
 
-    #     #o3d.visualization.draw_geometries([pcd_sampled, pcd_noise])
-    #     o3d.visualization.draw_geometries([pcd_sampled])
-    #     o3d.visualization.draw_geometries([pcd_noise])
-
-######################################################################333333
+        
 
 
-    # print("Starting test dataset")
-    # for data in loader_test:
-    #     print(data)
+        for i in range(100):
+        
+            pcd_sampled = o3d.geometry.PointCloud()
+            pcd_noise = o3d.geometry.PointCloud()
 
-    # print("Starting train dataset")
-    # for data in loader_train:
-    #     print(data) 
+            print("PCD sampled")
+            pcd_sampled.points=o3d.utility.Vector3dVector(train_dataset[i].pos)
+            #pcd_sampled.normals=o3d.utility.Vector3dVector(train_dataset[i].normal)
 
-# /home/victor/workspace/catkin_ws/dataset_camera
+            pcd_sampled.paint_uniform_color([0, 0, 1])
+
+            print("PCD noise")
+            pcd_noise.points=o3d.utility.Vector3dVector(train_dataset_noise[i].pos)
+            #pcd_noise.normals=o3d.utility.Vector3dVector(train_dataset_noise[i].normal)
+            pcd_noise.paint_uniform_color([1, 0, 0])
+
+            o3d.visualization.draw_geometries([pcd_sampled, pcd_noise])
+  

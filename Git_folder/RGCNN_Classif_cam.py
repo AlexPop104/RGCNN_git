@@ -36,15 +36,8 @@ from datetime import datetime
 from torch.nn import MSELoss
 from torch.optim import lr_scheduler
 
-import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix
-import seaborn as sn
-import pandas as pd
+
 import numpy as np
-
-import matplotlib.pyplot
-from mpl_toolkits.mplot3d import Axes3D
-
 
 
 from utils import GaussianNoiseTransform
@@ -192,31 +185,7 @@ def test(model, loader,num_points,criterion,device):
 
     return total_loss / len(loader.dataset) , total_correct / len(loader.dataset) 
 
-def createConfusionMatrix(model,loader):
-    y_pred = [] # save predction
-    y_true = [] # save ground truth
 
-    # iterate over data
-    for  data in loader:
-        x = torch.cat([data.pos, data.normal], dim=1)
-        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
-
-        logits, _ = model(x.to(device))
-        pred = logits.argmax(dim=-1)
-        
-        output = pred.cpu().numpy()
-        y_pred.extend(output)  # save prediction
-
-        labels = data.y.cpu().numpy()
-        y_true.extend(labels)  # save ground truth
-
-   
-    # Build confusion matrix
-    cf_matrix = confusion_matrix(y_true, y_pred,normalize='true')
-    df_cm = pd.DataFrame(cf_matrix, index=[i for i in range(40)],
-                         columns=[i for i in range(40)])
-    plt.figure(figsize=(50, 50))    
-    return sn.heatmap(df_cm, annot=True).get_figure()
 
 
 now = datetime.now()
@@ -225,11 +194,11 @@ parent_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models
 path = os.path.join(parent_directory, directory)
 os.mkdir(path)
 
-num_points = 512
+num_points = 1024
 batch_size = 16
 num_epochs = 250
 learning_rate = 1e-3
-modelnet_num = 5
+modelnet_num = 40
 dropout=0.25
 
 F = [128, 512, 1024]  # Outputs size of convolutional filter.
@@ -255,7 +224,7 @@ regularization = 1e-9
 torch.manual_seed(0)
 #################################################################33
 
-root = Path("/home/alex/Alex_documents/RGCNN_git/Classification/Archive_all/Git_folder/data/dataset_resampled_v2/")
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Modelnet40/")
 train_dataset_0 = cam_loader.PcdDataset(root_dir=root, points=num_points)
 test_dataset_0 = cam_loader.PcdDataset(root_dir=root, folder='test',points=num_points)
 

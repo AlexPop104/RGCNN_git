@@ -34,14 +34,9 @@ from datetime import datetime
 from torch.nn import MSELoss
 from torch.optim import lr_scheduler
 
-import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix
-import seaborn as sn
-import pandas as pd
+
 import numpy as np
 
-import matplotlib.pyplot
-from mpl_toolkits.mplot3d import Axes3D
 
 from utils import GaussianNoiseTransform
 import utils as util_functions
@@ -187,7 +182,7 @@ def test(model, loader,num_points,criterion,device):
 
 
 
-num_points = 512
+num_points = 1024
 batch_size = 16
 num_epochs = 250
 learning_rate = 1e-3
@@ -214,7 +209,7 @@ criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
 regularization = 1e-9
 
-path_saved_model="/home/alex/Alex_documents/RGCNN_git/Classification/Archive_all/Git_folder/model_512_points.pt"
+path_saved_model="/home/alex/Alex_documents/RGCNN_git/Git_folder/model9.pt"
 model.load_state_dict(torch.load(path_saved_model))
 print(model.parameters)
 model = model.to(device)
@@ -223,7 +218,7 @@ torch.manual_seed(0)
 
 ###############################################################################################
 
-root = Path("/home/alex/Alex_documents/RGCNN_git/Classification/Archive_all/Git_folder/data/dataset_resampled_v2/")
+root = Path("/home/alex/Alex_documents/RGCNN_git/Git_folder/data/dataset_resampled_1024/")
 test_dataset_0 = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
 
 

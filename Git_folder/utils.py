@@ -36,6 +36,31 @@ def get_laplacian(adj_matrix, normalize=True):
 
     return L
 
+def get_laplacian_HAAR(adj_matrix, normalize=True):
+    """ 
+    Function to compute the Laplacian of an adjacency matrix
+
+    Args:
+        adj_matrix: tensor (batch_size, num_points, num_points)
+        normlaize:  boolean
+    Returns: 
+        L:          tensor (batch_size, num_points, num_points)
+    """
+
+    if normalize:
+        D = t.sum(adj_matrix, dim=1)
+        eye = t.ones_like(D)
+        eye = t.diag_embed(eye)
+        D = 1 / D
+        D = t.diag_embed(D)
+        L = eye - t.matmul(D, adj_matrix)
+    else:
+        D = t.sum(adj_matrix, dim=1)
+        D = t.diag(D)
+        L = D - adj_matrix
+
+    return L
+
 def pairwise_distance(point_cloud,normalize=False):
     """
     Compute the pairwise distance of a point cloud.
@@ -341,7 +366,7 @@ class Sphere_Occlusion_Transform(BaseTransform):
 
         pcd_o3d_remaining.estimate_normals(fast_normal_computation=False)
         pcd_o3d_remaining.normalize_normals()
-        pcd_o3d_remaining.orient_normals_consistent_tangent_plane(100)
+        #pcd_o3d_remaining.orient_normals_consistent_tangent_plane(100)
 
         normals=np.asarray(pcd_o3d_remaining.normals)
 

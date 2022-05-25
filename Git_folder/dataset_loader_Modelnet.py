@@ -284,27 +284,10 @@ classes = {folder: i for i, folder in enumerate(folders)};
 print(classes)
                 
 
-
-
-save_path = Path("/home/alex/Alex_documents/RGCNN_git/Git_folder/data/Modelnet"+str(modelnet_num)+"/")
-num_points = 512
+save_path = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Modelnet"+str(modelnet_num)+"/")
+num_points = 1024
 process_dataset(root=path, save_path=save_path,  num_points=num_points)
 
 
-
-
-
-
-# inv_classes = {i: cat for cat, i in train_ds.classes.items()};
-# print(inv_classes)
-
-# print('Train dataset size: ', len(train_ds))
-# print('Valid dataset size: ', len(valid_ds))
-# print('Number of classes: ', len(train_ds.classes))
-# print('Sample pointcloud shape: ', train_ds[0]['pointcloud'].size())
-# print('Class: ', inv_classes[train_ds[0]['category']])
-
-# train_loader = DataLoader(dataset=dataset_train, batch_size=32, shuffle=True)
-# valid_loader = DataLoader(dataset=dataset_test, batch_size=64)
 
 
