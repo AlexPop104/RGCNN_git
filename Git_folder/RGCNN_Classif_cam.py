@@ -43,7 +43,7 @@ import numpy as np
 from utils import GaussianNoiseTransform
 import utils as util_functions
 
-import dataset_loader as cam_loader
+import dataset_loader_noise as cam_loader
 
 
 import random
@@ -93,7 +93,7 @@ class cls_model(nn.Module):
         self.regularizers = []
         with torch.no_grad():
             L = util_functions.pairwise_distance(x) # W - weight matrix
-            L = util_functions.get_laplacian(L)
+            L = util_functions.get_laplacian_HAAR(L)
 
         out = self.conv1(x, L)
         out = self.relu1(out)
@@ -224,7 +224,7 @@ regularization = 1e-9
 torch.manual_seed(0)
 #################################################################33
 
-root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Modelnet40/")
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Modelnet40_2048/")
 train_dataset_0 = cam_loader.PcdDataset(root_dir=root, points=num_points)
 test_dataset_0 = cam_loader.PcdDataset(root_dir=root, folder='test',points=num_points)
 

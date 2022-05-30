@@ -129,6 +129,63 @@ class DenseChebConvV2(nn.Module):
                 f'{self.out_channels}, K={self.K}, '
                 f'normalization={self.normalization})')
 
+class DenseChebConvV2_3DTI(nn.Module):
+    '''
+    Convolutional Module implementing ChebConv. The input to the forward method needs to be
+    a tensor 'x' of size (batch_size, num_points, num_features) and a tensor 'L' of size
+    (batch_size, num_points, num_points).
+    '''
+    def __init__(self, in_channels: int, out_channels: int, K: int, normalization: Optional[bool]=True, bias: bool=False, **kwargs):
+        assert K > 0
+        super(DenseChebConvV2, self).__init__()
+        self.K = K
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.normalization = normalization
+
+        self.lin = Linear(in_channels * K, out_channels, bias=bias)
+        self.lins = t.nn.ModuleList([
+            Linear(1, out_channels, bias=True, 
+                weight_initializer='glorot') for _ in range(K)
+        ])
+
+        if bias:
+            self.bias = Parameter(t.Tensor(out_channels))
+        else:
+            self.register_parameter('bias', None)
+
+        self.reset_parameters()
+
+
+    def reset_parameters(self):        
+        for lin in self.lins:
+            lin.weight = t.nn.init.trunc_normal_(lin.weight, mean=0, std=0.2)
+            lin.bias      = t.nn.init.normal_(lin.bias, mean=0, std=0.2)
+
+
+    def forward(self, x, L):
+        x0 = x # N x M x Fin
+        out = self.lins[0](x0)
+
+        if self.K > 1:
+            x1 = t.matmul(L, x0)
+            out = out + self.lins[1](x1)
+
+        for i in range(2, self.K):
+            x2 = 2 * t.matmul(L, x1) - x0
+            out += self.lins[i](x2)
+            x0, x1 = x1, x2
+
+        if self.bias is not None:
+            out += self.bias
+        return out
+
+
+    def __repr__(self) -> str:
+        return (f'{self.__class__.__name__}({self.in_channels}, '
+                f'{self.out_channels}, K={self.K}, '
+                f'normalization={self.normalization})')
+
 
 
 def get_weights(dataset, num_points=2048, nr_classes=40):

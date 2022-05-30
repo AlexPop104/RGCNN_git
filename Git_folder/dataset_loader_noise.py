@@ -128,6 +128,7 @@ class PcdDataset(Dataset):
                 normals = fps_normals
         else:
             normals=np.asarray(pcd.normals)
+
         normals = torch.Tensor(normals)
         normals=normals.float()
 
@@ -135,6 +136,7 @@ class PcdDataset(Dataset):
 
         if self.transforms:
             pointcloud = self.transforms(pointcloud)
+
 
         return pointcloud
 
@@ -177,15 +179,15 @@ if __name__ == '__main__':
     ######New tests
 
     mu=0
-    sigma=0.1
+    sigma=0.0
 
     rot_x=1
     rot_y=1
     rot_z=1
 
-    ceva=2
+    ceva=4
 
-    radius=0.03
+    radius=0.25
     percentage=0.25
 
     random_rotate = Compose([
@@ -196,8 +198,8 @@ if __name__ == '__main__':
 
     test_transform = Compose([
                     #random_rotate,
-                    #GaussianNoiseTransform(mu=mu,sigma=sigma),
-                    #Sphere_Occlusion_Transform(percentage=percentage)
+                    #GaussianNoiseTransform(mu=mu,sigma=sigma)
+                    #Sphere_Occlusion_Transform(radius=radius, percentage=percentage,num_points=1024)
                     ])
 
     ##################################################3
@@ -206,36 +208,34 @@ if __name__ == '__main__':
     print("Choice=")
     choice=int(input())
 
-    num_points = 1024
-    root = Path("/home/alex/Alex_documents/RGCNN_git/Git_folder/data/Dataset/")
-    root_noise = Path("/home/alex/Alex_documents/RGCNN_git/Git_folder/data/dataset_resampled_1024/")
+    num_points = 256
+    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Modelnet40_2048/")
+
+    root_noise_1 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Modelnet40_"+str(num_points)+"/")
 
     if(choice==1):
     ####Processing the datasets
-         process_dataset(root=root, save_path=root_noise,  num_points=num_points,transform=test_transform)
+         process_dataset(root=root, save_path=root_noise_1,  num_points=num_points,transform=test_transform)
 
     else:
     ##################################################################333333333
 
     ##Loading the processed dataset
 
-    
-
-        num_points = 1024
-
-        train_dataset = PcdDataset(root,valid=False,points=num_points)
-        test_dataset = PcdDataset(root,folder="test",points=num_points)
-
-        train_dataset_noise = PcdDataset(root_noise,valid=False,points=num_points)
-        test_dataset_noise = PcdDataset(root_noise,folder="test",points=num_points)
+        num_points_original=2048
+        num_points_noise=64
 
         
+        train_dataset = PcdDataset(root,valid=False,points=num_points_original)
+        train_dataset_noise_1 = PcdDataset(root_noise_1,valid=False,points=num_points_noise)
+        
 
-
-        for i in range(100):
+        for i in range(0,200):
         
             pcd_sampled = o3d.geometry.PointCloud()
-            pcd_noise = o3d.geometry.PointCloud()
+            pcd_noise_1 = o3d.geometry.PointCloud()
+           
+            
 
             print("PCD sampled")
             pcd_sampled.points=o3d.utility.Vector3dVector(train_dataset[i].pos)
@@ -243,10 +243,12 @@ if __name__ == '__main__':
 
             pcd_sampled.paint_uniform_color([0, 0, 1])
 
-            print("PCD noise")
-            pcd_noise.points=o3d.utility.Vector3dVector(train_dataset_noise[i].pos)
+            # print("PCD noise")
+            pcd_noise_1.points=o3d.utility.Vector3dVector(train_dataset_noise_1[i].pos)
             #pcd_noise.normals=o3d.utility.Vector3dVector(train_dataset_noise[i].normal)
-            pcd_noise.paint_uniform_color([1, 0, 0])
+            pcd_noise_1.paint_uniform_color([1, 0, 0])
 
-            o3d.visualization.draw_geometries([pcd_sampled, pcd_noise])
+            o3d.visualization.draw_geometries([pcd_sampled, pcd_noise_1])
+            #o3d.visualization.draw_geometries([pcd_sampled])
+            #o3d.visualization.draw_geometries([ pcd_noise_1])
   

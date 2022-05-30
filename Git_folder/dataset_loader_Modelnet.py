@@ -285,7 +285,7 @@ print(classes)
                 
 
 save_path = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Modelnet"+str(modelnet_num)+"/")
-num_points = 1024
+num_points = 2048
 process_dataset(root=path, save_path=save_path,  num_points=num_points)
 
 

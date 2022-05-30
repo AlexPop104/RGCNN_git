@@ -9,6 +9,7 @@ import torch_geometric as tg
 from torch_geometric.transforms import BaseTransform
 from torch_geometric.data import Data, HeteroData
 import open3d as o3d
+from torch_geometric.nn import fps
 
 
 def get_laplacian(adj_matrix, normalize=True):
@@ -155,6 +156,64 @@ class DenseChebConvV2(nn.Module):
                 f'normalization={self.normalization})')
 
 
+class DenseChebConvV2_3DTI(nn.Module):
+    '''
+    Convolutional Module implementing ChebConv. The input to the forward method needs to be
+    a tensor 'x' of size (batch_size, num_points, num_features) and a tensor 'L' of size
+    (batch_size, num_points, num_points).
+    '''
+    def __init__(self, in_channels: int, out_channels: int, K: int, normalization: Optional[bool]=True, bias: bool=False, **kwargs):
+        assert K > 0
+        super(DenseChebConvV2, self).__init__()
+        self.K = K
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.normalization = normalization
+
+        self.lin = Linear(in_channels * K, out_channels, bias=bias)
+        self.lins = t.nn.ModuleList([
+            Linear(1, out_channels, bias=True, 
+                weight_initializer='glorot') for _ in range(K)
+        ])
+
+        if bias:
+            self.bias = Parameter(t.Tensor(out_channels))
+        else:
+            self.register_parameter('bias', None)
+
+        self.reset_parameters()
+
+
+    def reset_parameters(self):        
+        for lin in self.lins:
+            lin.weight = t.nn.init.trunc_normal_(lin.weight, mean=0, std=0.2)
+            lin.bias      = t.nn.init.normal_(lin.bias, mean=0, std=0.2)
+
+
+    def forward(self, x, L):
+        x0 = x # N x M x Fin
+        out = self.lins[0](x0)
+
+        if self.K > 1:
+            x0 = t.matmul(L, x0)
+            out = out + self.lins[1](x0)
+
+        for i in range(2, self.K):
+            x0 = t.matmul(L, x0)
+            out += self.lins[i](x0)
+
+        if self.bias is not None:
+            out += self.bias
+        return out
+
+
+    def __repr__(self) -> str:
+        return (f'{self.__class__.__name__}({self.in_channels}, '
+                f'{self.out_channels}, K={self.K}, '
+                f'normalization={self.normalization})')
+
+
+
 
 def get_weights(dataset, num_points=2048, nr_classes=40):
     from sklearn.utils import class_weight
@@ -181,6 +240,9 @@ def get_weights(dataset, num_points=2048, nr_classes=40):
     #weights = dict(zip(np.unique(y), weights))
 
     return weights
+
+
+
 
 def get_weights_clasif(dataset, num_points=2048, nr_classes=40):
     from sklearn.utils import class_weight
@@ -294,7 +356,7 @@ class GaussianNoiseTransform(BaseTransform):
             pcd_o3d = o3d.geometry.PointCloud()
             pcd_o3d.points = o3d.utility.Vector3dVector(data.pos)
             pcd_o3d.estimate_normals(fast_normal_computation=False)
-            pcd_o3d.normalize_normals()
+            #pcd_o3d.normalize_normals()
             if hasattr(data, 'normal'):
                 data.normal = np.asarray(pcd_o3d.normals)
                 data.normal = torch.tensor(data.normal, dtype=torch.float32)
@@ -308,12 +370,13 @@ class GaussianNoiseTransform(BaseTransform):
 
 class Sphere_Occlusion_Transform(BaseTransform):
 
-    def __init__(self, radius: Optional[float] = 0.1,percentage:Optional[float] = 0.1):
+    def __init__(self, radius: Optional[float] = 0.1,percentage:Optional[float] = 0.1, num_points: Optional[int]=1024):
         torch.manual_seed(0)
         np.random.seed(0)
         
         self.radius = radius
         self.percentage=percentage
+        self.num_points=num_points
 
     def __call__(self, data: Union[Data, HeteroData]):
         chosen_center= np.random.randint(0, data.pos.shape[0])
@@ -329,15 +392,15 @@ class Sphere_Occlusion_Transform(BaseTransform):
         points=points-pcd_center
         points=np.linalg.norm(points, axis=1)
 
-        sorted_points=np.sort(points)
+        # sorted_points=np.sort(points)
 
-        selected_position=int(data.pos.shape[0]*self.percentage)
+        # selected_position=int(data.pos.shape[0]*self.percentage)
 
-        radius=sorted_points[selected_position]
+        # radius=sorted_points[selected_position]
         
-        # index_pcd= np.squeeze(np.argwhere(points_final<self.radius))
+        remaining_index= np.squeeze(np.argwhere(points>=self.radius))
 
-        remaining_index= np.squeeze(np.argwhere(points>=radius))
+        #remaining_index= np.squeeze(np.argwhere(points>=radius))
 
     
         pcd_o3d = o3d.geometry.PointCloud()
@@ -345,6 +408,7 @@ class Sphere_Occlusion_Transform(BaseTransform):
 
         pcd_o3d_remaining = o3d.geometry.PointCloud()
         pcd_o3d_remaining.points = o3d.utility.Vector3dVector(np.squeeze(data.pos[remaining_index]))
+        pcd_o3d_remaining.normals = o3d.utility.Vector3dVector(np.squeeze(data.normal[remaining_index]))
         pcd_o3d.paint_uniform_color([0, 1, 0])
 
         # pcd_o3d_sphere = o3d.geometry.PointCloud()
@@ -364,13 +428,16 @@ class Sphere_Occlusion_Transform(BaseTransform):
         # o3d.visualization.draw_geometries([pcd_o3d_remaining]) 
         # o3d.visualization.draw_geometries([pcd_o3d])        
 
-        pcd_o3d_remaining.estimate_normals(fast_normal_computation=False)
-        pcd_o3d_remaining.normalize_normals()
-        #pcd_o3d_remaining.orient_normals_consistent_tangent_plane(100)
+        # pcd_o3d_remaining.estimate_normals(fast_normal_computation=False)
+        # pcd_o3d_remaining.normalize_normals()
+        # pcd_o3d_remaining.orient_normals_consistent_tangent_plane(100)
 
         normals=np.asarray(pcd_o3d_remaining.normals)
 
-        if len(pcd_o3d_remaining.points) < data.pos.shape[0]:
+        points_remaining=np.asarray(pcd_o3d_remaining.points)
+        points_remaining=torch.tensor(points_remaining)
+
+        if len(pcd_o3d_remaining.points) < self.num_points:
                 alpha = 0.03
                 rec_mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_alpha_shape(
                     pcd_o3d_remaining, alpha)
@@ -400,17 +467,24 @@ class Sphere_Occlusion_Transform(BaseTransform):
                 data.pos=points
                 data.normal=normals
 
-        
+        else:
+            nr_points_fps=self.num_points
+            nr_points=remaining_index.shape[0]
+
+            index_fps = fps(points_remaining, ratio=float(nr_points_fps/nr_points) , random_start=True)
+
+            index_fps=index_fps[0:nr_points_fps]
+
+            fps_points=points_remaining[index_fps]
+            fps_normals=normals[index_fps]
+
+            points=fps_points
+            normals = fps_normals
+
+            data.pos=points
+            data.normal=normals
 
 
-        # pcd_o3d.estimate_normals(fast_normal_computation=False)
-        # pcd_o3d.normalize_normals()
-        # if hasattr(data, 'normal'):
-        #     data.normal = np.asarray(pcd_o3d.normals)
-        #     data.normal = torch.tensor(data.normal, dtype=torch.float32)
-        # else:
-        #     data.normal = np.asarray(pcd_o3d.normals)
-        #     data.normal = torch.tensor(data.normal, dtype=torch.float32)
         return data
 
     def __repr__(self) -> str:
