@@ -224,7 +224,7 @@ regularization = 1e-9
 torch.manual_seed(0)
 #################################################################33
 
-root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Modelnet40_2048/")
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_1024/Modelnet40_1024_r40_recomputed_1024/")
 train_dataset_0 = cam_loader.PcdDataset(root_dir=root, points=num_points)
 test_dataset_0 = cam_loader.PcdDataset(root_dir=root, folder='test',points=num_points)
 

@@ -85,6 +85,6 @@ def align_all_pcds(root, folder='train'):
                    
 
 if __name__ == "__main__":
-    root = Path("/home/alex/Alex_documents/RGCNN_git/Git_folder/data/Dataset/")
+    root = Path("/media/rambo/ssd2/Alex_data/RGCNN_real_data/Datasets/Dataset/")
 
     align_all_pcds(root)

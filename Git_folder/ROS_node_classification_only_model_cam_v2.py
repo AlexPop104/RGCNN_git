@@ -183,7 +183,7 @@ if __name__ == "__main__":
     ##############################################################################3333
 
 
-    path_saved_model="/home/alex/Alex_documents/RGCNN_git/Git_folder/model_512_points.pt"
+    path_saved_model="/home/alex/Alex_documents/RGCNN_git/Git_folder/Trained+models/Cam_data_model_512_points.pt"
 
 
     device = 'cuda'
