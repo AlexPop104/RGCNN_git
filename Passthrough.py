@@ -42,6 +42,8 @@ centroid_point.points=o3d.utility.Vector3dVector([centroid])
 
 centroid_point.paint_uniform_color([0, 1, 0])
 
+
+
 corners=[]
 
 corner_1=centroid+np.multiply([-1,-1,-1],measures)
