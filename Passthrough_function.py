@@ -330,11 +330,10 @@ def Passthrough_custom(L=1,l=1,h=1,angle_x=0,angle_y=0,angle_z=0,centroid_x=1,ce
 path_pointcloud="/home/alex/Alex_documents/RGCNN_git/1651654246540199.pcd"
 cloud = o3d.io.read_point_cloud(path_pointcloud)
 
+
 cloud.paint_uniform_color([0.5, 0.5, 0.5])
 
 centroid= o3d.geometry.PointCloud.get_center(cloud)
-
-
 
 
 print("Centroid")
@@ -349,7 +348,7 @@ angle_y_1=10
 angle_z_1=5
 
 centroid_x_1=-0.2874577
-centroid_y_1= -0.14024239
+centroid_y_1= -0.14024239-0.1
 centroid_z_1=1.21766081-0.05
 
 color_box_1=[0.2, 0.2, 0.5]
@@ -380,6 +379,7 @@ pf_filter3=o3d.geometry.PointCloud()
 box_1=o3d.geometry.PointCloud()
 box_2=o3d.geometry.PointCloud()
 box_3=o3d.geometry.PointCloud()
+
 
 pf_filter1,box_1=Passthrough_custom(L=L_1,l=l_1,h=h_1,angle_x=angle_x_1,angle_y=angle_y_1,angle_z=angle_z_1,centroid_x=centroid_x_1,centroid_y=centroid_y_1,centroid_z=centroid_z_1,color_box=color_box_1,color_pass_cloud=color_pass_cloud_1)
 pf_filter2,box_2=Passthrough_custom(L=L_2,l=l_2,h=h_2,angle_x=angle_x_2,angle_y=angle_y_2,angle_z=angle_z_2,centroid_x=centroid_x_2,centroid_y=centroid_y_2,centroid_z=centroid_z_2,color_box=color_box_2,color_pass_cloud=color_pass_cloud_2)
