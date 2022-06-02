@@ -25,11 +25,11 @@ centroid= o3d.geometry.PointCloud.get_center(cloud)
 # print("Centroid")
 # print(centroid)
 
-L=0.30
-l=0.15
-h=0.15
+L=0.05
+l=0.05
+h=0.05
 
-measures=[L/2,l/2,h/2]
+measures=[h/2,L/2,l/2]
 
 centroid_point=o3d.geometry.PointCloud()
 centroid_point.points=o3d.utility.Vector3dVector([centroid])
@@ -126,32 +126,35 @@ line_set_2.points = o3d.utility.Vector3dVector(New_corners)
 line_set_2.lines = o3d.utility.Vector2iVector(lines_2)
 line_set_2.colors = o3d.utility.Vector3dVector(colors_2)
 
-Maximum= np.max(New_corners,axis=0)
-Minimum= np.min(New_corners,axis=0)
+
 
 # print("Maximum Minimum")
 # print(Maximum)
 # print(Minimum)
 
-# #lines_3 = [[0, 1], [1, 2], [2, 3], [3, 0], [4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7],[0,6],[1,7],[2,4],[3,5]]
-# lines_3 = [[1, 5],[5,2]]
-# colors_3 = [[1, 0., 0.] for i in range(len(lines_3))]
+#lines_3 = [[0, 1], [1, 2], [2, 3], [3, 0], [4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7],[0,6],[1,7],[2,4],[3,5]]
+lines_3 = [[4, 0],[4,1]]
+colors_3 = [[1, 0., 0.] for i in range(len(lines_3))]
 
 
-# line_set_3 = o3d.geometry.LineSet()
-# line_set_3.points = o3d.utility.Vector3dVector(New_corners)
-# line_set_3.lines = o3d.utility.Vector2iVector(lines_3)
-# line_set_3.colors = o3d.utility.Vector3dVector(colors_3)
+line_set_3 = o3d.geometry.LineSet()
+line_set_3.points = o3d.utility.Vector3dVector(New_corners)
+line_set_3.lines = o3d.utility.Vector2iVector(lines_3)
+line_set_3.colors = o3d.utility.Vector3dVector(colors_3)
 
-#o3d.visualization.draw_geometries([line_set_2,line_set_3])
+o3d.visualization.draw_geometries([line_set_2,line_set_3])
 
 
 plane=np.zeros((6,4))
 
 ###################Plane 1
 
-line1=corner_2-corner_1
-line2=corner_2-corner_3
+# line1=corner_2-corner_1
+# line2=corner_2-corner_3
+
+line1=New_corners[1]-New_corners[0]
+line2=New_corners[1]-New_corners[2]
+
 
 normals_plane=np.cross(line1,line2)
 
@@ -161,7 +164,9 @@ verification2=np.dot(normals_plane,line2.T)
 print(verification1)
 print(verification2)
 
-d=-np.dot(normals_plane,corner_2)
+#d=-np.dot(normals_plane,corner_2)
+
+d=-np.dot(normals_plane,New_corners[1].T)
 
 
 plane[0,0:3]=normals_plane
@@ -173,8 +178,11 @@ distance_1=np.abs(np.dot(normals_plane,centroid)+d)/ np.sqrt(np.dot(normals_plan
 
 ###################Plane 2
 
-line1=corner_6-corner_5
-line2=corner_6-corner_7
+# line1=corner_6-corner_5
+# line2=corner_6-corner_7
+
+line1=New_corners[5]-New_corners[4]
+line2=New_corners[5]-New_corners[6]
 
 normals_plane=np.cross(line1,line2)
 
@@ -184,7 +192,9 @@ verification2=np.dot(normals_plane,line2.T)
 print(verification1)
 print(verification2)
 
-d=-np.dot(normals_plane,corner_6)
+#d=-np.dot(normals_plane,corner_6)
+
+d=-np.dot(normals_plane,New_corners[5].T)
 
 plane[1,0:3]=normals_plane
 plane[1,3]=d
@@ -193,12 +203,13 @@ print(plane)
 
 distance_2=np.abs(np.dot(normals_plane,centroid)+d)/ np.sqrt(np.dot(normals_plane,normals_plane.T))
 
-
-
 ###################Plane 3
 
-line1=corner_5-corner_1
-line2=corner_5-corner_2
+# line1=corner_5-corner_1
+# line2=corner_5-corner_2
+
+line1=New_corners[4]-New_corners[0]
+line2=New_corners[4]-New_corners[1]
 
 normals_plane=np.cross(line1,line2)
 
@@ -208,7 +219,9 @@ verification2=np.dot(normals_plane,line2.T)
 print(verification1)
 print(verification2)
 
-d=-np.dot(normals_plane,corner_5)
+#d=-np.dot(normals_plane,corner_5)
+
+d=-np.dot(normals_plane,New_corners[4].T)
 
 plane[2,0:3]=normals_plane
 plane[2,3]=d
@@ -221,6 +234,9 @@ distance_3=np.abs(np.dot(normals_plane,centroid)+d)/ np.sqrt(np.dot(normals_plan
 line1=corner_7-corner_3
 line2=corner_7-corner_8
 
+line1=New_corners[6]-New_corners[2]
+line2=New_corners[6]-New_corners[7]
+
 
 normals_plane=np.cross(line1,line2)
 
@@ -230,7 +246,9 @@ verification2=np.dot(normals_plane,line2.T)
 print(verification1)
 print(verification2)
 
-d=-np.dot(normals_plane,corner_7)
+#d=-np.dot(normals_plane,corner_7)
+
+d=-np.dot(normals_plane,New_corners[6].T)
 
 plane[3,0:3]=normals_plane
 plane[3,3]=d
@@ -243,6 +261,9 @@ distance_4=np.abs(np.dot(normals_plane,centroid)+d)/ np.sqrt(np.dot(normals_plan
 line1=corner_5-corner_1
 line2=corner_5-corner_8
 
+line1=New_corners[4]-New_corners[0]
+line2=New_corners[4]-New_corners[7]
+
 
 normals_plane=np.cross(line1,line2)
 
@@ -252,7 +273,9 @@ verification2=np.dot(normals_plane,line2.T)
 print(verification1)
 print(verification2)
 
-d=-np.dot(normals_plane,corner_5)
+#d=-np.dot(normals_plane,corner_5)
+
+d=-np.dot(normals_plane,New_corners[4].T)
 
 plane[4,0:3]=normals_plane
 plane[4,3]=d
@@ -266,6 +289,10 @@ line1=corner_6-corner_2
 line2=corner_6-corner_3
 
 
+line1=New_corners[5]-New_corners[1]
+line2=New_corners[5]-New_corners[2]
+
+
 normals_plane=np.cross(line1,line2)
 
 verification1=np.dot(normals_plane,line1.T)
@@ -274,7 +301,9 @@ verification2=np.dot(normals_plane,line2.T)
 print(verification1)
 print(verification2)
 
-d=-np.dot(normals_plane,corner_6)
+#d=-np.dot(normals_plane,corner_6)
+
+d=-np.dot(normals_plane,New_corners[5].T)
 
 plane[5,0:3]=normals_plane
 plane[5,3]=d
@@ -295,7 +324,7 @@ points_range=np.zeros(points.shape[0])
 
 for i in range(6):
     points_range =points_range+ np.divide(np.abs(np.dot(points,plane[i,0:3].T)+plane[i,3]),np.sqrt(np.dot(plane[i,0:3],plane[i,0:3].T)))
-
+    print(points_range)
 
 points_range=points_range<=(L+l+h)
 
