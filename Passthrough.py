@@ -18,14 +18,26 @@ L=0.15
 l=0.15
 h=0.10
 
-angle=45
+angle_x=20
+angle_y=10
+angle_z=5
 
-Transf_matrix_x=np.matrix([[1 ,0,0, 0],[0 , np.cos(angle), -np.sin(angle),0],[0, np.sin(angle), np.cos(angle) ,0],[0, 0 ,0 ,1]])
-Transf_matrix_y=np.matrix([[np.cos(angle) , 0, np.sin(angle),0],[0 ,1,0, 0],[-np.sin(angle), 0, np.cos(angle) ,0],[0, 0 ,0 ,1]])
-Transf_matrix_z=np.matrix([[np.cos(angle), -np.sin(angle),0,0],[np.sin(angle), np.cos(angle),0 ,0],[ 0,0,1, 0],[0, 0 ,0 ,1]])
+def Rot_matrix_x(angle=0):
+    return np.matrix([[1 ,0,0, 0],[0 , np.cos(angle), -np.sin(angle),0],[0, np.sin(angle), np.cos(angle) ,0],[0, 0 ,0 ,1]])
 
-#print(Transf_matrix_x)
-Transf_matrix=Transf_matrix_y
+def Rot_matrix_y(angle=0):
+    return np.matrix([[np.cos(angle) , 0, np.sin(angle),0],[0 ,1,0, 0],[-np.sin(angle), 0, np.cos(angle) ,0],[0, 0 ,0 ,1]])
+
+def Rot_matrix_z(angle=0):
+    return np.matrix([[np.cos(angle), -np.sin(angle),0,0],[np.sin(angle), np.cos(angle),0 ,0],[ 0,0,1, 0],[0, 0 ,0 ,1]])
+
+#Transf_matrix_x=np.matrix([[1 ,0,0, 0],[0 , np.cos(angle), -np.sin(angle),0],[0, np.sin(angle), np.cos(angle) ,0],[0, 0 ,0 ,1]])
+#Transf_matrix_y=np.matrix([[np.cos(angle) , 0, np.sin(angle),0],[0 ,1,0, 0],[-np.sin(angle), 0, np.cos(angle) ,0],[0, 0 ,0 ,1]])
+#Transf_matrix_z=np.matrix([[np.cos(angle), -np.sin(angle),0,0],[np.sin(angle), np.cos(angle),0 ,0],[ 0,0,1, 0],[0, 0 ,0 ,1]])
+
+
+Transf_matrix=np.dot(np.dot(Rot_matrix_x(angle=angle_x),Rot_matrix_y(angle=angle_y)),Rot_matrix_z(angle=angle_z))
+
 
 measures=[h/2,L/2,l/2]
 
@@ -311,11 +323,11 @@ for i in range(6):
     points_range =points_range+ np.divide(np.abs(np.dot(points,plane[i,0:3].T)+plane[i,3]),np.sqrt(np.dot(plane[i,0:3],plane[i,0:3].T)))
     print(points_range)
 
-points_range=points_range<=(L+l+h)
+points_range_final=points_range<=(L+l+h)
 
 cloud_3=o3d.geometry.PointCloud()
 
-cloud_3.points = o3d.utility.Vector3dVector(points[points_range])
+cloud_3.points = o3d.utility.Vector3dVector(points[points_range_final])
 
 cloud_3.paint_uniform_color([0, 1, 1])
 
