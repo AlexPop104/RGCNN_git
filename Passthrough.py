@@ -11,8 +11,8 @@ centroid= o3d.geometry.PointCloud.get_center(cloud)
 
 
 
-# print("Centroid")
-# print(centroid)
+print("Centroid")
+print(centroid)
 
 L=0.15
 l=0.15
@@ -21,6 +21,8 @@ h=0.10
 angle_x=20
 angle_y=10
 angle_z=5
+
+centroid=np.asarray([-0.2874577+0.1,  -0.14024239 , 1.21766081])
 
 def Rot_matrix_x(angle=0):
     return np.matrix([[1 ,0,0, 0],[0 , np.cos(angle), -np.sin(angle),0],[0, np.sin(angle), np.cos(angle) ,0],[0, 0 ,0 ,1]])
@@ -31,13 +33,7 @@ def Rot_matrix_y(angle=0):
 def Rot_matrix_z(angle=0):
     return np.matrix([[np.cos(angle), -np.sin(angle),0,0],[np.sin(angle), np.cos(angle),0 ,0],[ 0,0,1, 0],[0, 0 ,0 ,1]])
 
-#Transf_matrix_x=np.matrix([[1 ,0,0, 0],[0 , np.cos(angle), -np.sin(angle),0],[0, np.sin(angle), np.cos(angle) ,0],[0, 0 ,0 ,1]])
-#Transf_matrix_y=np.matrix([[np.cos(angle) , 0, np.sin(angle),0],[0 ,1,0, 0],[-np.sin(angle), 0, np.cos(angle) ,0],[0, 0 ,0 ,1]])
-#Transf_matrix_z=np.matrix([[np.cos(angle), -np.sin(angle),0,0],[np.sin(angle), np.cos(angle),0 ,0],[ 0,0,1, 0],[0, 0 ,0 ,1]])
-
-
 Transf_matrix=np.dot(np.dot(Rot_matrix_x(angle=angle_x),Rot_matrix_y(angle=angle_y)),Rot_matrix_z(angle=angle_z))
-
 
 measures=[h/2,L/2,l/2]
 
