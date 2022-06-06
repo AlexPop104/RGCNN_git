@@ -242,14 +242,15 @@ def test(model, loader,nr_points):
 
 now = datetime.now()
 directory = now.strftime("%d_%m_%y_%H:%M:%S")
-parent_directory = "/home/alex/Alex_documents/RGCNN_git/data/logs/Trained_Models"
+directory="Pointnet_"+directory
+parent_directory = "/media/rambo/ssd2/Alex_data/RGCNN/data/logs/Trained_Models"
 path = os.path.join(parent_directory, directory)
 os.mkdir(path)
 
 modelnet_num = 40
 num_points= 1024
 batch_size=16
-
+num_epochs=200
 nr_features=3
 
 
@@ -267,7 +268,7 @@ criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 
 my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
 
-torch.manual_seed(0)
+
 #################################################################33
 
 # transforms = Compose([SamplePoints(num_points, include_normals=True), NormalizeScale()])
@@ -277,62 +278,216 @@ torch.manual_seed(0)
 
 ###################################################################
 
-mu=0
-sigma=0.
-#transforms_noisy = Compose([SamplePoints(num_points),NormalizeScale(),GaussianNoiseTransform(mu, sigma,recompute_normals=True)])
-
-rot_x=30
-rot_y=30
-rot_z=30
+print("Select type of training  (1 - no noise, 2 - Rotation noise , 3- Position noise)")
+selection=int(input())
 
 torch.manual_seed(0)
 
 #################################
+if(selection==1):
+
+    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024/")
+    train_dataset_0 = cam_loader.PcdDataset(root_dir=root, points=num_points)
+    test_dataset_0 = cam_loader.PcdDataset(root_dir=root, folder='test',points=num_points)
 
 
-root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024/")
-train_dataset_0 = cam_loader.PcdDataset(root_dir=root, points=num_points)
-test_dataset_0 = cam_loader.PcdDataset(root_dir=root, folder='test',points=num_points)
+    ###############################################################################
+
+    train_loader_0 = DataLoader(train_dataset_0, batch_size=batch_size, shuffle=True, pin_memory=True)
+    test_loader_0  = DataLoader(test_dataset_0, batch_size=batch_size)
 
 
-###############################################################################
+    ###############################################################################
 
-train_loader_0 = DataLoader(train_dataset_0, batch_size=batch_size, shuffle=True, pin_memory=True)
-test_loader_0  = DataLoader(test_dataset_0, batch_size=batch_size)
+    # program_name="Pointnet"
+    # conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
 
-
-###############################################################################
-
-# program_name="Pointnet"
-# conv.view_pcd(model=model,loader=test_loader,num_points=num_points,device=device,program_name=program_name)
-
-for epoch in range(1, 251):
+    for epoch in range(1, num_epochs+1):
 
 
-    train_start_time = time.time()
-    train_loss,train_acc = train(model, optimizer, train_loader_0,nr_points=num_points)
-    train_stop_time = time.time()
-
-    
-
-    test_start_time = time.time()
-    test_acc = test(model, test_loader_0,nr_points=num_points)
-    test_stop_time = time.time()
-
-    
-    writer.add_scalar("Loss/train", train_loss, epoch)
-    writer.add_scalar("Acc/train", train_acc, epoch)
-    writer.add_scalar("Acc/test", test_acc, epoch)
-
-    print(f'Epoch: {epoch:02d}, Loss: {train_loss:.4f}, Test Accuracy: {test_acc:.4f}')
-    print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
-    Test Time: \t{test_stop_time - test_start_time }')
-
-    if(epoch%3==0):
-        torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+        train_start_time = time.time()
+        train_loss,train_acc = train(model, optimizer, train_loader_0,nr_points=num_points)
+        train_stop_time = time.time()
 
 
-    my_lr_scheduler.step()
+        test_start_time = time.time()
+        test_acc = test(model, test_loader_0,nr_points=num_points)
+        test_stop_time = time.time()
+
+        
+        writer.add_scalar("Loss/train", train_loss, epoch)
+        writer.add_scalar("Acc/train", train_acc, epoch)
+        writer.add_scalar("Acc/test", test_acc, epoch)
+
+        print(f'Epoch: {epoch:02d}, Loss: {train_loss:.4f}, Test Accuracy: {test_acc:.4f}')
+        print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
+        Test Time: \t{test_stop_time - test_start_time }')
+
+        if(epoch%3==0):
+            torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
 
 
-torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+        my_lr_scheduler.step()
+
+
+    torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+
+elif(selection==2):
+
+    root_train_10 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_10/")
+    root_train_20 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_20/")
+    root_train_30 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_30/")
+    root_train_40 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_40/")
+
+    root_test = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024/")
+
+    train_dataset_10 = cam_loader.PcdDataset(root_dir=root_train_10, points=num_points)
+    train_dataset_20 = cam_loader.PcdDataset(root_dir=root_train_10, points=num_points)
+    train_dataset_30 = cam_loader.PcdDataset(root_dir=root_train_10, points=num_points)
+    train_dataset_40 = cam_loader.PcdDataset(root_dir=root_train_10, points=num_points)
+
+    test_dataset = cam_loader.PcdDataset(root_dir=root_test, folder='test',points=num_points)
+
+    ###############################################################################
+
+    train_loader_10 = DataLoader(train_dataset_10, batch_size=batch_size, shuffle=True, pin_memory=True)
+    train_loader_20 = DataLoader(train_dataset_20, batch_size=batch_size, shuffle=True, pin_memory=True)
+    train_loader_30 = DataLoader(train_dataset_30, batch_size=batch_size, shuffle=True, pin_memory=True)
+    train_loader_40 = DataLoader(train_dataset_40, batch_size=batch_size, shuffle=True, pin_memory=True)
+
+    test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+
+    for epoch in range(1, num_epochs+1):
+
+        loss_tr=0
+        loss_t=0
+        acc_t=0
+        acc_tr=0
+
+        train_start_time = time.time()
+        train_loss,train_acc = train(model, optimizer, train_loader_10,nr_points=num_points)
+
+        loss_tr=loss_tr+train_loss
+        acc_tr=acc_tr+train_acc
+
+        train_loss,train_acc = train(model, optimizer, train_loader_20,nr_points=num_points)
+
+        loss_tr=loss_tr+train_loss
+        acc_tr=acc_tr+train_acc
+
+        train_loss,train_acc = train(model, optimizer, train_loader_30,nr_points=num_points)
+
+        loss_tr=loss_tr+train_loss
+        acc_tr=acc_tr+train_acc
+
+        train_loss,train_acc = train(model, optimizer, train_loader_40,nr_points=num_points)
+        train_stop_time = time.time()
+
+
+        loss_tr=loss_tr+train_loss
+        acc_tr=acc_tr+train_acc
+
+        loss_tr=loss_tr/4
+        acc_tr=acc_tr/4
+
+        test_start_time = time.time()
+        test_acc = test(model, test_loader,nr_points=num_points)
+        test_stop_time = time.time()
+
+        
+        writer.add_scalar("Loss/train", loss_tr, epoch)
+        writer.add_scalar("Acc/train", acc_tr, epoch)
+        writer.add_scalar("Acc/test", test_acc, epoch)
+
+        print(f'Epoch: {epoch:02d}, Loss: {loss_t:.4f}, Test Accuracy: {test_acc:.4f}')
+        print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
+        Test Time: \t{test_stop_time - test_start_time }')
+
+        if(epoch%3==0):
+            torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+
+
+        my_lr_scheduler.step()
+
+
+    torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+
+elif(selection==3):
+
+    root_train_002 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_002/")
+    root_train_005 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_005/")
+    root_train_008 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_008/")
+    root_train_010 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_010/")
+
+    root_test = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024/")
+
+    train_dataset_002 = cam_loader.PcdDataset(root_dir=root_train_002, points=num_points)
+    train_dataset_005 = cam_loader.PcdDataset(root_dir=root_train_005, points=num_points)
+    train_dataset_008 = cam_loader.PcdDataset(root_dir=root_train_008, points=num_points)
+    train_dataset_010 = cam_loader.PcdDataset(root_dir=root_train_010, points=num_points)
+
+    test_dataset = cam_loader.PcdDataset(root_dir=root_test, folder='test',points=num_points)
+
+    ###############################################################################
+
+    train_loader_002 = DataLoader(train_dataset_002, batch_size=batch_size, shuffle=True, pin_memory=True)
+    train_loader_005 = DataLoader(train_dataset_005, batch_size=batch_size, shuffle=True, pin_memory=True)
+    train_loader_008 = DataLoader(train_dataset_008, batch_size=batch_size, shuffle=True, pin_memory=True)
+    train_loader_010 = DataLoader(train_dataset_010, batch_size=batch_size, shuffle=True, pin_memory=True)
+
+    test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+
+    for epoch in range(1, num_epochs+1):
+
+        loss_tr=0
+        loss_t=0
+        acc_t=0
+        acc_tr=0
+
+        train_start_time = time.time()
+        train_loss,train_acc = train(model, optimizer, train_loader_002,nr_points=num_points)
+
+        loss_tr=loss_tr+train_loss
+        acc_tr=acc_tr+train_acc
+
+        train_loss,train_acc = train(model, optimizer, train_loader_005,nr_points=num_points)
+
+        loss_tr=loss_tr+train_loss
+        acc_tr=acc_tr+train_acc
+
+        train_loss,train_acc = train(model, optimizer, train_loader_008,nr_points=num_points)
+
+        loss_tr=loss_tr+train_loss
+        acc_tr=acc_tr+train_acc
+
+        train_loss,train_acc = train(model, optimizer, train_loader_010,nr_points=num_points)
+        train_stop_time = time.time()
+
+
+        loss_tr=loss_tr+train_loss
+        acc_tr=acc_tr+train_acc
+
+        loss_tr=loss_tr/4
+        acc_tr=acc_tr/4
+
+        test_start_time = time.time()
+        test_acc = test(model, test_loader,nr_points=num_points)
+        test_stop_time = time.time()
+
+        
+        writer.add_scalar("Loss/train", loss_tr, epoch)
+        writer.add_scalar("Acc/train", acc_tr, epoch)
+        writer.add_scalar("Acc/test", test_acc, epoch)
+
+        print(f'Epoch: {epoch:02d}, Loss: {loss_t:.4f}, Test Accuracy: {test_acc:.4f}')
+        print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
+        Test Time: \t{test_stop_time - test_start_time }')
+
+        if(epoch%3==0):
+            torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+
+
+        my_lr_scheduler.step()
+
+
+    torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
