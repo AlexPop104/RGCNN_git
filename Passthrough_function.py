@@ -14,7 +14,7 @@ def Rot_matrix_z(angle=0):
     return np.matrix([[np.cos(angle), -np.sin(angle),0,0],[np.sin(angle), np.cos(angle),0 ,0],[ 0,0,1, 0],[0, 0 ,0 ,1]])
 
 
-def Passthrough_custom(L=1,l=1,h=1,angle_x=0,angle_y=0,angle_z=0,centroid_x=1,centroid_y=1,centroid_z=1,color_box=[0.2, 0.2, 0.5],color_pass_cloud=[0., 1., 1.]):
+def Passthrough_custom(L=1,l=1,h=1,angle_x=0,angle_y=0,angle_z=0,centroid_x=1,centroid_y=1,centroid_z=1,color_box=[0.2, 0.2, 0.5],color_pass_cloud=[0., 1., 1.],cloud=o3d.geometry.PointCloud()):
     centroid=np.asarray([centroid_x,  centroid_y , centroid_z])
 
     centroid_point=o3d.geometry.PointCloud()
@@ -381,6 +381,6 @@ box_2=o3d.geometry.PointCloud()
 box_3=o3d.geometry.PointCloud()
 
 
-pf_filter1,box_1=Passthrough_custom(L=L_1,l=l_1,h=h_1,angle_x=angle_x_1,angle_y=angle_y_1,angle_z=angle_z_1,centroid_x=centroid_x_1,centroid_y=centroid_y_1,centroid_z=centroid_z_1,color_box=color_box_1,color_pass_cloud=color_pass_cloud_1)
-pf_filter2,box_2=Passthrough_custom(L=L_2,l=l_2,h=h_2,angle_x=angle_x_2,angle_y=angle_y_2,angle_z=angle_z_2,centroid_x=centroid_x_2,centroid_y=centroid_y_2,centroid_z=centroid_z_2,color_box=color_box_2,color_pass_cloud=color_pass_cloud_2)
+pf_filter1,box_1=Passthrough_custom(L=L_1,l=l_1,h=h_1,angle_x=angle_x_1,angle_y=angle_y_1,angle_z=angle_z_1,centroid_x=centroid_x_1,centroid_y=centroid_y_1,centroid_z=centroid_z_1,color_box=color_box_1,color_pass_cloud=color_pass_cloud_1,cloud=cloud)
+pf_filter2,box_2=Passthrough_custom(L=L_2,l=l_2,h=h_2,angle_x=angle_x_2,angle_y=angle_y_2,angle_z=angle_z_2,centroid_x=centroid_x_2,centroid_y=centroid_y_2,centroid_z=centroid_z_2,color_box=color_box_2,color_pass_cloud=color_pass_cloud_2,cloud=cloud)
 o3d.visualization.draw_geometries([cloud,box_1,pf_filter1,box_2,pf_filter2])

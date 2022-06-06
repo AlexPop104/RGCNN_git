@@ -76,7 +76,7 @@ class cls_model(nn.Module):
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
 
-        self.conv1 = util_functions.DenseChebConvV2(6, 128, 3)
+        self.conv1 = util_functions.DenseChebConvV2(self.K[0], 128, 3)
         self.conv2 = util_functions.DenseChebConvV2(128,512, 3)
         self.conv3 = util_functions.DenseChebConvV2(512,1024, 3)
 
@@ -93,7 +93,7 @@ class cls_model(nn.Module):
         self.regularizers = []
         with torch.no_grad():
             L = util_functions.pairwise_distance(x) # W - weight matrix
-            L = util_functions.get_laplacian_HAAR(L)
+            L = util_functions.get_laplacian(L)
 
         out = self.conv1(x, L)
         out = self.relu1(out)
@@ -144,10 +144,19 @@ def train(model, optimizer,num_points,criterion, loader, regularization,device):
     for i, data in enumerate(loader):
         optimizer.zero_grad()
 
-        x = torch.cat([data.pos, data.normal], dim=1)   
-        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+        if (model.conv1.in_channels==6):
+            x = torch.cat([data.pos, data.normal], dim=1)   
+            x = x.reshape(data.batch.unique().shape[0], num_points, model.conv1.in_channels)
 
-        x =x.float()
+            x =x.float()
+
+        if (model.conv1.in_channels==3):
+            x = data.pos
+            x = x.reshape(data.batch.unique().shape[0], num_points, model.conv1.in_channels)
+
+            x =x.float()  
+
+
         logits, regularizers  = model(x=x.to(device))
         pred = logits.argmax(dim=-1)
         total_correct += int((pred == data.y.to(device)).sum())
@@ -170,10 +179,17 @@ def test(model, loader,num_points,criterion,device):
     total_correct = 0
     for data in loader:
        
-        x = torch.cat([data.pos, data.normal], dim=1)   
-        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+        if (model.conv1.in_channels==6):
+            x = torch.cat([data.pos, data.normal], dim=1)   
+            x = x.reshape(data.batch.unique().shape[0], num_points, model.conv1.in_channels)
 
-        x=x.float()
+            x =x.float()
+
+        if (model.conv1.in_channels==3):
+            x = data.pos
+            x = x.reshape(data.batch.unique().shape[0], num_points, model.conv1.in_channels)
+
+            x =x.float()  
 
         logits, regularizers = model(x=x.to(device))
         loss    = criterion(logits, data.y.to(device))
@@ -195,15 +211,16 @@ parent_directory = "/media/rambo/ssd2/Alex_data/RGCNN/data/logs/Trained_Models"
 path = os.path.join(parent_directory, directory)
 os.mkdir(path)
 
-num_points = 1024
+num_points = 512
 batch_size = 16
 num_epochs = 250
 learning_rate = 1e-3
 modelnet_num = 40
 dropout=0.25
+input_feature_size=3
 
 F = [128, 512, 1024]  # Outputs size of convolutional filter.
-K = [6, 5, 3]         # Polynomial orders.
+K = [input_feature_size, 5, 3]         # Polynomial orders.
 M = [512, 128, modelnet_num]
 
 
@@ -229,7 +246,7 @@ print("Select type of training  (1 - no noise, 2 - Rotation noise , 3- Position 
 selection=int(input())
 
 if(selection==1):
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_1024/Modelnet40_1024_r40_recomputed_1024/")
+    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_512/")
     train_dataset_0 = cam_loader.PcdDataset(root_dir=root, points=num_points)
     test_dataset_0 = cam_loader.PcdDataset(root_dir=root, folder='test',points=num_points)
 

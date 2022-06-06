@@ -2,6 +2,8 @@ import numpy as np
 import open3d as o3d
 import os
 
+
+
 # Helper parameters class containing variables that will change in the callback function
 class params():
     # voxels counter that will stop the voxel mesh generation when there are no more voxels in the voxel grid

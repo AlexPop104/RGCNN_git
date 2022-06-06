@@ -248,10 +248,10 @@ path = os.path.join(parent_directory, directory)
 os.mkdir(path)
 
 modelnet_num = 40
-num_points= 1024
+num_points= 512
 batch_size=16
 num_epochs=200
-nr_features=3
+nr_features=6
 
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -286,7 +286,7 @@ torch.manual_seed(0)
 #################################
 if(selection==1):
 
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024/")
+    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_512/")
     train_dataset_0 = cam_loader.PcdDataset(root_dir=root, points=num_points)
     test_dataset_0 = cam_loader.PcdDataset(root_dir=root, folder='test',points=num_points)
 
