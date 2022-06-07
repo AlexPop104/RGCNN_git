@@ -217,7 +217,7 @@ num_epochs = 250
 learning_rate = 1e-3
 modelnet_num = 40
 dropout=0.25
-input_feature_size=3
+input_feature_size=6
 
 F = [128, 512, 1024]  # Outputs size of convolutional filter.
 K = [input_feature_size, 5, 3]         # Polynomial orders.

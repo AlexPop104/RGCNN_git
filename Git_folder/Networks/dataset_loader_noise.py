@@ -198,7 +198,7 @@ if __name__ == '__main__':
 
     test_transform = Compose([
                     #random_rotate,
-                    GaussianNoiseTransform(mu=mu,sigma=sigma)
+                    #GaussianNoiseTransform(mu=mu,sigma=sigma)
                     #Sphere_Occlusion_Transform(radius=radius, percentage=percentage,num_points=1024)
                     ])
 
@@ -208,10 +208,10 @@ if __name__ == '__main__':
     print("Choice=")
     choice=int(input())
 
-    num_points = 1024
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024/")
+    num_points = 512
+    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_2048_r_40/")
 
-    root_noise_1 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Modelnet40_"+str(num_points)+"/")
+    root_noise_1 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Modelnet40_"+str(num_points)+"_r_40"+"/")
 
     if(choice==1):
     ####Processing the datasets

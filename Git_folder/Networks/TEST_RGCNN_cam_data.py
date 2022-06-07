@@ -74,7 +74,7 @@ class cls_model(nn.Module):
         self.dropout = torch.nn.Dropout(p=self.dropout)
 
 
-        self.conv1 = util_functions.DenseChebConvV2(6, 128, 3)
+        self.conv1 = util_functions.DenseChebConvV2(self.K[0], 128, 3)
         self.conv2 = util_functions.DenseChebConvV2(128,512, 3)
         self.conv3 = util_functions.DenseChebConvV2(512,1024, 3)
 
@@ -165,10 +165,17 @@ def test(model, loader,num_points,criterion,device):
     total_correct = 0
     for data in loader:
        
-        x = torch.cat([data.pos, data.normal], dim=1)   
-        x = x.reshape(data.batch.unique().shape[0], num_points, 6)
+        if (model.conv1.in_channels==6):
+            x = torch.cat([data.pos, data.normal], dim=1)   
+            x = x.reshape(data.batch.unique().shape[0], num_points, model.conv1.in_channels)
 
-        x=x.float()
+            x =x.float()
+
+        if (model.conv1.in_channels==3):
+            x = data.pos
+            x = x.reshape(data.batch.unique().shape[0], num_points, model.conv1.in_channels)
+
+            x =x.float()  
 
         logits, regularizers = model(x=x.to(device))
         loss    = criterion(logits, data.y.to(device))
@@ -188,10 +195,13 @@ num_epochs = 250
 learning_rate = 1e-3
 modelnet_num = 40
 dropout=0.25
+input_feature_size=6
 
 F = [128, 512, 1024]  # Outputs size of convolutional filter.
-K = [6, 5, 3]         # Polynomial orders.
+K = [input_feature_size, 5, 3]         # Polynomial orders.
 M = [512, 128, modelnet_num]
+
+
 
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -209,7 +219,7 @@ criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
 regularization = 1e-9
 
-path_saved_model="/home/alex/Alex_documents/RGCNN_git/Git_folder/Trained+models/Modelnet_40_RGCNN.pt"
+path_saved_model="/home/alex/Alex_documents/RGCNN_git/Git_folder/Trained+models/No noise_train/RGCNN_6_512.pt"
 model.load_state_dict(torch.load(path_saved_model))
 #print(model.parameters)
 model = model.to(device)
@@ -364,268 +374,268 @@ print(f'{test_acc:.4f}')
 
 
 
+##############################################################################################
+print("Modelnet40 2048 points rotation 10-20-30-40 accuracy")
+num_points=2048
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_2048_r_10/")
+test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+
+test_start_time = time.time()
+test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+test_stop_time = time.time()
+
+print(f'{test_acc:.4f}')
+
 ###############################################################################################
-# print("Modelnet40 2048 points rotation 10-20-30-40 accuracy")
-# num_points=2048
-# root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_2048_r_10/")
-# test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-# test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+#print("Modelnet40 2048 points rotation 20 accuracy")
+num_points=2048
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_2048_r_20/")
+test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
-# test_start_time = time.time()
-# test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-# test_stop_time = time.time()
+test_start_time = time.time()
+test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+test_stop_time = time.time()
 
-# print(f'{test_acc:.4f}')
+print(f'{test_acc:.4f}')
 
-# ###############################################################################################
-# #print("Modelnet40 2048 points rotation 20 accuracy")
-# num_points=2048
-# root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_2048_r_20/")
-# test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-# test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+###############################################################################################
+#print("Modelnet40 2048 points rotation 30 accuracy")
+num_points=2048
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_2048_r_30/")
+test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
-# test_start_time = time.time()
-# test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-# test_stop_time = time.time()
+test_start_time = time.time()
+test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+test_stop_time = time.time()
 
-# print(f'{test_acc:.4f}')
+print(f'{test_acc:.4f}')
 
-# ###############################################################################################
-# #print("Modelnet40 2048 points rotation 30 accuracy")
-# num_points=2048
-# root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_2048_r_30/")
-# test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-# test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+###############################################################################################
+#print("Modelnet40 2048 points rotation 40 accuracy")
+num_points=2048
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_2048_r_40/")
+test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
-# test_start_time = time.time()
-# test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-# test_stop_time = time.time()
+test_start_time = time.time()
+test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+test_stop_time = time.time()
 
-# print(f'{test_acc:.4f}')
+print(f'{test_acc:.4f}')
 
-# ###############################################################################################
-# #print("Modelnet40 2048 points rotation 40 accuracy")
-# num_points=2048
-# root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_2048_r_40/")
-# test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-# test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+###############################################################################################
+print("Modelnet40 1024 points normals sampled 2048 rotation 10-20-30-40 accuracy")
+num_points=1024
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_10/")
+test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
-# test_start_time = time.time()
-# test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-# test_stop_time = time.time()
+test_start_time = time.time()
+test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+test_stop_time = time.time()
 
-# print(f'{test_acc:.4f}')
+print(f'{test_acc:.4f}')
 
-# ###############################################################################################
-# print("Modelnet40 1024 points normals sampled 2048 rotation 10-20-30-40 accuracy")
-# num_points=1024
-# root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_10/")
-# test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-# test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+###############################################################################################
+#print("Modelnet40 1024 points rotation 20 accuracy")
+num_points=1024
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_20/")
+test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
-# test_start_time = time.time()
-# test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-# test_stop_time = time.time()
+test_start_time = time.time()
+test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+test_stop_time = time.time()
 
-# print(f'{test_acc:.4f}')
+print(f'{test_acc:.4f}')
 
-# ###############################################################################################
-# #print("Modelnet40 1024 points rotation 20 accuracy")
-# num_points=1024
-# root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_20/")
-# test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-# test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+###############################################################################################
+#print("Modelnet40 1024 points rotation 30 accuracy")
+num_points=1024
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_30/")
+test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
-# test_start_time = time.time()
-# test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-# test_stop_time = time.time()
+test_start_time = time.time()
+test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+test_stop_time = time.time()
 
-# print(f'{test_acc:.4f}')
+print(f'{test_acc:.4f}')
 
-# ###############################################################################################
-# #print("Modelnet40 1024 points rotation 30 accuracy")
-# num_points=1024
-# root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_30/")
-# test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-# test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+###############################################################################################
+#print("Modelnet40 1024 points rotation 40 accuracy sampled normals")
+num_points=1024
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_40/")
+test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
-# test_start_time = time.time()
-# test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-# test_stop_time = time.time()
+test_start_time = time.time()
+test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+test_stop_time = time.time()
 
-# print(f'{test_acc:.4f}')
-
-# ###############################################################################################
-# #print("Modelnet40 1024 points rotation 40 accuracy sampled normals")
-# num_points=1024
-# root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_40/")
-# test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-# test_loader  = DataLoader(test_dataset, batch_size=batch_size)
-
-# test_start_time = time.time()
-# test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-# test_stop_time = time.time()
-
-# print(f'{test_acc:.4f}')
+print(f'{test_acc:.4f}')
 
 
-# ###############################################################################################
-# print("Modelnet40 1024-512 points Occlusion Radius 0.25 accuracy sampled normals")
-# num_points=1024
-# root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_occlusion_1024_025/")
-# test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-# test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+###############################################################################################
+print("Modelnet40 1024-512 points Occlusion Radius 0.25 accuracy sampled normals")
+num_points=1024
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_occlusion_1024_025/")
+test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
-# test_start_time = time.time()
-# test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-# test_stop_time = time.time()
+test_start_time = time.time()
+test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+test_stop_time = time.time()
 
-# print(f'{test_acc:.4f}')
+print(f'{test_acc:.4f}')
 
-# ###############################################################################################
-# #print("Modelnet40 512 points Occlusion Radius 0.25 accuracy")
-# num_points=512
-# root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_occlusion_512_025/")
-# test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-# test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+###############################################################################################
+#print("Modelnet40 512 points Occlusion Radius 0.25 accuracy")
+num_points=512
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_occlusion_512_025/")
+test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
-# test_start_time = time.time()
-# test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-# test_stop_time = time.time()
+test_start_time = time.time()
+test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+test_stop_time = time.time()
 
-# print(f'{test_acc:.4f}')
+print(f'{test_acc:.4f}')
 
-# ###############################################################################################
-# print("Modelnet40 1024 points Position noise sigma=0.02-0.05-0.08-0.10 accuracy sampled normals")
-# num_points=1024
-# root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_002/")
-# test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-# test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+###############################################################################################
+print("Modelnet40 1024 points Position noise sigma=0.02-0.05-0.08-0.10 accuracy sampled normals")
+num_points=1024
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_002/")
+test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
-# test_start_time = time.time()
-# test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-# test_stop_time = time.time()
+test_start_time = time.time()
+test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+test_stop_time = time.time()
 
-# print(f'{test_acc:.4f}')
+print(f'{test_acc:.4f}')
 
-# ###############################################################################################
-# #print("Modelnet40 1024 points Position noise sigma=0.05 accuracy sampled normals")
-# num_points=1024
-# root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_005/")
-# test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-# test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+###############################################################################################
+#print("Modelnet40 1024 points Position noise sigma=0.05 accuracy sampled normals")
+num_points=1024
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_005/")
+test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
-# test_start_time = time.time()
-# test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-# test_stop_time = time.time()
+test_start_time = time.time()
+test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+test_stop_time = time.time()
 
-# print(f'{test_acc:.4f}')
+print(f'{test_acc:.4f}')
 
-# ###############################################################################################
-# #print("Modelnet40 1024 points Position noise sigma=0.08 accuracy sampled normals")
-# num_points=1024
-# root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_008/")
-# test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-# test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+###############################################################################################
+#print("Modelnet40 1024 points Position noise sigma=0.08 accuracy sampled normals")
+num_points=1024
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_008/")
+test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
-# test_start_time = time.time()
-# test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-# test_stop_time = time.time()
+test_start_time = time.time()
+test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+test_stop_time = time.time()
 
-# print(f'{test_acc:.4f}')
+print(f'{test_acc:.4f}')
 
-# ###############################################################################################
-# #print("Modelnet40 1024 points Position noise sigma=0.05 accuracy sampled normals")
-# num_points=1024
-# root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_010/")
-# test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-# test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+###############################################################################################
+#print("Modelnet40 1024 points Position noise sigma=0.05 accuracy sampled normals")
+num_points=1024
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_010/")
+test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
-# test_start_time = time.time()
-# test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-# test_stop_time = time.time()
+test_start_time = time.time()
+test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+test_stop_time = time.time()
 
-# print(f'{test_acc:.4f}')
+print(f'{test_acc:.4f}')
 
-# ###############################################################################################
-# print("Modelnet40 1024 points  Position noise sigma=0.02-0.05 accuracy recomputed normals")
-# num_points=1024
-# root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_1024/Modelnet40_1024_n_002_recomputed_1024/")
-# test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-# test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+###############################################################################################
+print("Modelnet40 1024 points  Position noise sigma=0.02-0.05 accuracy recomputed normals")
+num_points=1024
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_1024/Modelnet40_1024_n_002_recomputed_1024/")
+test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
-# test_start_time = time.time()
-# test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-# test_stop_time = time.time()
+test_start_time = time.time()
+test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+test_stop_time = time.time()
 
-# print(f'{test_acc:.4f}')
+print(f'{test_acc:.4f}')
 
-# ###############################################################################################
-# #print("Modelnet40 1024 points Position noise sigma=0.05 accuracy recomputed normals")
-# num_points=1024
-# root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_1024/Modelnet40_1024_n_005_recomputed_1024/")
-# test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-# test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+###############################################################################################
+#print("Modelnet40 1024 points Position noise sigma=0.05 accuracy recomputed normals")
+num_points=1024
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_1024/Modelnet40_1024_n_005_recomputed_1024/")
+test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
-# test_start_time = time.time()
-# test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-# test_stop_time = time.time()
+test_start_time = time.time()
+test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+test_stop_time = time.time()
 
-# print(f'{test_acc:.4f}')
+print(f'{test_acc:.4f}')
 
-# ###############################################################################################
-# print("Modelnet40 1024 points rotation 10-20-30-40 accuracy recomputed normals")
-# num_points=1024
-# root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_1024/Modelnet40_1024_r10_recomputed_1024/")
-# test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-# test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+###############################################################################################
+print("Modelnet40 1024 points rotation 10-20-30-40 accuracy recomputed normals")
+num_points=1024
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_1024/Modelnet40_1024_r10_recomputed_1024/")
+test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
-# test_start_time = time.time()
-# test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-# test_stop_time = time.time()
+test_start_time = time.time()
+test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+test_stop_time = time.time()
 
-# print(f'{test_acc:.4f}')
+print(f'{test_acc:.4f}')
 
-# ###############################################################################################
-# #print("Modelnet40 1024 points rotation 20 accuracy recomputed normals")
-# num_points=1024
-# root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_1024/Modelnet40_1024_r20_recomputed_1024/")
-# test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-# test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+###############################################################################################
+#print("Modelnet40 1024 points rotation 20 accuracy recomputed normals")
+num_points=1024
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_1024/Modelnet40_1024_r20_recomputed_1024/")
+test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
-# test_start_time = time.time()
-# test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-# test_stop_time = time.time()
+test_start_time = time.time()
+test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+test_stop_time = time.time()
 
-# print(f'{test_acc:.4f}')
-
-
-# ###############################################################################################
-# #print("Modelnet40 1024 points rotation 30 accuracy recomputed normals")
-# num_points=1024
-# root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_1024/Modelnet40_1024_r30_recomputed_1024/")
-# test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-# test_loader  = DataLoader(test_dataset, batch_size=batch_size)
-
-# test_start_time = time.time()
-# test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-# test_stop_time = time.time()
-
-# print(f'{test_acc:.4f}')
+print(f'{test_acc:.4f}')
 
 
-# ###############################################################################################
-# #print("Modelnet40 1024 points rotation 40 accuracy recomputed normals")
-# num_points=1024
-# root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_1024/Modelnet40_1024_r40_recomputed_1024/")
-# test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-# test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+###############################################################################################
+#print("Modelnet40 1024 points rotation 30 accuracy recomputed normals")
+num_points=1024
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_1024/Modelnet40_1024_r30_recomputed_1024/")
+test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
-# test_start_time = time.time()
-# test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-# test_stop_time = time.time()
+test_start_time = time.time()
+test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+test_stop_time = time.time()
 
-# print(f'{test_acc:.4f}')
+print(f'{test_acc:.4f}')
+
+
+###############################################################################################
+#print("Modelnet40 1024 points rotation 40 accuracy recomputed normals")
+num_points=1024
+root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_1024/Modelnet40_1024_r40_recomputed_1024/")
+test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+
+test_start_time = time.time()
+test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+test_stop_time = time.time()
+
+print(f'{test_acc:.4f}')
 
 
 

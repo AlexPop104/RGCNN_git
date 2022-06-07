@@ -313,7 +313,7 @@ torch.manual_seed(0)
 
 
 if(selection==1):
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_512/")
+    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024/")
     train_dataset_0 = cam_loader.PcdDataset(root_dir=root, points=num_points)
     test_dataset_0 = cam_loader.PcdDataset(root_dir=root, folder='test',points=num_points)
 
@@ -361,12 +361,12 @@ if(selection==1):
     torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
 
 elif(selection==2):
-    root_train_10 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_10/")
-    root_train_20 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_20/")
-    root_train_30 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_30/")
-    root_train_40 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_40/")
+    root_train_10 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_"+str(num_points)+"_r_10/")
+    root_train_20 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_"+str(num_points)+"_r_20/")
+    root_train_30 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_"+str(num_points)+"_r_30/")
+    root_train_40 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_"+str(num_points)+"_r_40/")
 
-    root_test = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024/")
+    root_test = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_"+str(num_points)+"/")
 
     train_dataset_10 = cam_loader.PcdDataset(root_dir=root_train_10, points=num_points)
     train_dataset_20 = cam_loader.PcdDataset(root_dir=root_train_10, points=num_points)
@@ -439,12 +439,12 @@ elif(selection==2):
     torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
 
 elif(selection==3):
-    root_train_002 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_002/")
-    root_train_005 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_005/")
-    root_train_008 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_008/")
-    root_train_010 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_010/")
+    root_train_002 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_"+str(num_points)+"_n_002/")
+    root_train_005 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_"+str(num_points)+"_n_005/")
+    root_train_008 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_"+str(num_points)+"_n_008/")
+    root_train_010 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_"+str(num_points)+"_n_010/")
 
-    root_test = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024/")
+    root_test = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_"+str(num_points)+"/")
 
     train_dataset_002 = cam_loader.PcdDataset(root_dir=root_train_002, points=num_points)
     train_dataset_005 = cam_loader.PcdDataset(root_dir=root_train_005, points=num_points)

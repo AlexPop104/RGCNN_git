@@ -214,8 +214,8 @@ def Passthrough_custom(L=1,l=1,h=1,angle_x=0,angle_y=0,angle_z=0,centroid_x=1,ce
     distance_3=np.abs(np.dot(normals_plane,centroid)+d)/ np.sqrt(np.dot(normals_plane,normals_plane.T))
     ###################Plane 4
 
-    line1=corner_7-corner_3
-    line2=corner_7-corner_8
+    # line1=corner_7-corner_3
+    # line2=corner_7-corner_8
 
     line1=New_corners[6]-New_corners[2]
     line2=New_corners[6]-New_corners[7]
@@ -241,8 +241,8 @@ def Passthrough_custom(L=1,l=1,h=1,angle_x=0,angle_y=0,angle_z=0,centroid_x=1,ce
     distance_4=np.abs(np.dot(normals_plane,centroid)+d)/ np.sqrt(np.dot(normals_plane,normals_plane.T))
     ###################Plane 5
 
-    line1=corner_5-corner_1
-    line2=corner_5-corner_8
+    # line1=corner_5-corner_1
+    # line2=corner_5-corner_8
 
     line1=New_corners[4]-New_corners[0]
     line2=New_corners[4]-New_corners[7]
@@ -268,8 +268,8 @@ def Passthrough_custom(L=1,l=1,h=1,angle_x=0,angle_y=0,angle_z=0,centroid_x=1,ce
     distance_5=np.abs(np.dot(normals_plane,centroid)+d)/ np.sqrt(np.dot(normals_plane,normals_plane.T))
     ###################Plane 6
 
-    line1=corner_6-corner_2
-    line2=corner_6-corner_3
+    # line1=corner_6-corner_2
+    # line2=corner_6-corner_3
 
 
     line1=New_corners[5]-New_corners[1]
@@ -310,6 +310,7 @@ def Passthrough_custom(L=1,l=1,h=1,angle_x=0,angle_y=0,angle_z=0,centroid_x=1,ce
         print(points_range)
 
     points_range_final=points_range<=(L+l+h)
+    points_remaining=points_range>(L+l+h)
 
     cloud_3=o3d.geometry.PointCloud()
 
@@ -321,13 +322,19 @@ def Passthrough_custom(L=1,l=1,h=1,angle_x=0,angle_y=0,angle_z=0,centroid_x=1,ce
 
     #o3d.visualization.draw_geometries([centroid_point,line_set_2,cloud,cloud_3])
 
+    cloud_remaining=o3d.geometry.PointCloud()
+
     
 
-    return cloud_3,line_set_2
+    cloud_remaining.points = o3d.utility.Vector3dVector(points[points_remaining])
+
+    
+
+    return cloud_3,line_set_2,cloud_remaining
 
 
 
-path_pointcloud="/home/alex/Alex_documents/RGCNN_git/1651654246540199.pcd"
+path_pointcloud="/home/alex/Alex_documents/RGCNN_git/Git_folder/data/plane/1651654247541301.pcd"
 cloud = o3d.io.read_point_cloud(path_pointcloud)
 
 
@@ -339,36 +346,23 @@ centroid= o3d.geometry.PointCloud.get_center(cloud)
 print("Centroid")
 print(centroid)
 
-L_1=0.15
-l_1=0.15
-h_1=0.10
 
-angle_x_1=20
+
+
+L_1=0.40
+l_1=0.15
+h_1=0.05
+
+angle_x_1=0
 angle_y_1=10
-angle_z_1=5
+angle_z_1=0
 
 centroid_x_1=-0.2874577
-centroid_y_1= -0.14024239-0.1
+centroid_y_1= -0.14024239+0.1
 centroid_z_1=1.21766081-0.05
 
-color_box_1=[0.2, 0.2, 0.5]
-color_pass_cloud_1=[0., 1., 1.]
-
-
-L_2=0.15
-l_2=0.15
-h_2=0.10
-
-angle_x_2=20
-angle_y_2=10
-angle_z_2=5
-
-centroid_x_2=-0.2874577
-centroid_y_2= -0.14024239+0.1
-centroid_z_2=1.21766081-0.05
-
-color_box_2=[0.45, 0.1, 0.9]
-color_pass_cloud_2=[1, 0.3, 0.5]
+color_box_1=[0.45, 0.1, 0.9]
+color_pass_cloud_1=[1, 0.3, 0.5]
 
 
 
@@ -381,6 +375,89 @@ box_2=o3d.geometry.PointCloud()
 box_3=o3d.geometry.PointCloud()
 
 
-pf_filter1,box_1=Passthrough_custom(L=L_1,l=l_1,h=h_1,angle_x=angle_x_1,angle_y=angle_y_1,angle_z=angle_z_1,centroid_x=centroid_x_1,centroid_y=centroid_y_1,centroid_z=centroid_z_1,color_box=color_box_1,color_pass_cloud=color_pass_cloud_1,cloud=cloud)
-pf_filter2,box_2=Passthrough_custom(L=L_2,l=l_2,h=h_2,angle_x=angle_x_2,angle_y=angle_y_2,angle_z=angle_z_2,centroid_x=centroid_x_2,centroid_y=centroid_y_2,centroid_z=centroid_z_2,color_box=color_box_2,color_pass_cloud=color_pass_cloud_2,cloud=cloud)
-o3d.visualization.draw_geometries([cloud,box_1,pf_filter1,box_2,pf_filter2])
+
+pf_filter2,box_2,cloud=Passthrough_custom(L=L_1,
+                                    l=l_1,
+                                    h=h_1,
+                                    angle_x=angle_x_1,
+                                    angle_y=angle_y_1,
+                                    angle_z=angle_z_1,
+                                    centroid_x=centroid_x_1,
+                                    centroid_y=centroid_y_1,
+                                    centroid_z=centroid_z_1,
+                                    color_box=color_box_1,
+                                    color_pass_cloud=color_pass_cloud_1,
+                                    cloud=cloud)
+cloud.paint_uniform_color([0.5, 0.5, 0.5])
+                                    
+# o3d.visualization.draw_geometries([cloud,box_2,pf_filter2])
+#o3d.visualization.draw_geometries([cloud])
+
+L_2=0.27
+l_2=1
+h_2=0.23
+
+angle_x_2=5
+angle_y_2=0
+angle_z_2=2.7
+
+centroid_x_2=-0.2874577+0.09
+centroid_y_2= -0.14024239+0.02
+centroid_z_2=1.21766081
+
+color_box_2=[0.2, 0.2, 0.5]
+color_pass_cloud_2=[0., 1., 1.]
+
+pf_filter1,box_1,cloud=Passthrough_custom(L=L_2,
+                                    l=l_2,
+                                    h=h_2,
+                                    angle_x=angle_x_2,
+                                    angle_y=angle_y_2,
+                                    angle_z=angle_z_2,
+                                    centroid_x=centroid_x_2,
+                                    centroid_y=centroid_y_2,
+                                    centroid_z=centroid_z_2,
+                                    color_box=color_box_2,
+                                    color_pass_cloud=color_pass_cloud_2,
+                                    cloud=cloud)
+
+cloud.paint_uniform_color([0.5, 0.5, 0.5])
+                                    
+#o3d.visualization.draw_geometries([cloud,box_1,pf_filter1])
+#o3d.visualization.draw_geometries([cloud])
+
+L_3=0.25
+l_3=0.27
+h_3=0.30
+
+angle_x_3=0
+angle_y_3=2.55
+angle_z_3=0
+
+centroid_x_3=-0.2874577-0.07
+centroid_y_3= -0.14024239+0.1
+centroid_z_3=1.21766081
+
+
+color_box_3=[0.2, 0.2, 0.5]
+color_pass_cloud_3=[0., 1., 1.]
+
+pf_filter3,box_3,cloud=Passthrough_custom(L=L_3,
+                                    l=l_3,
+                                    h=h_3,
+                                    angle_x=angle_x_3,
+                                    angle_y=angle_y_3,
+                                    angle_z=angle_z_3,
+                                    centroid_x=centroid_x_3,
+                                    centroid_y=centroid_y_3,
+                                    centroid_z=centroid_z_3,
+                                    color_box=color_box_3,
+                                    color_pass_cloud=color_pass_cloud_3,
+                                    cloud=cloud)
+
+cloud.paint_uniform_color([0.5, 0.5, 0.5])
+                                    
+o3d.visualization.draw_geometries([cloud,box_3,pf_filter3])
+
+
+o3d.visualization.draw_geometries([cloud,pf_filter1,pf_filter2,pf_filter3])

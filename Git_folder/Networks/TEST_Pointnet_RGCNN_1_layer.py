@@ -192,8 +192,14 @@ def test(model, loader,nr_points):
 
         batch_size=int(data.y.shape[0])
 
-        x = torch.cat([data.pos, data.normal], dim=1)   
-        x=torch.reshape(x,(batch_size,nr_points,x.shape[1]))
+        if (model.transform.input_transform.k==6):
+
+            x = torch.cat([data.pos, data.normal], dim=1)   
+            x=torch.reshape(x,(batch_size,nr_points,x.shape[1]))
+
+        if (model.transform.input_transform.k==3):
+            x = data.pos
+            x=torch.reshape(x,(batch_size,nr_points,x.shape[1]))
 
         x=x.float()
 
@@ -222,7 +228,7 @@ def test(model, loader,nr_points):
 
 
 modelnet_num = 40
-num_points= 1024
+num_points= 512
 batch_size=16
 num_epochs=250
 nr_features=6
@@ -231,36 +237,19 @@ nr_features=6
 
 
 model = PointNet(num_classes=modelnet_num,nr_features=nr_features)
-path_saved_model="/home/alex/Alex_documents/RGCNN_git/Git_folder/Trained+models/Modelnet_Pointnet_RGCNN_1024.pt"
+path_saved_model="/home/alex/Alex_documents/RGCNN_git/Git_folder/Trained+models/No noise_train/RGCNN_Pointnet_6_512.pt"
 model.load_state_dict(torch.load(path_saved_model))
 #print(model)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = model.to(device)
 
-root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024/")
-
-test_dataset = cam_loader.PcdDataset(root_dir=root, folder='test',points=num_points)
-
-
-###############################################################################
-
-test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
 
 torch.manual_seed(0)
 
-        
-test_start_time = time.time()
-test_acc = test(model, test_loader,nr_points=num_points)
-test_stop_time = time.time()
 
-print(f'{test_acc:.4f}')
-
-#print(f'\Test Time: \t{test_stop_time - test_start_time }')
-#print(f' Test Accuracy: {test_acc:.4f}')
-
-###############################################################################################
+# ###############################################################################################
 print("-----------------------Pointnet RGCNN trained on 1024 points--------------")
 
 print("Modelnet40 2048-1024-512-256-128-64 points No noise computed normals at 2048, sampled later ")
@@ -275,7 +264,7 @@ test_stop_time = time.time()
 
 print(f'{test_acc:.4f}')
 
-###############################################################################################
+# ###############################################################################################
 #print("Modelnet40 1024 points No noise accuracy")
 num_points=1024
 root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024/")
@@ -288,7 +277,7 @@ test_stop_time = time.time()
 
 print(f'{test_acc:.4f}')
 
-###############################################################################
+# ###############################################################################
 #print("Modelnet40 512 points No noise accuracy")
 num_points=512
 root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_512/")
@@ -301,7 +290,7 @@ test_stop_time = time.time()
 
 print(f'{test_acc:.4f}')
 
-###############################################################################
+# ###############################################################################
 #print("Modelnet40 512 points No noise accuracy")
 num_points=256
 root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_256/")
@@ -314,7 +303,7 @@ test_stop_time = time.time()
 
 print(f'{test_acc:.4f}')
 
-###############################################################################
+# ###############################################################################
 #print("Modelnet40 512 points No noise accuracy")
 num_points=128
 root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_128/")
@@ -327,7 +316,7 @@ test_stop_time = time.time()
 
 print(f'{test_acc:.4f}')
 
-###############################################################################
+# ###############################################################################
 #print("Modelnet40 512 points No noise accuracy")
 num_points=64
 root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_64/")
@@ -340,7 +329,7 @@ test_stop_time = time.time()
 
 print(f'{test_acc:.4f}')
 
-###############################################################################
+# ###############################################################################
 print("Modelnet40 1024-512-256-128-64 points No noise recomputed normals")
 num_points=1024
 root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Recomputed_normals/Modelnet40_1024_recomputed_normals/")
