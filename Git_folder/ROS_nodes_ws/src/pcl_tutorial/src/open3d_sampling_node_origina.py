@@ -20,25 +20,6 @@ import torch as t
 from torch_geometric.nn import fps
 
 
-def rotate_pcd(pcd, angle, axis):
-    c = np.cos(angle)
-    s = np.sin(angle)
-    
-    if axis == 0:
-        """rot on x"""
-        R = np.array([[1 ,0 ,0],[0 ,c ,-s],[0 ,s ,c]])
-    elif axis == 1:
-        """rot on y"""
-        R = np.array([[c, 0, s],[0, 1, 0],[-s, 0, c]])
-    elif axis == 2:
-        """rot on z"""
-        R = np.array([[c, -s, 0],[s, c, 0],[0, 0, 1]])
-
-    return pcd.rotate(R)
-
-
-
-
 
 counter = 0
 
@@ -148,50 +129,6 @@ def callback(data,num_points):
 
                     points=fps_points
                     normals = fps_normals
-
-
-    path_pointcloud="/home/alex/Alex_documents/RGCNN_git/data/Test_programe/1654765661.475854000.pcd"
-    target = o3d.io.read_point_cloud(path_pointcloud)
-
-    source_pcd = o3d.geometry.PointCloud()
-    source_pcd.points=o3d.utility.Vector3dVector(points)
-    source_pcd.normals=o3d.utility.Vector3dVector(normals)
-
-    target.paint_uniform_color([0.5, 0.5, 0.5])
-    
-    
-    aabb_target = target.get_oriented_bounding_box()
-    aabb_source = source_pcd.get_oriented_bounding_box()
-
-    centroid_target= o3d.geometry.PointCloud.get_center(target)
-    centroid_source= o3d.geometry.PointCloud.get_center(source_pcd)
-
-    source_pcd=source_pcd.rotate(aabb_source.R.T)
-    
-
-    source_pcd.translate(-centroid_source)
-
-    dists_1 = target.compute_point_cloud_distance(source_pcd)
-    dists_1=np.sum(dists_1)
-
-    source_pcd=rotate_pcd(source_pcd,np.pi,2)
-
-    dists_2=target.compute_point_cloud_distance(source_pcd)
-
-    dists_2=np.sum(dists_2)
-
-    if(dists_1<dists_2):
-        source_pcd=rotate_pcd(source_pcd,-np.pi,2)
-
-    source_pcd.translate(centroid_target)
-    source_pcd=source_pcd.rotate(aabb_target.R)
-
-    aabb_2 = source_pcd.get_oriented_bounding_box()
-    aabb_2.color = (0, 0, 1)     
-
-
-    points= np.asarray(source_pcd.points)  
-    normals= np.asarray(source_pcd.normals)            
 
     test_pcd=np.concatenate((points,normals),axis=1)
     xyz = t.tensor(points)

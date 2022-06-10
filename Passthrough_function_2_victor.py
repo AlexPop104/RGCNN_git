@@ -397,13 +397,15 @@ class BoxSelect():
 # curr_dir = Path(__file__).parent
 # path_pointcloud = str((curr_dir/"1651654246540199.pcd").resolve())
 
-path_pointcloud="/home/alex/Alex_documents/RGCNN_git/Git_folder/data/plane/1651654247541301.pcd"
+path_pointcloud="/home/alex/Alex_documents/RGCNN_git/data/Dataset_Rambo/plane/1654765661.475854000.pcd"
 cloud = o3d.io.read_point_cloud(path_pointcloud)
 
 
 cloud.paint_uniform_color([0.5, 0.5, 0.5])
 
 centroid= o3d.geometry.PointCloud.get_center(cloud)
+
+cloud.translate(-centroid)
 
 
 print("Centroid")

@@ -3,6 +3,8 @@ from unicodedata import category
 import numpy as np
 import os
 
+import copy
+
 from tqdm import tqdm
 import torch
 # from torch.utils.data import DataLoader
@@ -33,6 +35,23 @@ from torch_geometric.transforms import RandomRotate
 
 import probreg_functions as probreg_f
 import Passthrough_function as pf_f
+
+
+def rotate_pcd(pcd, angle, axis):
+    c = np.cos(angle)
+    s = np.sin(angle)
+    
+    if axis == 0:
+        """rot on x"""
+        R = np.array([[1 ,0 ,0],[0 ,c ,-s],[0 ,s ,c]])
+    elif axis == 1:
+        """rot on y"""
+        R = np.array([[c, 0, s],[0, 1, 0],[-s, 0, c]])
+    elif axis == 2:
+        """rot on z"""
+        R = np.array([[c, -s, 0],[s, c, 0],[0, 0, 1]])
+
+    return pcd.rotate(R)
 
 def default_transforms():
     return transforms.Compose([
@@ -86,7 +105,7 @@ class PcdDataset(Dataset):
         if self.save_path is not None:
 
             pcd.estimate_normals(fast_normal_computation=False)
-            pcd.normalize_normals()
+            #pcd.normalize_normals()
             #pcd.orient_normals_consistent_tangent_plane(100)
 
             normals=np.asarray(pcd.normals)
@@ -140,8 +159,6 @@ class PcdDataset(Dataset):
 
     def __getitem__(self, idx):
 
-       
-        aligner = probreg_f.pcd_registration()
         pcd_path = self.files[idx]['pcd_path']
 
         
@@ -167,7 +184,7 @@ class PcdDataset(Dataset):
 
                 with open(base_pcd_dir/base_pcd_name, 'r') as f:
                     target = o3d.io.read_point_cloud(f.name)
-                    aligner.set_target(target)
+                   
                 
 
                 name = splits[len(splits) - 1]
@@ -180,17 +197,58 @@ class PcdDataset(Dataset):
 
                 pcd_save = o3d.geometry.PointCloud()
                 pcd_save.points = o3d.utility.Vector3dVector(pointcloud.pos)
+                pcd_save.normals =  o3d.utility.Vector3dVector(pointcloud.normal)
 
-                source_pcd = pcd_save
-                aligner.set_source(source_pcd)
-                result = aligner.register_pcds()
+                target.paint_uniform_color([0.5, 0.5, 0.5])
+                source_pcd = copy.deepcopy(pcd_save) 
+                
+                aabb_target = target.get_oriented_bounding_box()
+                aabb_source = source_pcd.get_oriented_bounding_box()
 
+                centroid_target= o3d.geometry.PointCloud.get_center(target)
+                centroid_source= o3d.geometry.PointCloud.get_center(source_pcd)
 
+                source_pcd=source_pcd.rotate(aabb_source.R.T)
+                
+
+                source_pcd.translate(-centroid_source)
+
+                dists_1 = target.compute_point_cloud_distance(source_pcd)
+                dists_1=np.sum(dists_1)
+
+                source_pcd=rotate_pcd(source_pcd,np.pi,2)
+
+                dists_2=target.compute_point_cloud_distance(source_pcd)
+
+                dists_2=np.sum(dists_2)
+
+                if(dists_1<dists_2):
+                    source_pcd=rotate_pcd(source_pcd,-np.pi,2)
+
+                source_pcd.translate(centroid_target)
+                source_pcd=source_pcd.rotate(aabb_target.R)
+
+                aabb_2 = source_pcd.get_oriented_bounding_box()
+                aabb_2.color = (0, 0, 1)
+
+                #o3d.visualization.draw_geometries([source_pcd,target,aabb_target,aabb_2])
+
+                #o3d.visualization.draw_geometries([target,result])
 
 
                 # cloud.paint_uniform_color([0.5, 0.5, 0.5])
+                cloud = copy.deepcopy(source_pcd) 
 
-                cloud=result
+
+                #cloud=source_pcd
+
+                centroid= o3d.geometry.PointCloud.get_center(cloud)
+
+
+                # print("Centroid")
+                # print(centroid)
+
+                cloud=cloud.translate(-centroid)
 
 
                 labels=2*np.ones((np.asarray(cloud.points).shape[0],1))
@@ -204,21 +262,24 @@ class PcdDataset(Dataset):
                 labels=np.concatenate((labels,label_indices),axis=1)
                 labels=np.int_(labels)
 
-                L_1=0.40
-                l_1=0.15
-                h_1=0.05
+                L_1=0.18
+                l_1=0.1
+                h_1=0.1
 
-                angle_x_1=0
-                angle_y_1=10
-                angle_z_1=0
+                angle_x_1=0.36
+                angle_y_1=0
+                angle_z_1=0.8
 
-                centroid_x_1=-0.2874577
-                centroid_y_1= -0.14024239+0.1
-                centroid_z_1=1.21766081-0.05
 
-                color_box_1=[0.45, 0.1, 0.9]
-                color_pass_cloud_1=[1, 0.3, 0.5]
 
+                centroid_x_1=0.08
+                centroid_y_1= 0.07
+                centroid_z_1=-0.04
+
+                color_box_1=[0.2, 0.2, 0.5]
+                color_pass_cloud_1=[0., 1., 1.]
+
+                
 
 
                 pf_filter1=o3d.geometry.PointCloud()
@@ -246,26 +307,27 @@ class PcdDataset(Dataset):
                                                     labels=labels,
                                                     label_nr=label_nr_1)
                 cloud.paint_uniform_color([0.5, 0.5, 0.5])
-
-                
                                                     
-                # o3d.visualization.draw_geometries([cloud,box_2,pf_filter2])
-                #o3d.visualization.draw_geometries([cloud])
+                #o3d.visualization.draw_geometries([cloud,box_1,pf_filter1])
+                # o3d.visualization.draw_geometries([cloud])
 
-                L_2=0.27
-                l_2=1
-                h_2=0.23
+                L_2=0.18
+                l_2=0.1
+                h_2=0.1
 
-                angle_x_2=5
+                angle_x_2=0.36
                 angle_y_2=0
-                angle_z_2=2.7
+                angle_z_2=0.8
 
-                centroid_x_2=-0.2874577+0.09
-                centroid_y_2= -0.14024239+0.02
-                centroid_z_2=1.21766081
 
-                color_box_2=[0.2, 0.2, 0.5]
-                color_pass_cloud_2=[0., 1., 1.]
+
+                centroid_x_2=-0.08
+                centroid_y_2= 0.07
+                centroid_z_2=-0.04
+
+                color_box_2=[0.45, 0.1, 0.9]
+                color_pass_cloud_2=[1, 0.3, 0.5]
+
 
                 label_nr_2=1
 
@@ -282,32 +344,32 @@ class PcdDataset(Dataset):
                                                     color_pass_cloud=color_pass_cloud_2,
                                                     cloud=cloud,
                                                     labels=remaining_labels,
-                                                    label_nr=label_nr_1)
+                                                    label_nr=label_nr_2)
 
                 cloud.paint_uniform_color([0.5, 0.5, 0.5])
-
-                
                                                     
-                #o3d.visualization.draw_geometries([cloud,box_1,pf_filter1])
-                #o3d.visualization.draw_geometries([cloud])
+                # o3d.visualization.draw_geometries([cloud,box_2,pf_filter2])
+                # o3d.visualization.draw_geometries([cloud])
 
-                L_3=0.25
-                l_3=0.27
-                h_3=0.30
+                L_3=0.18
+                l_3=0.1
+                h_3=0.1
 
-                angle_x_3=0
-                angle_y_3=2.55
-                angle_z_3=0
+                angle_x_3=0.36
+                angle_y_3=0
+                angle_z_3=0.8
 
-                centroid_x_3=-0.2874577-0.07
-                centroid_y_3= -0.14024239+0.1
-                centroid_z_3=1.21766081
+
+
+                centroid_x_3=-0.09
+                centroid_y_3= -0.09
+                centroid_z_3=0.02
 
 
                 color_box_3=[0.2, 0.2, 0.5]
                 color_pass_cloud_3=[0., 1., 1.]
 
-                label_nr_3=1
+                label_nr_3=0
 
                 pf_filter3,box_3,cloud,labels3,remaining_labels=pf_f.Passthrough_custom(L=L_3,
                                                     l=l_3,
@@ -342,8 +404,9 @@ class PcdDataset(Dataset):
 
 
 
-                pcd_save.normals =  o3d.utility.Vector3dVector(pointcloud.normal)
-                o3d.io.write_point_cloud(str(total_path), pcd_save, write_ascii=True)
+                
+                #o3d.io.write_point_cloud(str(total_path), pcd_save, write_ascii=True)
+                o3d.io.write_point_cloud(str(total_path), source_pcd, write_ascii=True)
 
                 #o3d.io.write_point_cloud(str(total_path), result, write_ascii=True)
         return pointcloud
@@ -397,9 +460,9 @@ if __name__ == '__main__':
     choice=int(input())
 
     num_points = 400
-    root = Path("/home/alex/Alex_documents/RGCNN_git/data/dataset/")
+    root = Path("/home/alex/Alex_documents/RGCNN_git/data/Dataset_rambo_2/")
 
-    root_noise_1 = Path("/home/alex/Alex_documents/RGCNN_git/data/dataset2/")
+    root_noise_1 = Path("/home/alex/Alex_documents/RGCNN_git/data/Dataset_Rambo_processed_2/")
 
     if(choice==1):
     ####Processing the datasets

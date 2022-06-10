@@ -231,21 +231,21 @@ def Passthrough_custom(L=1,l=1,h=1,angle_x=0,angle_y=0,angle_z=0,centroid_x=1,ce
 
     #d=-np.dot(normals_plane,corner_7)
 
-    d=-np.dot(normals_plane,New_corners[6].T)
+    d =-np.dot(normals_plane,New_corners[6].T)
 
     plane[3,0:3]=normals_plane
-    plane[3,3]=d
+    plane[3,3]= d
 
     # print(plane)
 
-    distance_4=np.abs(np.dot(normals_plane,centroid)+d)/ np.sqrt(np.dot(normals_plane,normals_plane.T))
+    distance_4 = np.abs(np.dot(normals_plane,centroid)+d)/ np.sqrt(np.dot(normals_plane,normals_plane.T))
     ###################Plane 5
 
     # line1=corner_5-corner_1
     # line2=corner_5-corner_8
 
-    line1=New_corners[4]-New_corners[0]
-    line2=New_corners[4]-New_corners[7]
+    line1 = New_corners[4]-New_corners[0]
+    line2 = New_corners[4]-New_corners[7]
 
 
     normals_plane=np.cross(line1,line2)
@@ -338,7 +338,7 @@ def Passthrough_custom(L=1,l=1,h=1,angle_x=0,angle_y=0,angle_z=0,centroid_x=1,ce
 
 
 
-path_pointcloud="/home/alex/Alex_documents/RGCNN_git/data/dataset/plane/1651654247541301.pcd"
+path_pointcloud="/home/alex/Alex_documents/RGCNN_git/data/Dataset_Rambo/plane/1654765661.475854000.pcd"
 cloud = o3d.io.read_point_cloud(path_pointcloud)
 
 cloud_original=cloud
@@ -350,6 +350,14 @@ centroid= o3d.geometry.PointCloud.get_center(cloud)
 
 
 print("Centroid")
+print(centroid)
+
+cloud=cloud.translate(-centroid)
+
+centroid= o3d.geometry.PointCloud.get_center(cloud)
+
+
+print("Centroid translated")
 print(centroid)
 
 
@@ -364,17 +372,19 @@ label_indices=np.expand_dims(label_indices, axis=1)
 labels=np.concatenate((labels,label_indices),axis=1)
 labels=np.int_(labels)
 
-L_1=0.40
-l_1=0.15
-h_1=0.05
+L_1=0.18
+l_1=0.1
+h_1=0.1
 
-angle_x_1=0
-angle_y_1=10
-angle_z_1=0
+angle_x_1=0.36
+angle_y_1=0
+angle_z_1=0.8
 
-centroid_x_1=-0.2874577
-centroid_y_1= -0.14024239+0.1
-centroid_z_1=1.21766081-0.05
+
+
+centroid_x_1=0.08
+centroid_y_1= 0.07
+centroid_z_1=-0.04
 
 color_box_1=[0.45, 0.1, 0.9]
 color_pass_cloud_1=[1, 0.3, 0.5]
@@ -407,20 +417,22 @@ pf_filter1,box_1,cloud,labels1,remaining_labels=Passthrough_custom(L=L_1,
                                     label_nr=label_nr_1)
 cloud.paint_uniform_color([0.5, 0.5, 0.5])
                                     
-# o3d.visualization.draw_geometries([cloud,box_2,pf_filter2])
-#o3d.visualization.draw_geometries([cloud])
+#o3d.visualization.draw_geometries([cloud,box_1,pf_filter1])
+# o3d.visualization.draw_geometries([cloud])
 
-L_2=0.27
-l_2=1
-h_2=0.23
+L_2=0.18
+l_2=0.1
+h_2=0.1
 
-angle_x_2=5
+angle_x_2=0.36
 angle_y_2=0
-angle_z_2=2.7
+angle_z_2=0.8
 
-centroid_x_2=-0.2874577+0.09
-centroid_y_2= -0.14024239+0.02
-centroid_z_2=1.21766081
+
+
+centroid_x_2=-0.08
+centroid_y_2= 0.07
+centroid_z_2=-0.04
 
 color_box_2=[0.2, 0.2, 0.5]
 color_pass_cloud_2=[0., 1., 1.]
@@ -440,30 +452,32 @@ pf_filter2,box_2,cloud,labels2,remaining_labels=Passthrough_custom(L=L_2,
                                     color_pass_cloud=color_pass_cloud_2,
                                     cloud=cloud,
                                     labels=remaining_labels,
-                                    label_nr=label_nr_1)
+                                    label_nr=label_nr_2)
 
 cloud.paint_uniform_color([0.5, 0.5, 0.5])
                                     
-#o3d.visualization.draw_geometries([cloud,box_1,pf_filter1])
-#o3d.visualization.draw_geometries([cloud])
+# o3d.visualization.draw_geometries([cloud,box_2,pf_filter2])
+# o3d.visualization.draw_geometries([cloud])
 
-L_3=0.25
-l_3=0.27
-h_3=0.30
+L_3=0.18
+l_3=0.1
+h_3=0.1
 
-angle_x_3=0
-angle_y_3=2.55
-angle_z_3=0
+angle_x_3=0.36
+angle_y_3=0
+angle_z_3=0.8
 
-centroid_x_3=-0.2874577-0.07
-centroid_y_3= -0.14024239+0.1
-centroid_z_3=1.21766081
+
+
+centroid_x_3=-0.09
+centroid_y_3= -0.09
+centroid_z_3=0.02
 
 
 color_box_3=[0.2, 0.2, 0.5]
 color_pass_cloud_3=[0., 1., 1.]
 
-label_nr_3=1
+label_nr_3=0
 
 pf_filter3,box_3,cloud,labels3,remaining_labels=Passthrough_custom(L=L_3,
                                     l=l_3,
@@ -489,8 +503,13 @@ labels[labels3.T[1,:],0]=label_nr_3
 
 labels_final=labels[:,0]
 
+labels_final = labels[:,0]
+colors = np.array([[1,0,0],[0,1,0],[0,0,1]])
+cloud_original.colors=o3d.utility.Vector3dVector(colors[labels_final])
 
-# #o3d.visualization.draw_geometries([cloud,box_3,pf_filter3])
+
+o3d.visualization.draw_geometries([cloud,box_3,pf_filter3])
 
 
-# #o3d.visualization.draw_geometries([cloud,pf_filter1,pf_filter2,pf_filter3])
+o3d.visualization.draw_geometries([cloud,pf_filter1,pf_filter2,pf_filter3])
+o3d.visualization.draw_geometries([cloud_original])

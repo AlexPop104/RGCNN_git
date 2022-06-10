@@ -338,159 +338,176 @@ def Passthrough_custom(L=1,l=1,h=1,angle_x=0,angle_y=0,angle_z=0,centroid_x=1,ce
 
 
 
-path_pointcloud="/home/alex/Alex_documents/RGCNN_git/data/dataset/plane/1651654247541301.pcd"
-cloud = o3d.io.read_point_cloud(path_pointcloud)
+# path_pointcloud="/home/alex/Alex_documents/RGCNN_git/data/dataset/plane/1651654247541301.pcd"
+# cloud = o3d.io.read_point_cloud(path_pointcloud)
 
-cloud_original=cloud
-
-
-cloud.paint_uniform_color([0.5, 0.5, 0.5])
-
-centroid= o3d.geometry.PointCloud.get_center(cloud)
+# cloud_original=cloud
 
 
-print("Centroid")
-print(centroid)
+# cloud.paint_uniform_color([0.5, 0.5, 0.5])
+
+# centroid= o3d.geometry.PointCloud.get_center(cloud)
 
 
-labels=2*np.ones((np.asarray(cloud.points).shape[0],1))
+# print("Centroid")
+# print(centroid)
 
 
-
-label_indices=range(np.asarray(cloud.points).shape[0])
-
-label_indices=np.expand_dims(label_indices, axis=1)
-
-labels=np.concatenate((labels,label_indices),axis=1)
-labels=np.int_(labels)
-
-L_1=0.40
-l_1=0.15
-h_1=0.05
-
-angle_x_1=0
-angle_y_1=10
-angle_z_1=0
-
-centroid_x_1=-0.2874577
-centroid_y_1= -0.14024239+0.1
-centroid_z_1=1.21766081-0.05
-
-color_box_1=[0.45, 0.1, 0.9]
-color_pass_cloud_1=[1, 0.3, 0.5]
+# labels=2*np.ones((np.asarray(cloud.points).shape[0],1))
 
 
 
-pf_filter1=o3d.geometry.PointCloud()
-pf_filter2=o3d.geometry.PointCloud()
-pf_filter3=o3d.geometry.PointCloud()
+# label_indices=range(np.asarray(cloud.points).shape[0])
 
-box_1=o3d.geometry.PointCloud()
-box_2=o3d.geometry.PointCloud()
-box_3=o3d.geometry.PointCloud()
+# label_indices=np.expand_dims(label_indices, axis=1)
 
-label_nr_1=0
+# labels=np.concatenate((labels,label_indices),axis=1)
+# labels=np.int_(labels)
 
-pf_filter1,box_1,cloud,labels1,remaining_labels=Passthrough_custom(L=L_1,
-                                    l=l_1,
-                                    h=h_1,
-                                    angle_x=angle_x_1,
-                                    angle_y=angle_y_1,
-                                    angle_z=angle_z_1,
-                                    centroid_x=centroid_x_1,
-                                    centroid_y=centroid_y_1,
-                                    centroid_z=centroid_z_1,
-                                    color_box=color_box_1,
-                                    color_pass_cloud=color_pass_cloud_1,
-                                    cloud=cloud,
-                                    labels=labels,
-                                    label_nr=label_nr_1)
-cloud.paint_uniform_color([0.5, 0.5, 0.5])
+# L_1=0.40
+# l_1=0.15
+# h_1=0.05
+
+# angle_x_1=0
+# angle_y_1=10
+# angle_z_1=0
+
+# centroid_x_1=-0.2874577
+# centroid_y_1= -0.14024239+0.1
+# centroid_z_1=1.21766081-0.05
+
+# color_box_1=[0.45, 0.1, 0.9]
+# color_pass_cloud_1=[1, 0.3, 0.5]
+
+
+
+# pf_filter1=o3d.geometry.PointCloud()
+# pf_filter2=o3d.geometry.PointCloud()
+# pf_filter3=o3d.geometry.PointCloud()
+
+# box_1=o3d.geometry.PointCloud()
+# box_2=o3d.geometry.PointCloud()
+# box_3=o3d.geometry.PointCloud()
+
+# label_nr_1=0
+
+# pf_filter1,box_1,cloud,labels1,remaining_labels=Passthrough_custom(L=L_1,
+#                                     l=l_1,
+#                                     h=h_1,
+#                                     angle_x=angle_x_1,
+#                                     angle_y=angle_y_1,
+#                                     angle_z=angle_z_1,
+#                                     centroid_x=centroid_x_1,
+#                                     centroid_y=centroid_y_1,
+#                                     centroid_z=centroid_z_1,
+#                                     color_box=color_box_1,
+#                                     color_pass_cloud=color_pass_cloud_1,
+#                                     cloud=cloud,
+#                                     labels=labels,
+#                                     label_nr=label_nr_1)
+# cloud.paint_uniform_color([0.5, 0.5, 0.5])
+
+# index_parts=labels1[:,1]
+
+                    
+                        
+# part_points=(np.asarray(cloud.points))[index_parts]
+
+# pcd_parts= o3d.geometry.PointCloud()
+# pcd_parts.points = o3d.utility.Vector3dVector(part_points)
+
+# # pcd_parts.paint_uniform_color([0.5, 0.5, 0.5])
+
+# # o3d.visualization.draw_geometries([pcd_parts])
+# # o3d.visualization.draw_geometries([pcd_parts,box_1,pf_filter1])
                                     
-# o3d.visualization.draw_geometries([cloud,box_2,pf_filter2])
-#o3d.visualization.draw_geometries([cloud])
+# # o3d.visualization.draw_geometries([cloud,box_2,pf_filter2])
+# #o3d.visualization.draw_geometries([cloud])
 
-L_2=0.27
-l_2=1
-h_2=0.23
+# L_2=0.27
+# l_2=1
+# h_2=0.23
 
-angle_x_2=5
-angle_y_2=0
-angle_z_2=2.7
+# angle_x_2=5
+# angle_y_2=0
+# angle_z_2=2.7
 
-centroid_x_2=-0.2874577+0.09
-centroid_y_2= -0.14024239+0.02
-centroid_z_2=1.21766081
+# centroid_x_2=-0.2874577+0.09
+# centroid_y_2= -0.14024239+0.02
+# centroid_z_2=1.21766081
 
-color_box_2=[0.2, 0.2, 0.5]
-color_pass_cloud_2=[0., 1., 1.]
+# color_box_2=[0.2, 0.2, 0.5]
+# color_pass_cloud_2=[0., 1., 1.]
 
-label_nr_2=1
+# label_nr_2=1
 
-pf_filter2,box_2,cloud,labels2,remaining_labels=Passthrough_custom(L=L_2,
-                                    l=l_2,
-                                    h=h_2,
-                                    angle_x=angle_x_2,
-                                    angle_y=angle_y_2,
-                                    angle_z=angle_z_2,
-                                    centroid_x=centroid_x_2,
-                                    centroid_y=centroid_y_2,
-                                    centroid_z=centroid_z_2,
-                                    color_box=color_box_2,
-                                    color_pass_cloud=color_pass_cloud_2,
-                                    cloud=cloud,
-                                    labels=remaining_labels,
-                                    label_nr=label_nr_1)
+# pf_filter2,box_2,cloud,labels2,remaining_labels=Passthrough_custom(L=L_2,
+#                                     l=l_2,
+#                                     h=h_2,
+#                                     angle_x=angle_x_2,
+#                                     angle_y=angle_y_2,
+#                                     angle_z=angle_z_2,
+#                                     centroid_x=centroid_x_2,
+#                                     centroid_y=centroid_y_2,
+#                                     centroid_z=centroid_z_2,
+#                                     color_box=color_box_2,
+#                                     color_pass_cloud=color_pass_cloud_2,
+#                                     cloud=cloud,
+#                                     labels=remaining_labels,
+#                                     label_nr=label_nr_2)
 
-cloud.paint_uniform_color([0.5, 0.5, 0.5])
+# cloud.paint_uniform_color([0.5, 0.5, 0.5])
                                     
-#o3d.visualization.draw_geometries([cloud,box_1,pf_filter1])
-#o3d.visualization.draw_geometries([cloud])
+# #o3d.visualization.draw_geometries([cloud,box_1,pf_filter1])
+# #o3d.visualization.draw_geometries([cloud])
 
-L_3=0.25
-l_3=0.27
-h_3=0.30
+# L_3=0.25
+# l_3=0.27
+# h_3=0.30
 
-angle_x_3=0
-angle_y_3=2.55
-angle_z_3=0
+# angle_x_3=0
+# angle_y_3=2.55
+# angle_z_3=0
 
-centroid_x_3=-0.2874577-0.07
-centroid_y_3= -0.14024239+0.1
-centroid_z_3=1.21766081
-
-
-color_box_3=[0.2, 0.2, 0.5]
-color_pass_cloud_3=[0., 1., 1.]
-
-label_nr_3=1
-
-pf_filter3,box_3,cloud,labels3,remaining_labels=Passthrough_custom(L=L_3,
-                                    l=l_3,
-                                    h=h_3,
-                                    angle_x=angle_x_3,
-                                    angle_y=angle_y_3,
-                                    angle_z=angle_z_3,
-                                    centroid_x=centroid_x_3,
-                                    centroid_y=centroid_y_3,
-                                    centroid_z=centroid_z_3,
-                                    color_box=color_box_3,
-                                    color_pass_cloud=color_pass_cloud_3,
-                                    cloud=cloud,
-                                    labels=remaining_labels,
-                                    label_nr=label_nr_3)
-
-cloud.paint_uniform_color([0.5, 0.5, 0.5])
-
-labels[labels1.T[1,:],0]=label_nr_1
-labels[labels2.T[1,:],0]=label_nr_2
-labels[labels3.T[1,:],0]=label_nr_3
+# centroid_x_3=-0.2874577-0.07
+# centroid_y_3= -0.14024239+0.1
+# centroid_z_3=1.21766081
 
 
-labels_final=labels[:,0]
+# color_box_3=[0.2, 0.2, 0.5]
+# color_pass_cloud_3=[0., 1., 1.]
+
+# label_nr_3=1
+
+# pf_filter3,box_3,cloud,labels3,remaining_labels=Passthrough_custom(L=L_3,
+#                                     l=l_3,
+#                                     h=h_3,
+#                                     angle_x=angle_x_3,
+#                                     angle_y=angle_y_3,
+#                                     angle_z=angle_z_3,
+#                                     centroid_x=centroid_x_3,
+#                                     centroid_y=centroid_y_3,
+#                                     centroid_z=centroid_z_3,
+#                                     color_box=color_box_3,
+#                                     color_pass_cloud=color_pass_cloud_3,
+#                                     cloud=cloud,
+#                                     labels=remaining_labels,
+#                                     label_nr=label_nr_3)
+
+# cloud.paint_uniform_color([0.5, 0.5, 0.5])
+
+# labels[labels1.T[1,:],0]=label_nr_1
+# labels[labels2.T[1,:],0]=label_nr_2
+# labels[labels3.T[1,:],0]=label_nr_3
 
 
-# #o3d.visualization.draw_geometries([cloud,box_3,pf_filter3])
+# labels_final=labels[:,0]
+# colors = np.array([[1,0,0],[0,1,0],[0,0,1]])
+# cloud_original.colors=o3d.utility.Vector3dVector(colors[labels_final])
+
+# o3d.visualization.draw_geometries([cloud_original])
+
+# # o3d.visualization.draw_geometries([cloud,box_3,pf_filter3])
 
 
-# #o3d.visualization.draw_geometries([cloud,pf_filter1,pf_filter2,pf_filter3])
+# o3d.visualization.draw_geometries([cloud,pf_filter1,pf_filter2,pf_filter3])
