@@ -38,6 +38,23 @@ def default_transforms():
         # transforms.ToTensor()
     ])
 
+
+def rotate_pcd(pcd, angle, axis):
+    c = np.cos(angle)
+    s = np.sin(angle)
+    
+    if axis == 0:
+        """rot on x"""
+        R = np.array([[1 ,0 ,0],[0 ,c ,-s],[0 ,s ,c]])
+    elif axis == 1:
+        """rot on y"""
+        R = np.array([[c, 0, s],[0, 1, 0],[-s, 0, c]])
+    elif axis == 2:
+        """rot on z"""
+        R = np.array([[c, -s, 0],[s, c, 0],[0, 0, 1]])
+
+    return pcd.rotate(R)
+
 class PcdDataset(Dataset):
     def __init__(self, root_dir, points=512, valid=False, folder="train", transform=default_transforms(), save_path=None):
         self.root_dir = root_dir
@@ -72,13 +89,37 @@ class PcdDataset(Dataset):
 
     def __preproc__(self, file, idx):
         pcd = o3d.io.read_point_cloud(file)
+
+        # angles = np.random.uniform(low=-np.pi, high=np.pi, size=(3,))
+        # pcd=rotate_pcd(pcd,angles[0],0)
+        # pcd=rotate_pcd(pcd,angles[1],0)
+        # pcd=rotate_pcd(pcd,angles[2],0)
+
+        # pcd=rotate_pcd(pcd,np.pi/2,0)
+        # pcd=rotate_pcd(pcd,np.pi/2,1)
+        # pcd=rotate_pcd(pcd,np.pi/2,2)
+
         #print(file)
+
+
+        #####Centering and rotation
+        #print(file)
+
+        # aabb_2 = pcd.get_oriented_bounding_box()
+        # aabb_2.color = (0, 0, 1)
+        # centroid_2= o3d.geometry.PointCloud.get_center(pcd)
+        # pcd.translate(-centroid_2)
+        
+        # pcd=pcd.rotate(aabb_2.R.T)
+
+        
+
         points = np.asarray(pcd.points)
         points = torch.tensor(points)
 
         normals = []
 
-      
+
             
            
 

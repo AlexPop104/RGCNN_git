@@ -215,9 +215,9 @@ num_points = 512
 batch_size = 16
 num_epochs = 250
 learning_rate = 1e-3
-modelnet_num = 40
+modelnet_num = 36
 dropout=0.25
-input_feature_size=6
+input_feature_size=3
 
 F = [128, 512, 1024]  # Outputs size of convolutional filter.
 K = [input_feature_size, 5, 3]         # Polynomial orders.
@@ -246,7 +246,7 @@ print("Select type of training  (1 - no noise, 2 - Rotation noise , 3- Position 
 selection=int(input())
 
 if(selection==1):
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_512/")
+    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/Modelnet40_512/")
     train_dataset_0 = cam_loader.PcdDataset(root_dir=root, points=num_points)
     test_dataset_0 = cam_loader.PcdDataset(root_dir=root, folder='test',points=num_points)
 
