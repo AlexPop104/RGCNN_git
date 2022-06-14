@@ -110,7 +110,7 @@ class cls_model(nn.Module):
         out = self.conv2(out, L)
         out = self.relu2(out)
 
-  
+        
 
         with torch.no_grad():
             L = util_functions.pairwise_distance(out,normalize=True) # W - weight matrix
@@ -209,13 +209,8 @@ def test(model, loader,num_points,criterion,device):
 
         gram=gram.to(device)
 
-     
-
-
         gram,indices=torch.sort(gram)
 
-        
-        
         logits, regularizers = model(x=x.to(device),gram=gram.to(device))
         loss    = criterion(logits, data.y.to(device))
 
@@ -225,8 +220,6 @@ def test(model, loader,num_points,criterion,device):
         total_correct += int((pred == data.y.to(device)).sum())
 
     return total_loss / len(loader.dataset) , total_correct / len(loader.dataset) 
-
-
 
 
 now = datetime.now()
@@ -243,7 +236,7 @@ learning_rate = 1e-3
 modelnet_num = 36
 dropout=0.25
 input_feature_selection=3
-input_feature_size=6
+input_feature_size=512
 
 
 F = [input_feature_selection, 512, 1024]  # Outputs size of convolutional filter.

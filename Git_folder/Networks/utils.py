@@ -489,3 +489,58 @@ class Sphere_Occlusion_Transform(BaseTransform):
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}()'
+
+
+def rotate_pcd(pcd, angle, axis):
+    c = np.cos(angle)
+    s = np.sin(angle)
+    
+    if axis == 0:
+        """rot on x"""
+        R = np.array([[1 ,0 ,0],[0 ,c ,-s],[0 ,s ,c]])
+    elif axis == 1:
+        """rot on y"""
+        R = np.array([[c, 0, s],[0, 1, 0],[-s, 0, c]])
+    elif axis == 2:
+        """rot on z"""
+        R = np.array([[c, -s, 0],[s, c, 0],[0, 0, 1]])
+
+    return pcd.rotate(R)
+
+
+class Rotate_transform(BaseTransform):
+
+    def __init__(self, rotation: Optional[float] = [0.,0.,0.], random_rotation_limits: Optional[float] = [[0,0],[0,0],[0,0]]):
+        torch.manual_seed(0)
+        np.random.seed(0)
+        self.rotation = rotation
+        self.random_rotation_limits = random_rotation_limits
+
+    def __call__(self, data: Union[Data, HeteroData]):
+            pcd_o3d = o3d.geometry.PointCloud()
+            pcd_o3d.points = o3d.utility.Vector3dVector(data.pos)
+            if hasattr(data, 'normal'):
+                pcd_o3d.normals=o3d.utility.Vector3dVector(data.normal)
+
+            if((np.array_equal(self.rotation,[0.,0.,0.]))==False ):
+                pcd_o3d=rotate_pcd(pcd_o3d,self.rotation[0],0)
+                pcd_o3d=rotate_pcd(pcd_o3d,self.rotation[1],1)
+                pcd_o3d=rotate_pcd(pcd_o3d,self.rotation[2],2)
+
+            elif((np.array_equal(self.random_rotation_limits,[0.,0.,0.,0.,0.,0.]))==False):
+
+                angle_x = np.random.uniform(low = self.random_rotation_limits[0][0], high=self.random_rotation_limits[0][1], size=(1,))
+                angle_y = np.random.uniform(low = self.random_rotation_limits[1][0], high=self.random_rotation_limits[1][1], size=(2,))
+                angle_z = np.random.uniform(low = self.random_rotation_limits[2][0], high=self.random_rotation_limits[2][1], size=(3,))
+
+                pcd_o3d=rotate_pcd(pcd_o3d,angle_x[0],0)
+                pcd_o3d=rotate_pcd(pcd_o3d,angle_y[0],1)
+                pcd_o3d=rotate_pcd(pcd_o3d,angle_y[0],2)
+
+            data.pos=np.asarray(pcd_o3d.points)
+            data.normal=np.asarray(pcd_o3d.normals)
+        
+            return data
+
+    def __repr__(self) -> str:
+        return f'{self.__class__.__name__}()'
