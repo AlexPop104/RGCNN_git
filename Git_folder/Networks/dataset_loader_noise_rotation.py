@@ -301,7 +301,7 @@ if __name__ == '__main__':
 
             # print("PCD noise")
             pcd_noise_1.points=o3d.utility.Vector3dVector(train_dataset_noise_1[i].pos)
-            #pcd_noise.normals=o3d.utility.Vector3dVector(train_dataset_noise[i].normal)
+            #pcd_noise_1.normals=o3d.utility.Vector3dVector(train_dataset_noise_1[i].normal)
             pcd_noise_1.paint_uniform_color([1, 0, 0])
 
             o3d.visualization.draw_geometries([pcd_sampled, pcd_noise_1])

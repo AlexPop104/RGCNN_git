@@ -392,15 +392,17 @@ class Sphere_Occlusion_Transform(BaseTransform):
         points=points-pcd_center
         points=np.linalg.norm(points, axis=1)
 
-        # sorted_points=np.sort(points)
+        sorted_points=np.sort(points)
 
-        # selected_position=int(data.pos.shape[0]*self.percentage)
+        selected_position=int(data.pos.shape[0]*self.percentage)
 
-        # radius=sorted_points[selected_position]
+        radius=sorted_points[selected_position]
+
+        remaining_index= np.squeeze(np.argwhere(points>=radius))
         
-        remaining_index= np.squeeze(np.argwhere(points>=self.radius))
+        #remaining_index= np.squeeze(np.argwhere(points>=self.radius))
 
-        #remaining_index= np.squeeze(np.argwhere(points>=radius))
+        
 
     
         pcd_o3d = o3d.geometry.PointCloud()
