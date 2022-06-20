@@ -326,7 +326,7 @@ print(f"Training on {device}")
 
 model = cls_model(num_points, F, K, M, modelnet_num, dropout=dropout, reg_prior=True)
 
-path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/model9.pt"
+path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/model250.pt"
 model.load_state_dict(torch.load(path_saved_model))
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'

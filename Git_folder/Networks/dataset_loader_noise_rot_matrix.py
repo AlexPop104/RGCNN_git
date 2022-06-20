@@ -123,16 +123,32 @@ class PcdDataset(Dataset):
         #####Centering and rotation
         #print(file)
 
-        aabb_2 = pcd.get_oriented_bounding_box()
+        
         # aabb_2.color = (0, 0, 1)
         centroid_2= o3d.geometry.PointCloud.get_center(pcd)
         pcd.translate(-centroid_2)
+        #aabb_2 = pcd.get_oriented_bounding_box()
         
-        pcd=pcd.rotate(aabb_2.R.T)
+        
 
         
 
         points = np.asarray(pcd.points)
+        points = torch.tensor(points)
+
+        ceva=np.dot(points.T,points)
+        eig_values, eig_vectors=np.linalg.eig(np.dot(points.T,points))
+
+        ceva2=np.asarray(eig_vectors)
+
+        #pcd=pcd.rotate(aabb_2.R.T)
+
+        points=np.dot(points,ceva2.T)
+        # pcd=pcd.rotate(ceva2.T)
+
+        pcd.points=o3d.utility.Vector3dVector(points)
+
+        #points = np.asarray(pcd.points)
         points = torch.tensor(points)
 
         normals = []
@@ -191,7 +207,7 @@ class PcdDataset(Dataset):
         normals = torch.Tensor(normals)
         normals=normals.float()
 
-        pointcloud = torch_geometric.data.Data(normal=normals, pos=points, y=self.classes[self.files[idx]['category']] , Rotation=torch.Tensor(aabb_2.R.T))
+        pointcloud = torch_geometric.data.Data(normal=normals, pos=points, y=self.classes[self.files[idx]['category']] , Rotation=torch.Tensor(ceva2.T))
 
         if self.transforms:
             pointcloud = self.transforms(pointcloud)
