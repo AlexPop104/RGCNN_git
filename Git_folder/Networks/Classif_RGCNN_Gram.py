@@ -222,21 +222,23 @@ def test(model, loader,num_points,criterion,device):
     return total_loss / len(loader.dataset) , total_correct / len(loader.dataset) 
 
 
-now = datetime.now()
-directory = now.strftime("%d_%m_%y_%H:%M:%S")
-directory="RGCNN_"+directory
-parent_directory = "/media/rambo/ssd2/Alex_data/RGCNN/data/logs/Trained_Models"
-path = os.path.join(parent_directory, directory)
-os.mkdir(path)
 
-num_points = 512
+
+num_points = 64
 batch_size = 16
 num_epochs = 250
 learning_rate = 1e-3
 modelnet_num = 36
 dropout=0.25
 input_feature_selection=3
-input_feature_size=512
+input_feature_size=num_points
+
+now = datetime.now()
+directory = now.strftime("%d_%m_%y_%H:%M:%S")
+directory="RGCNN_"+str(num_points)+"_gram_"+directory
+parent_directory = "/media/rambo/ssd2/Alex_data/RGCNN/data/logs/Trained_Models"
+path = os.path.join(parent_directory, directory)
+os.mkdir(path)
 
 
 F = [input_feature_selection, 512, 1024]  # Outputs size of convolutional filter.
@@ -266,7 +268,7 @@ print("Select type of training  (1 - no noise, 2 - Rotation noise , 3- Position 
 selection=int(input())
 
 if(selection==1):
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/Modelnet40_512/")
+    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_sampling/Modelnet40_"+str(num_points)+"/")
     train_dataset_0 = cam_loader.PcdDataset(root_dir=root, points=num_points)
     test_dataset_0 = cam_loader.PcdDataset(root_dir=root, folder='test',points=num_points)
 

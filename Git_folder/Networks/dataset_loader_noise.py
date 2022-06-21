@@ -249,11 +249,11 @@ if __name__ == '__main__':
     print("Choice=")
     choice=int(input())
 
-    num_points = 2048
+    num_points = 64
     root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Tests_2/Modelnet40_2048/")
 
     #root_noise_1 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Modelnet40_"+str(num_points)+"_r_40"+"/")
-    root_noise_1 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Occlusion/Modelnet40_occlusion_512_radius_"+str(percentage)+"/")
+    root_noise_1 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_sampling/Modelnet40_"+str(num_points)+"/")
 
     if(choice==1):
     ####Processing the datasets
@@ -264,8 +264,8 @@ if __name__ == '__main__':
 
     ##Loading the processed dataset
 
-        num_points_original=512
-        num_points_noise=512
+        num_points_original=2048
+        num_points_noise=64
 
         
         train_dataset = PcdDataset(root,valid=False,points=num_points_original)
@@ -275,7 +275,7 @@ if __name__ == '__main__':
         test_dataset_noise_1 = PcdDataset(root_noise_1,valid=False,points=num_points_noise)
         
 
-        for i in range(96,98):
+        for i in range(len(test_dataset)):
         
             pcd_sampled = o3d.geometry.PointCloud()
             pcd_noise_1 = o3d.geometry.PointCloud()

@@ -418,17 +418,17 @@ elif(selection==3):
 
     print(f'{test_acc:.4f}')
 
-    print("Occlusion noise, R=0.25")
-    num_points=512
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Occlusion/Modelnet40_occlusion_512_0.25/")
-    test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-    test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+    # print("Occlusion noise, R=0.25")
+    # num_points=512
+    # root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Occlusion/Modelnet40_occlusion_512_0.25/")
+    # test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+    # test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
-    test_start_time = time.time()
-    test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-    test_stop_time = time.time()
+    # test_start_time = time.time()
+    # test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+    # test_stop_time = time.time()
 
-    print(f'{test_acc:.4f}')
+    # print(f'{test_acc:.4f}')
 
     
     # num_points=512
@@ -442,16 +442,16 @@ elif(selection==3):
 
     # print(f'{test_acc:.4f}')
 
-    num_points=512
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Occlusion/Modelnet40_occlusion_512_0.35/")
-    test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
-    test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+    # num_points=512
+    # root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Occlusion/Modelnet40_occlusion_512_0.35/")
+    # test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+    # test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
-    test_start_time = time.time()
-    test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
-    test_stop_time = time.time()
+    # test_start_time = time.time()
+    # test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+    # test_stop_time = time.time()
 
-    print(f'{test_acc:.4f}')
+    # print(f'{test_acc:.4f}')
 
 
 
