@@ -251,7 +251,7 @@ model = cls_model(num_points, F, K, M, modelnet_num, dropout=dropout, reg_prior=
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-path_saved_model="/home/alex/Alex_documents/RGCNN_git/Git_folder/Trained+models/RGCNN_gram_v2.pt"
+path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Final_colection/RGCNN_gram_v2.pt"
 model.load_state_dict(torch.load(path_saved_model))
 
 

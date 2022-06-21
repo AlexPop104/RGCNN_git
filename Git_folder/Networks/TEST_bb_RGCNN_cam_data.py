@@ -219,7 +219,7 @@ criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 my_lr_scheduler = lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=0.95)
 regularization = 1e-9
 
-path_saved_model="/home/alex/Alex_documents/RGCNN_git/Git_folder/Trained+models/RGCNN_rot_512.pt"
+path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Final_colection/RGCNN_bb_512.pt"
 model.load_state_dict(torch.load(path_saved_model))
 #print(model.parameters)
 model = model.to(device)

@@ -43,7 +43,7 @@ import numpy as np
 from utils import GaussianNoiseTransform
 import utils as util_functions
 
-import dataset_loader_noise_rot_matrix as cam_loader
+import dataset_loader_noise_rot_matrix_eigen as cam_loader
 
 
 import random
