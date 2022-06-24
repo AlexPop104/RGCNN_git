@@ -279,8 +279,6 @@ class PcdDataset(Dataset):
                 color_box_1=[0.2, 0.2, 0.5]
                 color_pass_cloud_1=[0., 1., 1.]
 
-                
-
 
                 pf_filter1=o3d.geometry.PointCloud()
                 pf_filter2=o3d.geometry.PointCloud()

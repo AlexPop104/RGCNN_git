@@ -12,8 +12,8 @@
 <node pkg="pcl_tutorial" type="remove_floor_node" name="remove_floor_node" output="screen">
 </node>
 
-<node pkg="pcl_tutorial" type="open3d_sampling_node.py" name="open3d_sampling_node.py" output="screen">
-</node>
+<!-- <node pkg="pcl_tutorial" type="open3d_sampling_node.py" name="open3d_sampling_node.py" output="screen">
+</node> -->
 
  <node pkg="rviz" type="rviz" name="rviz" output="screen" args="-d $(find pcl_tutorial)/cfg/rviz.rviz"/>
 

@@ -338,7 +338,7 @@ def Passthrough_custom(L=1,l=1,h=1,angle_x=0,angle_y=0,angle_z=0,centroid_x=1,ce
 
 
 
-path_pointcloud="/home/alex/Alex_documents/RGCNN_git/data/Dataset_Rambo/plane/1654765661.475854000.pcd"
+path_pointcloud="/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Dataset_live_cam/Dataset_Rambo/plane/1654765661.475854000.pcd"
 cloud = o3d.io.read_point_cloud(path_pointcloud)
 
 cloud_original=cloud
@@ -417,8 +417,8 @@ pf_filter1,box_1,cloud,labels1,remaining_labels=Passthrough_custom(L=L_1,
                                     label_nr=label_nr_1)
 cloud.paint_uniform_color([0.5, 0.5, 0.5])
                                     
-#o3d.visualization.draw_geometries([cloud,box_1,pf_filter1])
-# o3d.visualization.draw_geometries([cloud])
+o3d.visualization.draw_geometries([cloud,box_1,pf_filter1])
+o3d.visualization.draw_geometries([cloud])
 
 L_2=0.18
 l_2=0.1

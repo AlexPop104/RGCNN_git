@@ -226,21 +226,32 @@ if __name__ == '__main__':
     rot_y=1
     rot_z=1
 
-    ceva=4
+    ceva=1
+
+    # print("rotation_number:")
+    # ceva=int(input())
+
+    # print("sigma=")
+    # sigma=str(input())
+
+
+    print("Number of points:")
+    num_points=int(input())
+    
 
     radius=0.4
     percentage=0.60
 
-    random_rotate = Compose([
-    RandomRotate(degrees=rot_x*ceva*10, axis=0),
-    RandomRotate(degrees=rot_y*ceva*10, axis=1),
-    RandomRotate(degrees=rot_z*ceva*10, axis=2),
-    ])
+    # random_rotate = Compose([
+    # RandomRotate(degrees=rot_x*ceva*10, axis=0),
+    # RandomRotate(degrees=rot_y*ceva*10, axis=1),
+    # RandomRotate(degrees=rot_z*ceva*10, axis=2),
+    # ])
 
     test_transform = Compose([
                     #random_rotate,
                     #GaussianNoiseTransform(mu=mu,sigma=sigma)
-                    Sphere_Occlusion_Transform(radius=radius, percentage=percentage,num_points=512)
+                    #Sphere_Occlusion_Transform(radius=radius, percentage=percentage,num_points=512)
                     ])
 
     ##################################################3
@@ -249,11 +260,15 @@ if __name__ == '__main__':
     print("Choice=")
     choice=int(input())
 
-    num_points = 64
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Tests_2/Modelnet40_2048/")
+    #num_points = 128
+    #root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/2048/Modelnet40_2048/")
+    #root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Noise/"+ str(2048)+ "/Modelnet40_"+str(2048)+"_n_"+str(sigma)+"/")
+    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Occlusion/Modelnet40_occlusion_1024_025/")
 
     #root_noise_1 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Modelnet40_"+str(num_points)+"_r_40"+"/")
-    root_noise_1 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_sampling/Modelnet40_"+str(num_points)+"/")
+    #root_noise_1 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/"+ str(num_points)+ "/Modelnet40_"+str(num_points)+"_r_"+str()+str(ceva*10)+"/")
+    #root_noise_1 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Noise/"+ str(num_points)+ "/Modelnet40_"+str(num_points)+"_n_"+str(sigma)+"/")
+    root_noise_1 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Occlusion/Modelnet40_occlusion_"+str(num_points)+"_025")
 
     if(choice==1):
     ####Processing the datasets
@@ -264,8 +279,8 @@ if __name__ == '__main__':
 
     ##Loading the processed dataset
 
-        num_points_original=2048
-        num_points_noise=64
+        num_points_original=1024
+        num_points_noise=num_points
 
         
         train_dataset = PcdDataset(root,valid=False,points=num_points_original)

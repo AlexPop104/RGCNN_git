@@ -303,7 +303,7 @@ def test(model, loader,num_points,criterion,device):
 
 
 
-num_points = 64
+num_points = 1024
 batch_size = 16
 num_epochs = 250
 learning_rate = 1e-3
@@ -389,11 +389,11 @@ if(selection==1):
         Test Time: \t{test_stop_time - test_start_time }')
 
         if(epoch%3==0):
-            torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+            torch.save(model.state_dict(), path + '/RGCNN_'+str(num_points)+"_multiview_bb_" + str(epoch) + '.pt')
 
         my_lr_scheduler.step()
 
-    torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+    torch.save(model.state_dict(), path + '/RGCNN_'+str(num_points)+"_multiview_bb_" + str(epoch) + '.pt')
 
 
 elif(selection==2):
