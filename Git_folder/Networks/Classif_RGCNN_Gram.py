@@ -224,7 +224,12 @@ def test(model, loader,num_points,criterion,device):
 
 
 
-num_points = 1024
+print("Nr_points")
+num_points=int(input())
+
+
+
+#num_points = 1024
 batch_size = 16
 num_epochs = 250
 learning_rate = 1e-3

@@ -202,11 +202,12 @@ def test(model, loader,num_points,criterion,device):
     return total_loss / len(loader.dataset) , total_correct / len(loader.dataset) 
 
 
+print("Nr_points")
+num_points=int(input())
 
 
 
-
-num_points = 2048
+#num_points = 1024
 batch_size = 16
 num_epochs = 250
 learning_rate = 1e-3

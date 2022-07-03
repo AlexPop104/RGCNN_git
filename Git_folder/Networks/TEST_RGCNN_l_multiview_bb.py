@@ -43,7 +43,7 @@ import numpy as np
 from utils import GaussianNoiseTransform
 import utils as util_functions
 
-import dataset_loader_noise as cam_loader
+import dataset_loader_noise_rot_matrix as cam_loader
 
 
 import random
@@ -89,36 +89,116 @@ class cls_model(nn.Module):
         self.regularizer = 0
         self.regularization = []             
 
-    def forward(self, x,gram):
+    def forward(self, x,Rotation):
         self.regularizers = []
 
+        x_batch_size=x.shape[0]
+        x_nr_points=x.shape[1]
+        x_feature_size=x.shape[2]
+
+        rotation_size=Rotation.shape[2]
+
+        
+
+        # Rotation = Rotation.reshape(Rotation.shape[0], Rotation.shape[1]* Rotation.shape[2])
+        # Rotation=Rotation.tile((4))
+        # Rotation =Rotation.reshape(x_batch_size, rotation_size*4 *rotation_size)
+        # Rotation =Rotation.reshape(x_batch_size*4, rotation_size*rotation_size)
+        # Rotation =Rotation.reshape(x_batch_size*4, rotation_size,rotation_size)
+
+
+
+        # sign_matrix=[[1 ,1 ,1],
+        #              [1 ,1 ,-1], 
+        #              [1 ,-1 ,1],
+        #              [1 ,-1 ,-1],
+        #              [-1 ,1 ,1],
+        #              [-1 ,1 ,-1],
+        #              [-1 ,-1 ,1],
+        #              [-1 ,-1 ,-1]]
+
+
+    
+        
+        # sign_matrix=torch.Tensor(sign_matrix)
+
+        # sign_matrix=sign_matrix.to("cuda")
+
+        # sign_matrix=sign_matrix.tile(rotation_size)
+        # sign_matrix=sign_matrix.reshape(8,rotation_size,rotation_size)
+
+        # sign_matrix=sign_matrix.reshape(8,rotation_size*rotation_size)
+        # sign_matrix=sign_matrix.reshape(8*rotation_size*rotation_size)
+        # sign_matrix=sign_matrix.tile(x_batch_size)
+
+        # sign_matrix=sign_matrix.reshape(8*x_batch_size,rotation_size*rotation_size)
+        # sign_matrix=sign_matrix.reshape(8*x_batch_size,rotation_size,rotation_size)
+
+        
+
+        Rotation_matrix=torch.Tensor([[[1.,0. ,0.],[0.,1. ,0.],[0.,0. ,1.]],
+                                     [[1.,0. ,0.],[0.,-1. ,0.],[0.,0. ,-1.]],
+                                     [[-1.,0. ,0.],[0.,1. ,0.],[0.,0. ,-1.]],
+                                     [[-1.,0. ,0.],[0.,-1. ,0.],[0.,0. ,1.]],])
+        Rotation_matrix=Rotation_matrix.to(device)
+
+        Rotation_matrix=  Rotation_matrix.reshape(4,rotation_size*rotation_size)    
+        Rotation_matrix=  Rotation_matrix.reshape(4*rotation_size*rotation_size)   
+        Rotation_matrix=  Rotation_matrix.tile(x_batch_size)  
+
+        Rotation_matrix=Rotation_matrix.reshape(x_batch_size,4*rotation_size*rotation_size)
+        Rotation_matrix=Rotation_matrix.reshape(4*x_batch_size,rotation_size*rotation_size)
+        Rotation_matrix=Rotation_matrix.reshape(4*x_batch_size,rotation_size,rotation_size)                  
+
+            
+
+        #Rotation=torch.bmm(Rotation,Rotation_matrix)
+        Rotation=Rotation_matrix
         
         with torch.no_grad():
-
-            L = util_functions.pairwise_distance(x,normalize=True) # W - weight matrix
+            L = util_functions.pairwise_distance(x) # W - weight matrix
             L = util_functions.get_laplacian(L)
 
-        out = self.conv1(gram, L)
+        x = x.reshape(x.shape[0], x.shape[1]* x.shape[2])
+        x=x.tile((4))
+        x =x.reshape(x_batch_size, x_nr_points*4 *x_feature_size)
+        x =x.reshape(x_batch_size*4, x_nr_points*x_feature_size)
+        x =x.reshape(x_batch_size*4, x_nr_points,x_feature_size)
+
+        x=torch.bmm(x,Rotation)
+
+        L = L.reshape(L.shape[0], L.shape[1]* L.shape[2])
+        L=L.tile((4))
+        L =L.reshape(x_batch_size, x_nr_points*4 *x_nr_points)
+        L =L.reshape(x_batch_size*4, x_nr_points *x_nr_points)
+        L =L.reshape(x_batch_size*4, x_nr_points,x_nr_points)
+
+        out = self.conv1(x, L)
         out = self.relu1(out)
 
         
        
-        with torch.no_grad():
-            L = util_functions.pairwise_distance(out,normalize=True) # W - weight matrix
-            L = util_functions.get_laplacian(L)
+        # with torch.no_grad():
+        #     L = util_functions.pairwise_distance(out) # W - weight matrix
+        #     L = util_functions.get_laplacian(L)
         
         out = self.conv2(out, L)
         out = self.relu2(out)
 
   
 
-        with torch.no_grad():
-            L = util_functions.pairwise_distance(out,normalize=True) # W - weight matrix
-            L = util_functions.get_laplacian(L)
+        # with torch.no_grad():
+        #     L = util_functions.pairwise_distance(out) # W - weight matrix
+        #     L = util_functions.get_laplacian(L)
         
         out = self.conv3(out, L)
         out = self.relu3(out)
         
+        
+
+        out, _ = t.max(out, 1)
+
+        out =out.reshape(x_batch_size,4,1024)
 
         out, _ = t.max(out, 1)
        
@@ -140,43 +220,6 @@ class cls_model(nn.Module):
 
 criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
 
-def train(model, optimizer,num_points,criterion, loader, regularization,device):
-    model.train()
-    total_loss = 0
-    total_correct = 0
-    for i, data in enumerate(loader):
-        optimizer.zero_grad()
-
-        if (model.F[0]==6):
-            x = torch.cat([data.pos, data.normal], dim=1)   
-            x = x.reshape(data.batch.unique().shape[0], num_points, model.F[0])
-
-            x =x.float()
-
-        if (model.F[0]==3):
-            x = data.pos
-            x = x.reshape(data.batch.unique().shape[0], num_points, model.F[0])
-
-            x =x.float()  
-
-        x_transpose = x.permute(0, 2, 1)
-        gram = t.matmul(x, x_transpose)
-
-        gram=gram.to(device)
-
-        gram,indices=torch.sort(gram)
-
-        logits, regularizers  = model(x=x.to(device),gram=gram.to(device))
-        pred = logits.argmax(dim=-1)
-        total_correct += int((pred == data.y.to(device)).sum())
-        
-        loss    = criterion(logits, data.y.to(device))
-       
-        loss.backward()
-        optimizer.step()
-        total_loss += loss.item() * data.num_graphs
-        
-    return total_loss / len(loader.dataset) , total_correct / len(loader.dataset) 
 
 @torch.no_grad()
 def test(model, loader,num_points,criterion,device):
@@ -187,27 +230,26 @@ def test(model, loader,num_points,criterion,device):
     total_loss = 0
     total_correct = 0
     for data in loader:
+
+        Rotation=data.Rotation
+        Rotation=Rotation.to(device)
+        Rotation=Rotation.float()
+
+        Rotation = Rotation.reshape(data.batch.unique().shape[0], Rotation.shape[1], Rotation.shape[1])
        
-        if (model.F[0]==6):
+        if (model.conv1.in_channels==6):
             x = torch.cat([data.pos, data.normal], dim=1)   
-            x = x.reshape(data.batch.unique().shape[0], num_points, model.F[0])
+            x = x.reshape(data.batch.unique().shape[0], num_points, model.conv1.in_channels)
 
             x =x.float()
 
-        if (model.F[0]==3):
+        if (model.conv1.in_channels==3):
             x = data.pos
-            x = x.reshape(data.batch.unique().shape[0], num_points, model.F[0])
+            x = x.reshape(data.batch.unique().shape[0], num_points, model.conv1.in_channels)
 
             x =x.float()  
 
-        x_transpose = x.permute(0, 2, 1)
-        gram = t.matmul(x, x_transpose)
-
-        gram=gram.to(device)
-
-        gram,indices=torch.sort(gram)
-        
-        logits, regularizers = model(x=x.to(device),gram=gram.to(device))
+        logits, regularizers = model(x=x.to(device),Rotation=Rotation.to(device))
         loss    = criterion(logits, data.y.to(device))
 
         total_loss += loss.item() * data.num_graphs
@@ -220,17 +262,24 @@ def test(model, loader,num_points,criterion,device):
 
 
 
-
 # print("Model nr of points")
-# num_points=int(input())
+# num_points=int(input()) 
 
 batch_size = 16
 num_epochs = 250
 learning_rate = 1e-3
 modelnet_num = 36
 dropout=0.25
-input_feature_selection=3
+input_feature_size=3
 
+F = [128, 512, 1024]  # Outputs size of convolutional filter.
+K = [input_feature_size, 5, 3]         # Polynomial orders.
+M = [512, 128, modelnet_num]
+
+
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+print(f"Training on {device}")
 
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -245,7 +294,6 @@ print(f"Training on {device}")
 
 # print("Dataset nr of points")
 # num_points_dataset=int(input())
-
 
 torch.manual_seed(0)
 
@@ -263,16 +311,9 @@ for j in range(1,4):
             #print(num_points)  
             list_final.append(num_points)
 
-            input_feature_size=num_points
-
-
-            F = [input_feature_selection, 512, 1024]  # Outputs size of convolutional filter.
-            K = [input_feature_size, 5, 3]         # Polynomial orders.
-            M = [1024, 128, modelnet_num]
-
             model = cls_model(num_points, F, K, M, modelnet_num, dropout=dropout, reg_prior=True)
 
-            path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_gram.pt"
+            path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_multiview_bb.pt"
 
 
             model.load_state_dict(torch.load(path_saved_model))
@@ -356,17 +397,9 @@ for j in range(1,4):
             num_points=int(array_points[i])   
             #print(num_points)  
             list_final.append(num_points)
-
-            input_feature_size=num_points
-
-
-            F = [input_feature_selection, 512, 1024]  # Outputs size of convolutional filter.
-            K = [input_feature_size, 5, 3]         # Polynomial orders.
-            M = [1024, 128, modelnet_num]
-
             model = cls_model(num_points, F, K, M, modelnet_num, dropout=dropout, reg_prior=True)
 
-            path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_gram.pt"
+            path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_multiview_bb.pt"
 
 
             model.load_state_dict(torch.load(path_saved_model))
@@ -453,17 +486,9 @@ for j in range(1,4):
             num_points=int(array_points[i])   
             #print(num_points)  
             list_final.append(num_points)
-
-            input_feature_size=num_points
-
-
-            F = [input_feature_selection, 512, 1024]  # Outputs size of convolutional filter.
-            K = [input_feature_size, 5, 3]         # Polynomial orders.
-            M = [1024, 128, modelnet_num]
-
             model = cls_model(num_points, F, K, M, modelnet_num, dropout=dropout, reg_prior=True)
 
-            path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_gram.pt"
+            path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_multiview_bb.pt"
 
 
             model.load_state_dict(torch.load(path_saved_model))
