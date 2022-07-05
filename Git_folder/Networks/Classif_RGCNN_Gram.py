@@ -269,7 +269,7 @@ regularization = 1e-9
 torch.manual_seed(0)
 #################################################################33
 
-print("Select type of training  (1 - no noise, 2 - Rotation noise , 3- Position noise)")
+print("Select type of training  (1 - no noise, 2 - Rotation noise , 3- Position noise, 4 - Occlusion noise)")
 selection=int(input())
 
 if(selection==1):
@@ -317,21 +317,21 @@ if(selection==1):
         Test Time: \t{test_stop_time - test_start_time }')
 
         if(epoch%3==0):
-            torch.save(model.state_dict(), path + '/RGCNN_'+str(num_points)+"_gram_" + str(epoch) + '.pt')
+            torch.save(model.state_dict(), path + '/RGCNN_gram'+str(num_points)+"_" + str(epoch) + '.pt')
 
         my_lr_scheduler.step()
 
-    torch.save(model.state_dict(), path + '/RGCNN_'+str(num_points)+"_gram_" + str(epoch) + '.pt')
+    torch.save(model.state_dict(), path + '/RGCNN_gram'+str(num_points)+"_" + str(epoch) + '.pt')
 
 
 elif(selection==2):
     
-    root_train_10 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_10/")
-    root_train_20 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_20/")
-    root_train_30 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_30/")
-    root_train_40 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_40/")
+    root_train_10 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/"+str(num_points)+"/"+"Modelnet40_"+str(num_points)+"_r_10/")
+    root_train_20 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/"+str(num_points)+"/"+"Modelnet40_"+str(num_points)+"_r_20/")
+    root_train_30 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/"+str(num_points)+"/"+"Modelnet40_"+str(num_points)+"_r_30/")
+    root_train_40 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/"+str(num_points)+"/"+"Modelnet40_"+str(num_points)+"_r_40/")
 
-    root_test = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024/")
+    root_test = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/"+str(num_points)+"/"+"Modelnet40_"+str(num_points)+"/")
 
     train_dataset_10 = cam_loader.PcdDataset(root_dir=root_train_10, points=num_points)
     train_dataset_20 = cam_loader.PcdDataset(root_dir=root_train_10, points=num_points)
@@ -405,20 +405,22 @@ elif(selection==2):
         Test Time: \t{test_stop_time - test_start_time }')
 
         if(epoch%3==0):
-            torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+            torch.save(model.state_dict(), path + '/RGCNN_gram_Rotation'+str(num_points)+"_" + str(epoch) + '.pt')
 
         my_lr_scheduler.step()
 
-    torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+    torch.save(model.state_dict(), path + '/RGCNN_gram_Rotation'+str(num_points)+"_" + str(epoch) + '.pt')
 
 elif(selection==3):
-    
-    root_train_002 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_002/")
-    root_train_005 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_005/")
-    root_train_008 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_008/")
-    root_train_010 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_010/")
 
-    root_test = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024/")
+    
+    
+    root_train_002 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Noise/"+str(num_points)+"/"+"Modelnet40_"+str(num_points)+"_n_002/")
+    root_train_005 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Noise/"+str(num_points)+"/"+"Modelnet40_"+str(num_points)+"_n_005/")
+    root_train_008 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Noise/"+str(num_points)+"/"+"Modelnet40_"+str(num_points)+"_n_008/")
+    root_train_010 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Noise/"+str(num_points)+"/"+"Modelnet40_"+str(num_points)+"_n_010/")
+
+    root_test = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/"+str(num_points)+"/"+"Modelnet40_"+str(num_points)+"/")
 
     train_dataset_002 = cam_loader.PcdDataset(root_dir=root_train_002, points=num_points)
     train_dataset_005 = cam_loader.PcdDataset(root_dir=root_train_005, points=num_points)
@@ -493,10 +495,62 @@ elif(selection==3):
         Test Time: \t{test_stop_time - test_start_time }')
 
         if(epoch%3==0):
-            torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+            torch.save(model.state_dict(), path + '/RGCNN_gram_Pos_noise'+str(num_points)+"_" + str(epoch) + '.pt')
 
         my_lr_scheduler.step()
 
-    torch.save(model.state_dict(), path + '/model' + str(epoch) + '.pt')
+    torch.save(model.state_dict(), path + '/RGCNN_gram_Pos_noise'+str(num_points)+"_" + str(epoch) + '.pt')
 
+if(selection==4):
+    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Occlusion/Modelnet40_occlusion_"+str(num_points)+"_025/")
 
+    root_test = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/"+str(num_points)+"/"+"Modelnet40_"+str(num_points)+"/")
+
+    train_dataset_0 = cam_loader.PcdDataset(root_dir=root, points=num_points)
+    test_dataset_0 = cam_loader.PcdDataset(root_dir=root_test, folder='test',points=num_points)
+
+    ###############################################################################
+
+    train_loader_0 = DataLoader(train_dataset_0, batch_size=batch_size, shuffle=True, pin_memory=True)
+    test_loader_0  = DataLoader(test_dataset_0, batch_size=batch_size)
+
+    ###############################################################################
+
+    for epoch in range(0, num_epochs+1):
+
+        loss_tr=0
+        loss_t=0
+        acc_t=0
+        acc_tr=0
+
+        train_start_time = time.time()
+        train_loss,train_acc = train(model=model, optimizer=optimizer, loader=train_loader_0, regularization=regularization,num_points=num_points,criterion=criterion, device=device)
+        train_stop_time = time.time()
+
+        loss_tr=loss_tr+train_loss
+        acc_tr=acc_tr+train_acc
+
+        
+
+        test_start_time = time.time()
+        test_loss,test_acc = test(model=model, loader=test_loader_0,num_points=num_points,criterion=criterion,device=device)
+        test_stop_time = time.time()
+
+        loss_t=loss_t+test_loss
+        acc_t=acc_t+test_acc
+
+        writer.add_scalar("Loss/train", train_loss, epoch)
+        writer.add_scalar("Loss/test", test_loss, epoch)
+        writer.add_scalar("Acc/train", train_acc, epoch)
+        writer.add_scalar("Acc/test", test_acc, epoch)
+
+        print(f'Epoch: {epoch:02d}, Loss: {train_loss:.4f}, Test Accuracy: {test_acc:.4f}')
+        print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
+        Test Time: \t{test_stop_time - test_start_time }')
+
+        if(epoch%3==0):
+            torch.save(model.state_dict(), path + '/RGCNN_gram_Occlusion'+str(num_points)+"_" + str(epoch) + '.pt')
+
+        my_lr_scheduler.step()
+
+    torch.save(model.state_dict(), path + '/RGCNN_gram_Occlusion'+str(num_points)+"_" + str(epoch) + '.pt')

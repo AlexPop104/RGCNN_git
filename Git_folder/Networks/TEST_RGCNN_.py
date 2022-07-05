@@ -232,7 +232,15 @@ torch.manual_seed(0)
 
 list_final=[]
 
-array_points=[64,128,256,512,1024]
+#array_points=[64,128,256,512,1024]
+
+array_points=[512]
+#path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Rotation/RGCNN_Rotation512_75.pt"
+
+#path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Position/RGCNN_Pos_512_78.pt"
+
+path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Occlusion/RGCNN_Occlusion512_48.pt"
+
 
 for j in range(1,4):
     selection=j
@@ -246,8 +254,9 @@ for j in range(1,4):
 
             model = cls_model(num_points, F, K, M, modelnet_num, dropout=dropout, reg_prior=True)
 
-            path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_.pt"
+            #path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_.pt"
 
+            
 
             model.load_state_dict(torch.load(path_saved_model))
             #print(model.parameters)
@@ -332,8 +341,9 @@ for j in range(1,4):
             list_final.append(num_points)
             model = cls_model(num_points, F, K, M, modelnet_num, dropout=dropout, reg_prior=True)
 
-            path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_.pt"
+            #path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_.pt"
 
+            
 
             model.load_state_dict(torch.load(path_saved_model))
             #print(model.parameters)
@@ -421,8 +431,9 @@ for j in range(1,4):
             list_final.append(num_points)
             model = cls_model(num_points, F, K, M, modelnet_num, dropout=dropout, reg_prior=True)
 
-            path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_.pt"
+            #path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_.pt"
 
+            
 
             model.load_state_dict(torch.load(path_saved_model))
             #print(model.parameters)

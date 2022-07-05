@@ -248,6 +248,8 @@ torch.manual_seed(0)
 print("Select type of training  (1 - no noise, 2 - Rotation noise , 3- Position noise, 4 - Occlusion noise)")
 selection=int(input())
 
+max_acc=-100
+
 if(selection==1):
     root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_sampling/Modelnet40_"+str(num_points)+"/")
     train_dataset_0 = cam_loader.PcdDataset(root_dir=root, points=num_points)
@@ -292,8 +294,12 @@ if(selection==1):
         print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
         Test Time: \t{test_stop_time - test_start_time }')
 
-        if(epoch%3==0):
+        if(max_acc<acc_t):
+            max_acc=acc_t
             torch.save(model.state_dict(), path + '/RGCNN_'+str(num_points)+"_" + str(epoch) + '.pt')
+
+        # if(epoch%3==0):
+        #     torch.save(model.state_dict(), path + '/RGCNN_'+str(num_points)+"_" + str(epoch) + '.pt')
 
         my_lr_scheduler.step()
 
@@ -380,8 +386,12 @@ elif(selection==2):
         print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
         Test Time: \t{test_stop_time - test_start_time }')
 
-        if(epoch%3==0):
-            torch.save(model.state_dict(), path + '/RGCNN_Rotation'+str(num_points)+"_" + str(epoch) + '.pt')
+        if(max_acc<acc_t):
+            max_acc=acc_t
+            torch.save(model.state_dict(), path + '/RGCNN__Rotation'+str(num_points)+"_" + str(epoch) + '.pt')
+
+        # if(epoch%3==0):
+        #     torch.save(model.state_dict(), path + '/RGCNN_Rotation'+str(num_points)+"_" + str(epoch) + '.pt')
 
         my_lr_scheduler.step()
 
@@ -470,8 +480,12 @@ elif(selection==3):
         print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
         Test Time: \t{test_stop_time - test_start_time }')
 
-        if(epoch%3==0):
+        if(max_acc<acc_t):
+            max_acc=acc_t
             torch.save(model.state_dict(), path + '/RGCNN_Pos_noise'+str(num_points)+"_" + str(epoch) + '.pt')
+
+        # if(epoch%3==0):
+        #     torch.save(model.state_dict(), path + '/RGCNN_Pos_noise'+str(num_points)+"_" + str(epoch) + '.pt')
 
         my_lr_scheduler.step()
 
@@ -491,6 +505,8 @@ if(selection==4):
     test_loader_0  = DataLoader(test_dataset_0, batch_size=batch_size)
 
     ###############################################################################
+
+   
 
     for epoch in range(0, num_epochs+1):
 
@@ -524,8 +540,12 @@ if(selection==4):
         print(f'\tTrain Time: \t{train_stop_time - train_start_time} \n \
         Test Time: \t{test_stop_time - test_start_time }')
 
-        if(epoch%3==0):
+        if(max_acc<acc_t):
+            max_acc=acc_t
             torch.save(model.state_dict(), path + '/RGCNN_Occlusion'+str(num_points)+"_" + str(epoch) + '.pt')
+
+        # if(epoch%3==0):
+        #     torch.save(model.state_dict(), path + '/RGCNN_Occlusion'+str(num_points)+"_" + str(epoch) + '.pt')
 
         my_lr_scheduler.step()
 
