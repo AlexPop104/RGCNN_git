@@ -220,6 +220,19 @@ print(f"Training on {device}")
 
 #path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/512/RGCNN_512_.pt"
 
+data_select=-500
+
+print("Select type of training  (1 - No noise training, 2 - Noisy data trainng)")
+train_select=int(input())
+
+if(train_select==2):
+    print("Select category augmented data (1- Rotation Noise, 2-Position Noise, 3-Occlusion Noise")
+    data_select=int(input())
+
+if (train_select==1):
+    array_points=[64,256,512]
+else:
+    array_points=[512]
 
 
 # print("Select type of testing  (1 Position noise, 2 - Rotation noise , 3-Occlusion Noise, 4-Nr_points)")
@@ -234,35 +247,43 @@ list_final=[]
 
 #array_points=[64,128,256,512,1024]
 
-array_points=[512]
-#path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Rotation/RGCNN_Rotation512_75.pt"
+#array_points=[512]
 
-#path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Position/RGCNN_Pos_512_78.pt"
 
-path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Occlusion/RGCNN_Occlusion512_48.pt"
+
+#
+
 
 
 for j in range(1,4):
     selection=j
+    
     if(selection==1):
         print(selection)
         list_final.append("Noise test sigma 0-0.02.05-0.08-0.10")
+        
         for i in range(len(array_points)):
             num_points=int(array_points[i]) 
             #print(num_points)  
             list_final.append(num_points)
 
+            
             model = cls_model(num_points, F, K, M, modelnet_num, dropout=dropout, reg_prior=True)
 
-            #path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_.pt"
-
+            if (train_select!=1)and (data_select==1):
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Rotation/RGCNN_Rotation512_75.pt"
+            elif (data_select==2):
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Position/RGCNN_Pos_512_108.pt"
+            elif (data_select==3):
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Occlusion/RGCNN_Occlusion512_168.pt"
             
+            else:
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_.pt"
 
             model.load_state_dict(torch.load(path_saved_model))
             #print(model.parameters)
             model = model.to(device) 
         
-
             #num_points=512
             root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/"+str(num_points)+"/Modelnet40_"+str(num_points)+"/")
             test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
@@ -343,7 +364,15 @@ for j in range(1,4):
 
             #path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_.pt"
 
+            if (train_select!=1)and (data_select==1):
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Rotation/RGCNN_Rotation512_75.pt"
+            elif (data_select==2):
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Position/RGCNN_Pos_512_108.pt"
+            elif (data_select==3):
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Occlusion/RGCNN_Occlusion512_168.pt"
             
+            else:
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_.pt"
 
             model.load_state_dict(torch.load(path_saved_model))
             #print(model.parameters)
@@ -433,7 +462,15 @@ for j in range(1,4):
 
             #path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_.pt"
 
+            if (train_select!=1)and (data_select==1):
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Rotation/RGCNN_Rotation512_75.pt"
+            elif (data_select==2):
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Position/RGCNN_Pos_512_108.pt"
+            elif (data_select==3):
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Occlusion/RGCNN_Occlusion512_168.pt"
             
+            else:
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_.pt"
 
             model.load_state_dict(torch.load(path_saved_model))
             #print(model.parameters)

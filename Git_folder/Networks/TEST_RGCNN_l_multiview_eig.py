@@ -283,7 +283,19 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 print(f"Training on {device}")
 
+data_select=-500
 
+print("Select type of training  (1 - No noise training, 2 - Noisy data trainng)")
+train_select=int(input())
+
+if(train_select==2):
+    print("Select category augmented data (1- Rotation Noise, 2-Position Noise, 3-Occlusion Noise")
+    data_select=int(input())
+
+if (train_select==1):
+    array_points=[64,256,512]
+else:
+    array_points=[512]
 
 
 # print("Select type of testing  (1 Position noise, 2 - Rotation noise , 3-Occlusion Noise, 4-Nr_points)")
@@ -296,7 +308,7 @@ torch.manual_seed(0)
 
 list_final=[]
 
-array_points=[64,128,256,512,1024]
+
 
 for j in range(1,4):
     selection=j
@@ -310,7 +322,17 @@ for j in range(1,4):
 
             model = cls_model(num_points, F, K, M, modelnet_num, dropout=dropout, reg_prior=True)
 
-            path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_multiview_eig.pt"
+            if (train_select!=1)and (data_select==1):
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Rotation/RGCNN_mview_eig_Rotation512_225.pt"
+            elif (data_select==2):
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Position/RGCNN_mview_eig_Pos_noise512_225.pt"
+            elif (data_select==3):
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Occlusion/RGCNN_mview_eig_Occlusion512_111.pt"
+            
+            else:
+               path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_multiview_eig.pt"
+
+            
 
 
             model.load_state_dict(torch.load(path_saved_model))
@@ -396,7 +418,15 @@ for j in range(1,4):
             list_final.append(num_points)
             model = cls_model(num_points, F, K, M, modelnet_num, dropout=dropout, reg_prior=True)
 
-            path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_multiview_eig.pt"
+            if (train_select!=1)and (data_select==1):
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Rotation/RGCNN_mview_eig_Rotation512_225.pt"
+            elif (data_select==2):
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Position/RGCNN_mview_eig_Pos_noise512_225.pt"
+            elif (data_select==3):
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Occlusion/RGCNN_mview_eig_Occlusion512_111.pt"
+            
+            else:
+               path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_multiview_eig.pt"
 
 
             model.load_state_dict(torch.load(path_saved_model))
@@ -485,7 +515,15 @@ for j in range(1,4):
             list_final.append(num_points)
             model = cls_model(num_points, F, K, M, modelnet_num, dropout=dropout, reg_prior=True)
 
-            path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_multiview_eig.pt"
+            if (train_select!=1)and (data_select==1):
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Rotation/RGCNN_mview_eig_Rotation512_225.pt"
+            elif (data_select==2):
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Position/RGCNN_mview_eig_Pos_noise512_225.pt"
+            elif (data_select==3):
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Occlusion/RGCNN_mview_eig_Occlusion512_111.pt"
+            
+            else:
+               path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_multiview_eig.pt"
 
 
             model.load_state_dict(torch.load(path_saved_model))
