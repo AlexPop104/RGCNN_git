@@ -251,7 +251,7 @@ if __name__ == '__main__':
     test_transform = Compose([
                     #random_rotate,
                     #GaussianNoiseTransform(mu=mu,sigma=sigma)
-                    #Sphere_Occlusion_Transform(radius=radius, percentage=percentage,num_points=512)
+                    #Sphere_Occlusion_Transform(radius=radius, num_points=512)
                     ])
 
     ##################################################3
@@ -263,12 +263,16 @@ if __name__ == '__main__':
     #num_points = 128
     #root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/2048/Modelnet40_2048/")
     #root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Noise/"+ str(2048)+ "/Modelnet40_"+str(2048)+"_n_"+str(sigma)+"/")
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Occlusion/Modelnet40_occlusion_1024_025/")
+    #root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Occlusion/Modelnet40_occlusion_1024_025/")
 
     #root_noise_1 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Modelnet40_"+str(num_points)+"_r_40"+"/")
     #root_noise_1 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/"+ str(num_points)+ "/Modelnet40_"+str(num_points)+"_r_"+str()+str(ceva*10)+"/")
     #root_noise_1 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Noise/"+ str(num_points)+ "/Modelnet40_"+str(num_points)+"_n_"+str(sigma)+"/")
-    root_noise_1 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Occlusion/Modelnet40_occlusion_"+str(num_points)+"_025")
+    #root_noise_1 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Occlusion/Modelnet40_occlusion_"+str(num_points)+"_025")
+
+    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Occlusion/Modelnet40_occlusion_"+str(num_points)+"_025/")
+
+    root_noise_1 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/"+str(num_points)+"/"+"Modelnet40_"+str(num_points)+"/")
 
     if(choice==1):
     ####Processing the datasets
@@ -279,7 +283,7 @@ if __name__ == '__main__':
 
     ##Loading the processed dataset
 
-        num_points_original=1024
+        num_points_original=num_points
         num_points_noise=num_points
 
         
@@ -299,13 +303,13 @@ if __name__ == '__main__':
 
             print("PCD sampled")
             pcd_sampled.points=o3d.utility.Vector3dVector(test_dataset[i].pos)
-            #pcd_sampled.normals=o3d.utility.Vector3dVector(train_dataset[i].normal)
+            pcd_sampled.normals=o3d.utility.Vector3dVector(train_dataset[i].normal)
 
             pcd_sampled.paint_uniform_color([0, 0, 1])
 
             # print("PCD noise")
             pcd_noise_1.points=o3d.utility.Vector3dVector(test_dataset_noise_1[i].pos)
-            #pcd_noise.normals=o3d.utility.Vector3dVector(train_dataset_noise[i].normal)
+            pcd_noise_1.normals=o3d.utility.Vector3dVector(test_dataset_noise_1[i].normal)
             pcd_noise_1.paint_uniform_color([1, 0, 0])
 
             o3d.visualization.draw_geometries([pcd_sampled, pcd_noise_1])

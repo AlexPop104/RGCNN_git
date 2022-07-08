@@ -251,11 +251,11 @@ for j in range(1,4):
             model = cls_model(num_points, F, K, M, modelnet_num, dropout=dropout, reg_prior=True)
 
             if (train_select!=1)and (data_select==1):
-                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Rotation/RGCNN_Rotation512_75.pt"
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Rotation/RGCNN_bb_Rotation512_250.pt"
             elif (data_select==2):
                 path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Position/RGCNN_bb_Pos_noise_512_250.pt"
             elif (data_select==3):
-                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Rotation/RGCNN_bb_Rotation512_250.pt"
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Occlusion/RGCNN_bb_Occlusion512_99.pt"
             
             else:
                 path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_bb.pt"
@@ -344,11 +344,11 @@ for j in range(1,4):
             model = cls_model(num_points, F, K, M, modelnet_num, dropout=dropout, reg_prior=True)
 
             if (train_select!=1)and (data_select==1):
-                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Rotation/RGCNN_Rotation512_75.pt"
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Rotation/RGCNN_bb_Rotation512_250.pt"
             elif (data_select==2):
                 path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Position/RGCNN_bb_Pos_noise_512_250.pt"
             elif (data_select==3):
-                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Rotation/RGCNN_bb_Rotation512_250.pt"
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Occlusion/RGCNN_bb_Occlusion512_99.pt"
             
             else:
                 path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_bb.pt"
@@ -441,11 +441,11 @@ for j in range(1,4):
             model = cls_model(num_points, F, K, M, modelnet_num, dropout=dropout, reg_prior=True)
 
             if (train_select!=1)and (data_select==1):
-                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Rotation/RGCNN_Rotation512_75.pt"
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Rotation/RGCNN_bb_Rotation512_250.pt"
             elif (data_select==2):
                 path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Position/RGCNN_bb_Pos_noise_512_250.pt"
             elif (data_select==3):
-                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Rotation/RGCNN_bb_Rotation512_250.pt"
+                path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/Noise_train_512/Occlusion/RGCNN_bb_Occlusion512_99.pt"
             
             else:
                 path_saved_model="/home/alex/Alex_documents/RGCNN_git/data/Trained+models/"+str(num_points)+"/RGCNN_"+str(num_points)+"_bb.pt"
