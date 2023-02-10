@@ -247,8 +247,8 @@ parent_directory = "/media/rambo/ssd2/Alex_data/RGCNN/data/logs/Trained_Models"
 path = os.path.join(parent_directory, directory)
 os.mkdir(path)
 
-modelnet_num = 36
-num_points= 512
+modelnet_num = 40
+num_points= 1024
 batch_size=16
 num_epochs=200
 nr_features=3
@@ -286,7 +286,7 @@ torch.manual_seed(0)
 #################################
 if(selection==1):
 
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/Modelnet40_512/")
+    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Recomputed_normals/Modelnet40_1024_recomputed_normals")
     train_dataset_0 = cam_loader.PcdDataset(root_dir=root, points=num_points)
     test_dataset_0 = cam_loader.PcdDataset(root_dir=root, folder='test',points=num_points)
 

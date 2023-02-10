@@ -247,7 +247,8 @@ if(train_select==2):
     data_select=int(input())
 
 if (train_select==1):
-    array_points=[64,256,512]
+    #array_points=[64,256,512]
+    array_points=[512]
 else:
     array_points=[512]
 
@@ -510,6 +511,30 @@ for j in range(1,4):
             #print(model.parameters)
             model = model.to(device) 
         
+            # #num_points=512
+            root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Noise/Modelnet40_ocl_014/")
+            test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+            test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+
+            test_start_time = time.time()
+            test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+            test_stop_time = time.time()
+
+            #print(f'{test_acc:.4f}')
+            list_final.append(str(test_acc))
+
+            # #num_points=512
+            root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Noise/Modelnet40_ocl_020/")
+            test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
+            test_loader  = DataLoader(test_dataset, batch_size=batch_size)
+
+            test_start_time = time.time()
+            test_loss,test_acc = test(model=model, loader=test_loader,num_points=num_points,criterion=criterion,device=device)
+            test_stop_time = time.time()
+
+            #print(f'{test_acc:.4f}')
+            list_final.append(str(test_acc))
+
             #num_points=512
             root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Occlusion/Modelnet40_occlusion_"+str(num_points)+"_025/")
             test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
@@ -521,6 +546,7 @@ for j in range(1,4):
 
             #print(f'{test_acc:.4f}')
             list_final.append(str(test_acc))
+
 
 
 for t in range(len(list_final)):

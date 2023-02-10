@@ -132,10 +132,15 @@ class cls_model(nn.Module):
         out = self.relu5(out)
 
         out = self.fc3(out)
+
+        # m=nn.LogSoftmax(dim=1)
+        # out=m(out)
         
         return out, self.regularizers
 
 criterion = torch.nn.CrossEntropyLoss()  # Define loss criterion.
+#criterion = torch.nn.MSELoss()  # Define loss criterion.
+#criterion = torch.nn.NLLLoss()
 
 def train(model, optimizer,num_points,criterion, loader, regularization,device):
     model.train()
@@ -251,7 +256,7 @@ selection=int(input())
 max_acc=-100
 
 if(selection==1):
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_sampling/Modelnet40_"+str(num_points)+"/")
+    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/512/Modelnet40_"+str(num_points)+"/")
     train_dataset_0 = cam_loader.PcdDataset(root_dir=root, points=num_points)
     test_dataset_0 = cam_loader.PcdDataset(root_dir=root, folder='test',points=num_points)
 
