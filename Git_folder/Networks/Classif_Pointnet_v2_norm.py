@@ -243,12 +243,12 @@ def test(model, loader,nr_points):
 now = datetime.now()
 directory = now.strftime("%d_%m_%y_%H:%M:%S")
 directory="Pointnet_"+directory
-parent_directory = "/media/rambo/ssd2/Alex_data/RGCNN/data/logs/Trained_Models"
+parent_directory = "/media/cuda/ssd/Alex/RGCNN/Training_in_progress"
 path = os.path.join(parent_directory, directory)
 os.mkdir(path)
 
-modelnet_num = 40
-num_points= 1024
+modelnet_num = 36
+num_points= 512
 batch_size=16
 num_epochs=200
 nr_features=3
@@ -258,7 +258,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 print(f"Training on {device}")
 
-root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+root = "/media/cuda/ssd/Alex/RGCNN/ModelNet"+str(modelnet_num)
 
 model = PointNet(num_classes=modelnet_num,nr_features=nr_features)
 model = model.to(device)
@@ -286,7 +286,8 @@ torch.manual_seed(0)
 #################################
 if(selection==1):
 
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Recomputed_normals/Modelnet40_1024_recomputed_normals")
+    #root = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Recomputed_normals/Modelnet40_"+str(num_points)+"_recomputed_normals")
+    root = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/"+str(num_points)+"/Modelnet40_"+str(num_points)+"/")
     train_dataset_0 = cam_loader.PcdDataset(root_dir=root, points=num_points)
     test_dataset_0 = cam_loader.PcdDataset(root_dir=root, folder='test',points=num_points)
 
@@ -334,12 +335,12 @@ if(selection==1):
 
 elif(selection==2):
 
-    root_train_10 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_10/")
-    root_train_20 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_20/")
-    root_train_30 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_30/")
-    root_train_40 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_40/")
+    root_train_10 = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_10/")
+    root_train_20 = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_20/")
+    root_train_30 = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_30/")
+    root_train_40 = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_r_40/")
 
-    root_test = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024/")
+    root_test = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024/")
 
     train_dataset_10 = cam_loader.PcdDataset(root_dir=root_train_10, points=num_points)
     train_dataset_20 = cam_loader.PcdDataset(root_dir=root_train_10, points=num_points)
@@ -414,12 +415,12 @@ elif(selection==2):
 
 elif(selection==3):
 
-    root_train_002 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_002/")
-    root_train_005 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_005/")
-    root_train_008 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_008/")
-    root_train_010 = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_010/")
+    root_train_002 = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_002/")
+    root_train_005 = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_005/")
+    root_train_008 = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_008/")
+    root_train_010 = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024_n_010/")
 
-    root_test = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024/")
+    root_test = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Normals_2048/Modelnet40_1024/")
 
     train_dataset_002 = cam_loader.PcdDataset(root_dir=root_train_002, points=num_points)
     train_dataset_005 = cam_loader.PcdDataset(root_dir=root_train_005, points=num_points)

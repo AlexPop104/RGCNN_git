@@ -221,7 +221,7 @@ input_feature_size=3
 now = datetime.now()
 directory = now.strftime("%d_%m_%y_%H:%M:%S")
 directory="RGCNN_"+str(num_points)+"_bb_"+directory
-parent_directory = "/media/rambo/ssd2/Alex_data/RGCNN/data/logs/Trained_Models"
+parent_directory = "/media/cuda/ssd/Alex/RGCNN/Training_in_progress"
 path = os.path.join(parent_directory, directory)
 os.mkdir(path)
 
@@ -253,7 +253,8 @@ print("Select type of training  (1 - no noise, 2 - Rotation noise , 3- Position 
 selection=int(input())
 
 if(selection==1):
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_sampling/Modelnet40_"+str(num_points)+"/")
+    #root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_sampling/Modelnet40_"+str(num_points)+"/")
+    root = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/"+str(num_points)+"/Modelnet40_"+str(num_points)+"/")
     train_dataset_0 = cam_loader.PcdDataset(root_dir=root, points=num_points)
     test_dataset_0 = cam_loader.PcdDataset(root_dir=root, folder='test',points=num_points)
 

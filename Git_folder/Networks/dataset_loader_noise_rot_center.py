@@ -105,14 +105,24 @@ class PcdDataset(Dataset):
         #####Centering and rotation
         #print(file)
 
+        start = time.time()
+
         aabb_2 = pcd.get_oriented_bounding_box()
-        aabb_2.color = (0, 0, 1)
+        #aabb_2.color = (0, 0, 1)
         centroid_2= o3d.geometry.PointCloud.get_center(pcd)
         pcd.translate(-centroid_2)
         
         pcd=pcd.rotate(aabb_2.R.T)
 
-        
+        stop =time.time()
+
+        # with open('log_RGCNN_bb.npy', 'wb') as f:
+        #     np.save(f, np.array([stop-start]))
+
+        # f = open("log_RGCNN_bb.txt", "a")
+        # f.write(str(stop-start)+"\n")
+        # f.close()
+
 
         points = np.asarray(pcd.points)
         points = torch.tensor(points)

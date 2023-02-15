@@ -136,6 +136,7 @@ class PcdDataset(Dataset):
         points = np.asarray(pcd.points)
         points = torch.tensor(points)
 
+        start =time.time()
         ceva=np.dot(points.T,points)
         eig_values, eig_vectors=np.linalg.eig(np.dot(points.T,points))
 
@@ -152,6 +153,14 @@ class PcdDataset(Dataset):
         # pcd=pcd.rotate(ceva2.T)
 
         pcd.points=o3d.utility.Vector3dVector(points)
+
+        stop = time.time()
+
+        
+
+        # f = open("log_RGCNN_eig_pre.txt", "a")
+        # f.write(str(stop-start)+"\n")
+        # f.close()
 
         points = np.asarray(pcd.points)
         points = torch.tensor(points)

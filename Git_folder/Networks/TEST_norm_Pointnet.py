@@ -37,7 +37,14 @@ import random
 random.seed(0)
 
 
-
+def get_n_params(model):
+    pp=0 
+    for p in list(model.parameters()):
+        nn=1 
+        for s in list(p.size()):
+            nn = nn*s
+            pp += nn
+    return pp
 
 class Tnet(nn.Module):
     def __init__(self, k):
@@ -176,7 +183,17 @@ def test(model, loader,nr_points):
 
         x=x.to(device)
         labels=data.y.to(device)
+        x =x.transpose(1,2)
        
+        for j in range(10000):
+
+            start = time.time()
+            outputs, __, __ = model(x)
+            stop = time.time()
+
+            f = open("log_pointnet_net_"+str(nr_points)+".txt", "a")
+            f.write(str(stop-start)+"\n")
+            f.close()
 
         #logits = model(data.pos.to(device))
         outputs, __, __ = model(x.transpose(1,2))
@@ -202,14 +219,18 @@ def test(model, loader,nr_points):
 # os.mkdir(path)
 
 modelnet_num = 36
-num_points= 512
-batch_size=16
+# num_points= 2048
+batch_size=1
 num_epochs=250
 nr_features=3
 
-root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
+print("Nr_points")
+num_points=int(input())
 
-#root="/media/rambo/ssd2/Alex_data/RGCNN/GeometricShapes"
+
+root = "/media/cuda/ssd/Alex/RGCNN/ModelNet"+str(modelnet_num)
+
+#root="/media/cuda/ssd/Alex/RGCNN/GeometricShapes"
 
 
     
@@ -217,10 +238,12 @@ root = "/media/rambo/ssd2/Alex_data/RGCNN/ModelNet"+str(modelnet_num)
 
 model = PointNet(num_classes=modelnet_num,nr_features=nr_features)
 #path_saved_model="/home/alex/Alex_documents/RGCNN_git/Git_folder/Trained+models/No noise_train/Pointnet_3_512.pt"
-path_saved_model="/home/alex/Alex_documents/RGCNN_git/Git_folder/Trained+models/No_noise_train_again/Pointnet_3_512.pt"
-model.load_state_dict(torch.load(path_saved_model))
+# path_saved_model="/media/cuda/ssd/Alex/RGCNN/Training_in_progress/Pointnet_14_02_23_13:07:30/model15.pt"
+# model.load_state_dict(torch.load(path_saved_model))
 #print(model)
 
+num_parameters = get_n_params(model)
+print(num_parameters)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = model.to(device)
@@ -234,8 +257,8 @@ torch.manual_seed(0)
 
 if(selection==1):
     print("Noise test sigma 0-0.02.05-0.08-0.10")
-    num_points=512
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/Modelnet40_512/")
+    # num_points=512
+    root = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/"+str(num_points)+"/Modelnet40_"+str(num_points)+"/")
     test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
     test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
@@ -248,7 +271,7 @@ if(selection==1):
     # ##############################################################################################
 
     num_points=512
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Noise/Modelnet40_512_n_002/")
+    root = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Noise/"+str(num_points)+"/Modelnet40_"+str(num_points)+"_n_002/")
     test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
     test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
@@ -261,7 +284,7 @@ if(selection==1):
     # ##############################################################################################
 
     num_points=512
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Noise/Modelnet40_512_n_005/")
+    root = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Noise/"+str(num_points)+"/Modelnet40_"+str(num_points)+"_n_005/")
     test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
     test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
@@ -274,7 +297,7 @@ if(selection==1):
     # ##############################################################################################
 
     num_points=512
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Noise/Modelnet40_512_n_008/")
+    root = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Noise/"+str(num_points)+"/Modelnet40_"+str(num_points)+"_n_008/")
     test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
     test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
@@ -287,7 +310,7 @@ if(selection==1):
     # ##############################################################################################
 
     num_points=512
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Noise/Modelnet40_512_n_010/")
+    root = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Noise/"+str(num_points)+"/Modelnet40_"+str(num_points)+"_n_010/")
     test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
     test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
@@ -304,7 +327,7 @@ if(selection==2):
     print("RGCNN our rotation method")
     print("Rotation invariance test 0-10-20-30-40")
     num_points=512
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/Modelnet40_512/")
+    root = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/"+str(num_points)+"/Modelnet40_"+str(num_points)+"/")
     test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
     test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
@@ -318,7 +341,7 @@ if(selection==2):
 
     # ##############################################################################################
     num_points=512
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/Modelnet40_512_r_10/")
+    root = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/"+str(num_points)+"/Modelnet40_"+str(num_points)+"_r_10/")
     test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
     test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
@@ -331,7 +354,7 @@ if(selection==2):
     # ###############################################################################################
     #print("Modelnet40 2048 points rotation 20 accuracy")
     num_points=512
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/Modelnet40_512_r_20/")
+    root = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/"+str(num_points)+"/Modelnet40_"+str(num_points)+"_r_20/")
     test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
     test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
@@ -344,7 +367,7 @@ if(selection==2):
     # ###############################################################################################
     # #print("Modelnet40 2048 points rotation 30 accuracy")
     num_points=512
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/Modelnet40_512_r_30/")
+    root = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/"+str(num_points)+"/Modelnet40_"+str(num_points)+"_r_30/")
     test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
     test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
@@ -357,7 +380,7 @@ if(selection==2):
     # ###############################################################################################
     # #print("Modelnet40 2048 points rotation 40 accuracy")
     num_points=512
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/Modelnet40_512_r_40/")
+    root = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Test_rotation_invariant/"+str(num_points)+"/Modelnet40_"+str(num_points)+"_r_40/")
     test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
     test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
@@ -369,9 +392,9 @@ if(selection==2):
 
 
 elif(selection==3):
-    print("Occlusion noise, R=0.25")
+    print("Occlusion noise, R=0.20")
     num_points=512
-    root = Path("/media/rambo/ssd2/Alex_data/RGCNN/PCD_DATA/Normals/Occlusion/Modelnet40_occlusion_512_025/")
+    root = Path("/media/cuda/ssd/Alex/RGCNN/PCD_DATA/Normals/Noise/Modelnet40_ocl_020/")
     test_dataset = cam_loader.PcdDataset(root_dir=root, valid=True, folder='test',points=num_points)
     test_loader  = DataLoader(test_dataset, batch_size=batch_size)
 
@@ -380,6 +403,8 @@ elif(selection==3):
     test_stop_time = time.time()
 
     print(f'{test_acc:.4f}')
+
+
 
 
 
